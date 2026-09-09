@@ -64,8 +64,7 @@ Rules:
 - Use empty string for unknown values.
 - Do not include markdown, explanations, code fences, or comments.
 - Keep the discount as a string like "-25%" or "20%".
-- Keep threshold as a string like "powyżej 99 PLN" or "99 PLN" if visible.
-`,
+- Keep threshold as a string like "powyżej 99 PLN" or "99 PLN" if visible.`,
               },
               {
                 inline_data: {
@@ -108,4 +107,52 @@ Rules:
   } catch {
     return {} as GeminiPromotionFields;
   }
+};
+
+export const translateToEnglishWithGemini = async (
+  text: string,
+): Promise<string> => {
+  if (!text || !text.trim()) return "";
+  if (!GEMINI_API_KEY) {
+    throw new Error("Missing REACT_APP_GEMINI_API_KEY");
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [
+              {
+                text: `Translate the following promotional terms, conditions, or notes from Polish (PL) or Czech (CZ) to English. Return only the direct English translation without explanations, notes, or markdown formatting.\n\nText:\n${text}`,
+              },
+            ],
+          },
+        ],
+      }),
+    },
+  );
+
+  const payload = await response.json();
+
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || "Gemini translation failed");
+  }
+
+  const translation = (
+    payload?.candidates
+      ?.map((candidate: any) =>
+        candidate?.content?.parts
+          ?.map((part: any) => part?.text || "")
+          .join(""),
+      )
+      .join("\n") || ""
+  ).trim();
+
+  return translation;
 };
