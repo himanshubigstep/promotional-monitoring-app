@@ -10,7 +10,10 @@ import { Box, Button, Modal, Typography } from "@mui/material";
 import { createWorker } from "tesseract.js";
 import type { Promotion } from "../context/AppContext";
 import FormField from "./FormField";
-import { readPromotionFieldsWithGemini } from "../utils/geminiOcr";
+import {
+  readPromotionFieldsWithGemini,
+  translateToEnglishWithGemini,
+} from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
@@ -204,6 +207,7 @@ export default function PromotionFormModal({
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const update = (
     field: keyof FormState,
@@ -254,6 +258,7 @@ export default function PromotionFormModal({
     retailer?: string;
     category?: string;
     name?: string;
+    notes?: string;
   };
 
   const mergeExtractedIntoForm = (
@@ -269,6 +274,7 @@ export default function PromotionFormModal({
     retailer: extracted.retailer || current.retailer,
     category: extracted.category || current.category,
     name: current.name || extracted.name || "",
+    notes: current.notes || extracted.notes || "",
   });
 
   // --- Tesseract path (local OCR) ----------------------------------------
@@ -302,6 +308,7 @@ export default function PromotionFormModal({
       brands: findKnownMatches(raw.brands || "", brands) as string,
       retailer: findKnownMatches(raw.retailer || "", retailers) as string,
       category: findKnownMatches(raw.category || "", categories) as string,
+      notes: raw.notes || "",
     };
   };
 
@@ -349,7 +356,7 @@ export default function PromotionFormModal({
     }
   };
 
-  const submit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name) errors.name = "Podaj nazwę promocji.";
@@ -364,7 +371,23 @@ export default function PromotionFormModal({
       setError("Sprawdź wymagane pola formularza.");
       return;
     }
-    onSave(form);
+
+    let finalNotes = form.notes || "";
+    if (finalNotes.trim() && isGeminiConfigured()) {
+      setSubmitting(true);
+      try {
+        const translated = await translateToEnglishWithGemini(finalNotes);
+        if (translated) {
+          finalNotes = translated;
+        }
+      } catch (err) {
+        console.warn("Failed to translate notes on submit with Gemini:", err);
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    onSave({ ...form, notes: finalNotes });
     setForm(emptyForm);
     setError("");
     setFieldErrors({});
@@ -606,14 +629,32 @@ export default function PromotionFormModal({
             <Button
               type="submit"
               variant="contained"
-              startIcon={<SaveRounded />}
+              disabled={submitting || ocrLoading}
+              startIcon={
+                submitting ? (
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 16,
+                      height: 16,
+                      border: "2px solid #bfd2ce",
+                      borderTopColor: "white",
+                      borderRadius: "50%",
+                      display: "inline-block",
+                      animation: "spin 0.8s linear infinite",
+                    }}
+                  />
+                ) : (
+                  <SaveRounded />
+                )
+              }
               sx={{
                 backgroundColor: "#286e5e",
                 textTransform: "none",
                 "&:hover": { backgroundColor: "#1d594b" },
               }}
             >
-              Zapisz promocję
+              {submitting ? "Zapisuję..." : "Zapisz promocję"}
             </Button>
           </Box>
         </Box>
