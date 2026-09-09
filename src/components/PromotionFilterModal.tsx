@@ -7,19 +7,14 @@ import {
   PromotionFilters,
 } from "../context/AppContext";
 import FormField from "./FormField";
+import { czDummyRetailers, plRetailers } from "../data/retailers";
 
 const categories = ["All", "Skincare", "Fragrance", "Makeup", "Haircare"];
-const retailers = [
-  "All",
-  "Rossmann Polska",
-  "Hebe",
-  "Douglas Polska",
-  "Super-Pharm",
-  "Natura",
-  "Kontigo",
-  "Fryzjerzy.pl",
-  "Cocolita",
-];
+const getVisibleRetailers = (market: string) => {
+  if (market === "CZ") return ["All", ...czDummyRetailers];
+  if (market === "PL") return ["All", ...plRetailers];
+  return ["All", ...plRetailers, ...czDummyRetailers];
+};
 const discounts = ["All", "10%+", "20%+", "25%+", "30%+"];
 const options = (values: string[]) =>
   values.map((value) => ({ label: value, value }));
@@ -93,7 +88,7 @@ export default function PromotionFilterModal({
             label="Retailer / store"
             value={filters.retailer}
             onValueChange={(value) => update("retailer", value)}
-            options={options(retailers)}
+            options={options(getVisibleRetailers(filters.market))}
           />
           <FormField
             type="select"

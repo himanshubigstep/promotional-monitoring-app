@@ -16,14 +16,12 @@ import {
   Typography,
 } from "@mui/material";
 import React, { useEffect, useMemo, useState } from "react";
-import products from "../../data/products.json";
-import type { Product } from "../../data/productTypes";
+import { catalog } from "../../data/catalog";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import YearFilter from "../../components/YearFilter";
 
-const catalog = products as Product[];
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 const today = "2026-09-08";

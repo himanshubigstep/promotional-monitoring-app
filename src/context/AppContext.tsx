@@ -5,7 +5,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import products from "../data/products.json";
+import { catalog } from "../data/catalog";
+import { czDummyBrands, sephoraBrands } from "../data/brands";
 import type { Product } from "../data/productTypes";
 
 export type UserRole = "Admin" | "Data Analytics" | "Viewer";
@@ -32,7 +33,7 @@ export const emptyPromotionFilters: PromotionFilters = {
 
 export const filterYears = Array.from(
   new Set(
-    products.flatMap((product) => [
+    catalog.flatMap((product) => [
       product.fromDate.slice(0, 4),
       product.toDate.slice(0, 4),
     ]),
@@ -97,8 +98,13 @@ type AppContextValue = {
   setRole: (role: UserRole) => void;
   promotions: Promotion[];
   products: Product[];
+  productsList: Product[];
+  brands: string[];
+  brandsByMarket: Record<"PL" | "CZ", string[]>;
   lastAddedProduct: Product | null;
   addPromotion: (promotion: Omit<Promotion, "id" | "createdAt">) => void;
+  addBrand: (brand: string, market?: "PL" | "CZ") => void;
+  addProduct: (product: Product) => void;
   canEdit: boolean;
   filters: PromotionFilters;
   setFilters: (filters: PromotionFilters) => void;
@@ -107,7 +113,7 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 function promotionsFromProducts(): Promotion[] {
-  return (products as Product[])
+  return catalog
     .filter((product) => product.market === "PL" || product.market === "CZ")
     .map((product) => ({
       id: product.id,
@@ -156,13 +162,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionsFromProducts,
   );
-  const [addedProducts, setAddedProducts] = useState<Product[]>([]);
+  const [brandsByMarket, setBrandsByMarket] = useState<
+    Record<"PL" | "CZ", string[]>
+  >({
+    PL: [...sephoraBrands],
+    CZ: [...czDummyBrands],
+  });
+  const brands = brandsByMarket.PL;
+  const [productsList, setProductsList] = useState<Product[]>(catalog);
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(
     null,
   );
   const [filters, setFilters] = useState<PromotionFilters>(
     emptyPromotionFilters,
   );
+
+  const addBrand = useCallback((brand: string, market: "PL" | "CZ" = "PL") => {
+    const normalizedBrand = brand.trim();
+    if (!normalizedBrand) return;
+
+    setBrandsByMarket((current) => {
+      const nextList = current[market] ?? [];
+      if (nextList.some((item) => item.toLowerCase() === normalizedBrand.toLowerCase())) {
+        return current;
+      }
+
+      return {
+        ...current,
+        [market]: [...nextList, normalizedBrand],
+      };
+    });
+  }, []);
+
+  const addProduct = useCallback((product: Product) => {
+    setProductsList((current) => {
+      const isDuplicate = current.some(
+        (item) =>
+          item.id === product.id ||
+          (item.name.toLowerCase() === product.name.toLowerCase() &&
+            item.brand.toLowerCase() === product.brand.toLowerCase()),
+      );
+
+      return isDuplicate ? current : [product, ...current];
+    });
+  }, []);
 
   const addPromotion = useCallback(
     (promotion: Omit<Promotion, "id" | "createdAt">) => {
@@ -212,11 +255,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         terms: next.notes,
         priceAfterDiscount: 0,
       };
-      const updatedProducts = [product, ...addedProducts];
-      setAddedProducts(updatedProducts);
+      setProductsList((current) => {
+        const exists = current.some(
+          (item) =>
+            item.id === product.id ||
+            (item.name.toLowerCase() === product.name.toLowerCase() &&
+              item.brand.toLowerCase() === product.brand.toLowerCase()),
+        );
+
+        return exists ? current : [product, ...current];
+      });
       setLastAddedProduct(product);
     },
-    [promotions, addedProducts],
+    [promotions],
   );
 
   const value = useMemo(
@@ -224,14 +275,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       role,
       setRole,
       promotions,
-      products: [...addedProducts, ...(products as Product[])],
+      products: productsList,
+      productsList,
+      brands,
+      brandsByMarket,
       lastAddedProduct,
       addPromotion,
+      addBrand,
+      addProduct,
       canEdit: role !== "Viewer",
       filters,
       setFilters,
     }),
-    [role, promotions, addedProducts, lastAddedProduct, addPromotion, filters],
+    [role, promotions, productsList, brands, brandsByMarket, lastAddedProduct, addPromotion, addBrand, addProduct, filters],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

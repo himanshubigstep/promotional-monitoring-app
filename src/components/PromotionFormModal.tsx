@@ -1,48 +1,28 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   AddPhotoAlternateRounded,
   CloseRounded,
   DeleteOutlineRounded,
   SaveRounded,
+  EditRounded,
 } from "@mui/icons-material";
-import { Box, Button, Modal, Typography } from "@mui/material";
+import { Box, Button, Modal, TextField, Typography, IconButton, Avatar } from "@mui/material";
 import { createWorker } from "tesseract.js";
-import type { Promotion } from "../context/AppContext";
+import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
+import { czDummyBrands, getMarketBrandOptions, sephoraBrands } from "../data/brands";
+import type { Product } from "../data/productTypes";
+import { czDummyRetailers, plRetailers } from "../data/retailers";
+import { readPromotionFieldsWithGemini } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
-const brands = [
-  "Ziaja",
-  "Tołpa",
-  "Bielenda",
-  "Resibo",
-  "Inglot",
-  "Mo61",
-  "GdanSkin",
-  "Pani Walewska",
-  "Eveline",
-  "Bell",
-  "Wibo",
-  "Joico Polska",
-  "Vis Plantis",
-  "Anwen",
-  "OnlyBio",
-];
-const retailers = [
-  "Rossmann Polska",
-  "Hebe",
-  "Douglas Polska",
-  "Super-Pharm",
-  "Natura",
-  "Kontigo",
-  "Fryzjerzy.pl",
-  "Cocolita",
-  "dm drogerie markt",
-  "Teta drogerie",
-  "Notino CZ",
-];
+const productCategories = ["Skincare", "Fragrance", "Makeup", "Haircare"] as const;
+const brandCatalog = [...sephoraBrands];
+const retailers = [...plRetailers];
+const czRetailers = [...czDummyRetailers];
+const czBrandCatalog = [...czDummyBrands];
 const scopes = ["Wielokanałowa", "Tylko e-commerce", "Tylko aplikacja mobilna"];
 const channels = [
   "Media społecznościowe",
@@ -53,9 +33,9 @@ const channels = [
   "Aplikacja mobilna",
 ];
 
-// Update FormState to have brands as string instead of array
 type FormState = Omit<Promotion, "id" | "createdAt"> & {
-  brands: string; // Override brands to be string
+  brands: string;
+  product: string;
 };
 
 const emptyForm: FormState = {
@@ -67,6 +47,7 @@ const emptyForm: FormState = {
   channel: "",
   category: "",
   brands: "",
+  product: "",
   retailer: "",
   discount: "",
   threshold: "",
@@ -79,16 +60,12 @@ const emptyForm: FormState = {
 
 // --- OCR helpers -----------------------------------------------------
 
-// Strip Polish diacritics + lowercase, so "Rossmann Polska" matches
-// even if OCR reads "Rossmann Polsko" or drops a diacritic mark.
 const normalize = (value: string) =>
   value
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-// Find the best match from a known list (brands / retailers / categories)
-// by checking if the list item appears (loosely) inside the OCR text.
 const findKnownMatches = (text: string, list: string[], multiple = false) => {
   const normalizedText = normalize(text);
   const matches = list.filter((item) =>
@@ -100,28 +77,23 @@ const findKnownMatches = (text: string, list: string[], multiple = false) => {
 const extractPromotionFields = (rawText: string) => {
   const text = rawText.replace(/\s+/g, " ").trim();
   console.log("OCR text:", text);
-  // Discount: "-25%", "25% rabatu", "rabat -30%"
   const discountMatch = text.match(/-?\d{1,3}\s?%(?:\s?(?:rabat[u]?|off))?/i);
   const discount = discountMatch ? discountMatch[0].replace(/\s+/g, "") : "";
 
-  // Threshold: "powyżej 99 PLN", "od 99 zł", "powyżej 99zł"
   const thresholdMatch = text.match(
     /(?:powyżej|od)\s?\d{1,4}(?:[.,]\d{1,2})?\s?(?:PLN|zł|CZK|Kč)/i,
   );
   const threshold = thresholdMatch ? thresholdMatch[0] : "";
 
-  // Average market discount: a second "%" figure often labeled "średni"
   const avgMatch = text.match(
     /średni[a-ząęćłńóśźż]*\s?rabat[a-ząęćłńóśźż]*\D{0,10}(\d{1,3}\s?%)/i,
   );
   const averageMarketDiscount = avgMatch ? avgMatch[1].replace(/\s+/g, "") : "";
 
-  // Known-list matches
-  const matchedBrand = findKnownMatches(text, brands) as string;
+  const matchedBrand = findKnownMatches(text, brandCatalog) as string;
   const matchedRetailer = findKnownMatches(text, retailers) as string;
   const matchedCategory = findKnownMatches(text, categories) as string;
 
-  // Name: fall back to the longest readable line that isn't just numbers/%
   const nameCandidate = rawText
     .split("\n")
     .map((l) => l.trim())
@@ -150,11 +122,171 @@ export default function PromotionFormModal({
   onClose: () => void;
   onSave: (promotion: FormState) => void;
 }) {
+  const {
+    brandsByMarket,
+    productsList,
+    addBrand,
+    addProduct,
+  } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState(false);
+  const [brandModalOpen, setBrandModalOpen] = useState(false);
+  const [newBrandName, setNewBrandName] = useState("");
+  const [productModalOpen, setProductModalOpen] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [editMode, setEditMode] = useState(false);
+
+  const currentLanguage =
+    form.market === "CZ"
+      ? {
+        addPromotion: "Přidat akci",
+        marketSubtitle: "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu.",
+        market: "Trh *",
+        marketLabel: "Trh",
+        productCategory: "Kategorie produktu",
+        promoName: "Název akce",
+        promoNamePlaceholder: "Zadejte název akce",
+        startDate: "Datum začátku",
+        endDate: "Datum ukončení",
+        scope: "Rozsah akce",
+        scopePlaceholder: "Vyberte rozsah akce",
+        channel: "Propagační kanál",
+        channelPlaceholder: "Vyberte propagační kanál",
+        brand: "Značka",
+        product: "Produkt",
+        retailer: "Prodejce",
+        discount: "Typ a výše slevy",
+        discountPlaceholder: "např. -25% nad 999 CZK",
+        threshold: "Minimální nákup",
+        thresholdPlaceholder: "např. 999 CZK",
+        sku: "Počet SKU",
+        skuPlaceholder: "Zadejte počet SKU",
+        avgDiscount: "Průměrná tržní sleva",
+        avgDiscountPlaceholder: "např. 18%",
+        notes: "Poznámky a podmínky",
+        notesPlaceholder: "Podmínky, výjimky, pravidla...",
+        upload: "Nahrajte screenshot nebo kreativ",
+        changeImage: "Změnit obrázek",
+        loading: "Načítání textu...",
+        cancel: "Zrušit",
+        save: "Uložit akci",
+        add: "Přidat",
+        addBrand: "Přidat značku",
+        addProduct: "Přidat produkt",
+        addBrandTitle: "Přidat novou značku",
+        addProductTitle: "Přidat nový produkt",
+        brandNameLabel: "Název značky",
+        brandNamePlaceholder: "Zadejte název značky",
+        productNameLabel: "Název produktu",
+        productNamePlaceholder: "Název produktu",
+        brandSelectLabel: "Značka",
+        brandSelectPlaceholder: "Vyberte značku",
+        categorySelectLabel: "Kategorie",
+        categorySelectPlaceholder: "Vyberte kategorii",
+        priceLabel: "Cena",
+        pricePlaceholder: "Cena",
+        descriptionLabel: "Popis",
+        descriptionPlaceholder: "Popis",
+        retailerLabel: "Prodejce",
+        retailerPlaceholder: "Prodejce",
+        saveBrand: "Uložit značku",
+        saveProduct: "Uložit produkt",
+        validationError: "Zkontrolujte povinná pole formuláře.",
+        errors: {
+          name: "Zadejte název akce.",
+          from: "Vyberte datum začátku.",
+          to: "Vyberte datum ukončení.",
+          invalidDates: "Datum ukončení musí být po datu začátku.",
+          discount: "Zadejte výši slevy.",
+          brand: "Vyberte značku.",
+          product: "Vyberte produkt.",
+        },
+      }
+      : {
+        addPromotion: "Dodaj promocję",
+        marketSubtitle: "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim.",
+        market: "Rynek *",
+        marketLabel: "Rynek",
+        productCategory: "Kategoria produktu",
+        promoName: "Nazwa promocji",
+        promoNamePlaceholder: "Wprowadź nazwę promocji",
+        startDate: "Data rozpoczęcia",
+        endDate: "Data zakończenia",
+        scope: "Zasięg promocji",
+        scopePlaceholder: "Wybierz zasięg promocji",
+        channel: "Kanał promocyjny",
+        channelPlaceholder: "Wybierz kanał promocyjny",
+        brand: "Marka",
+        product: "Produkt",
+        retailer: "Sprzedawca",
+        discount: "Poziom i typ rabatu",
+        discountPlaceholder: "np. -25% powyżej 99 PLN",
+        threshold: "Próg zakupowy",
+        thresholdPlaceholder: "np. 99 PLN",
+        sku: "Liczba SKU",
+        skuPlaceholder: "Wpisz liczbę SKU",
+        avgDiscount: "Średni rabat rynkowy",
+        avgDiscountPlaceholder: "np. 18%",
+        notes: "Uwagi i warunki",
+        notesPlaceholder: "Warunki, wykluczenia, zasady...",
+        upload: "Prześlij screenshot lub kreację",
+        changeImage: "Zmień obraz",
+        loading: "Wczytuję tekst...",
+        cancel: "Anuluj",
+        save: "Zapisz promocję",
+        add: "Dodaj",
+        addBrand: "Dodaj markę",
+        addProduct: "Dodaj produkt",
+        addBrandTitle: "Dodaj nową markę",
+        addProductTitle: "Dodaj nowy produkt",
+        brandNameLabel: "Nazwa marki",
+        brandNamePlaceholder: "Wpisz nazwę marki",
+        productNameLabel: "Nazwa produktu",
+        productNamePlaceholder: "Nazwa produktu",
+        brandSelectLabel: "Marka",
+        brandSelectPlaceholder: "Wybierz markę",
+        categorySelectLabel: "Kategoria",
+        categorySelectPlaceholder: "Wybierz kategorię",
+        priceLabel: "Cena",
+        pricePlaceholder: "Cena",
+        descriptionLabel: "Opis",
+        descriptionPlaceholder: "Opis",
+        retailerLabel: "Sprzedawca",
+        retailerPlaceholder: "Sprzedawca",
+        saveBrand: "Zapisz markę",
+        saveProduct: "Zapisz produkt",
+        validationError: "Sprawdź wymagane pola formularza.",
+        errors: {
+          name: "Podaj nazwę promocji.",
+          from: "Wybierz datę rozpoczęcia.",
+          to: "Wybierz datę zakończenia.",
+          invalidDates: "Data zakończenia musi być po dacie rozpoczęcia.",
+          discount: "Podaj poziom rabatu.",
+          brand: "Wybierz markę.",
+          product: "Wybierz produkt.",
+        },
+      };
+
+  const [newProduct, setNewProduct] = useState<{
+    name: string;
+    brand: string;
+    category: Product["category"];
+    price: string;
+    description: string;
+    retailer: string;
+    image: string;
+  }>({
+    name: "",
+    brand: "",
+    category: productCategories[0],
+    price: "",
+    description: "",
+    retailer: "",
+    image: "",
+  });
 
   const update = (
     field: keyof FormState,
@@ -163,29 +295,60 @@ export default function PromotionFormModal({
     setForm((current) => ({ ...current, [field]: value }));
   };
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
+  const removeImage = () => {
+    setPreviewUrl("");
+    setImageFile(null);
+    update("creativeName", "");
+    update("creativeData", "");
+  };
 
-    if (!file) return;
+  const handleImageUpload = async (file: File) => {
+    setImageFile(file);
 
+    // Save the ORIGINAL image for preview/storage
     const reader = new FileReader();
-
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
-
-      setForm((current) => ({
-        ...current,
-        creativeName: file.name,
-        creativeData: result,
-      }));
-
       setPreviewUrl(result);
+      update("creativeName", file.name);
+      update("creativeData", result);
     };
-
     reader.readAsDataURL(file);
+
+    // Extract fields
+    setOcrLoading(true);
+    try {
+      let extracted: ExtractedFields;
+
+      if (isGeminiConfigured()) {
+        try {
+          extracted = await extractWithGemini(file);
+        } catch (err) {
+          console.warn(
+            "Gemini extraction failed, falling back to Tesseract:",
+            err,
+          );
+          extracted = await extractWithTesseract(file);
+        }
+      } else {
+        extracted = await extractWithTesseract(file);
+      }
+
+      setForm((current) => mergeExtractedIntoForm(current, extracted));
+    } catch (err) {
+      console.error("OCR extraction failed:", err);
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+    handleImageUpload(file);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = ({
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
@@ -195,64 +358,83 @@ export default function PromotionFormModal({
     maxSize: 5 * 1024 * 1024,
   });
 
-  const handleCreativeUpload = async (file: File) => {
-    // 1) Save the ORIGINAL image for preview/storage (don't show the user
-    //    the grayscale-processed version — that's just for OCR internally)
-    const reader = new FileReader();
-    reader.onload = () => {
-      update("creativeName", file.name);
-      update(
-        "creativeData",
-        typeof reader.result === "string" ? reader.result : "",
-      );
-    };
-    reader.readAsDataURL(file);
+  // --- shared merge logic -----------------------------------------------
 
-    // 2) Preprocess + run OCR on the processed version
-    setOcrLoading(true);
-    try {
-      const processedFile = await preprocessImageForOCR(file, {
-        scale: 1.5,
-        contrast: 1.4,
-        grayscale: true,
-      });
-
-      const worker = await createWorker(["eng", "pol"]);
-      const {
-        data: { text },
-      } = await worker.recognize(processedFile);
-      await worker.terminate();
-
-      const extracted = extractPromotionFields(text);
-
-      setForm((current) => ({
-        ...current,
-        discount: current.discount || extracted.discount,
-        threshold: current.threshold || extracted.threshold,
-        averageMarketDiscount:
-          current.averageMarketDiscount || extracted.averageMarketDiscount,
-        brands: current.brands.length ? current.brands : extracted.brands,
-        retailer: extracted.retailer || current.retailer,
-        category: extracted.category || current.category,
-        name: current.name || extracted.name,
-      }));
-    } catch (err) {
-      console.error("OCR extraction failed:", err);
-    } finally {
-      setOcrLoading(false);
-    }
+  type ExtractedFields = {
+    discount?: string;
+    threshold?: string;
+    averageMarketDiscount?: string;
+    brands?: string;
+    retailer?: string;
+    category?: string;
+    name?: string;
   };
+
+  const mergeExtractedIntoForm = (
+    current: FormState,
+    extracted: ExtractedFields,
+  ): FormState => ({
+    ...current,
+    discount: current.discount || extracted.discount || "",
+    threshold: current.threshold || extracted.threshold || "",
+    averageMarketDiscount:
+      current.averageMarketDiscount || extracted.averageMarketDiscount || "",
+    brands: current.brands.length ? current.brands : extracted.brands || "",
+    retailer: extracted.retailer || current.retailer,
+    category: extracted.category || current.category,
+    name: current.name || extracted.name || "",
+  });
+
+  // --- Tesseract path (local OCR) ----------------------------------------
+
+  const extractWithTesseract = async (file: File): Promise<ExtractedFields> => {
+    const processedFile = await preprocessImageForOCR(file, {
+      scale: 1.5,
+      contrast: 1.4,
+      grayscale: true,
+    });
+
+    const worker = await createWorker(["eng", "pol"]);
+    const {
+      data: { text },
+    } = await worker.recognize(processedFile);
+    await worker.terminate();
+
+    return extractPromotionFields(text);
+  };
+
+  // --- Gemini path ---------------------------------------------------------
+
+  const extractWithGemini = async (file: File): Promise<ExtractedFields> => {
+    const raw = await readPromotionFieldsWithGemini(file);
+
+    return {
+      discount: raw.discount || "",
+      threshold: raw.threshold || "",
+      averageMarketDiscount: raw.averageMarketDiscount || "",
+      name: raw.name || "",
+      brands: findKnownMatches(raw.brands || "", brandCatalog) as string,
+      retailer: findKnownMatches(raw.retailer || "", retailers) as string,
+      category: findKnownMatches(raw.category || "", categories) as string,
+    };
+  };
+
+  // --- orchestration ---------------------------------------------------------
+
+  const isGeminiConfigured = () =>
+    Boolean(process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     const errors: Record<string, string> = {};
-    if (!form.name) errors.name = "Podaj nazwę promocji.";
-    if (!form.from) errors.from = "Wybierz datę rozpoczęcia.";
-    if (!form.to) errors.to = "Wybierz datę zakończenia.";
+    if (!form.name) errors.name = currentLanguage.errors.name;
+    if (!form.from) errors.from = currentLanguage.errors.from;
+    if (!form.to) errors.to = currentLanguage.errors.to;
     if (form.from && form.to && form.from > form.to)
-      errors.to = "Data zakończenia musi być po dacie rozpoczęcia.";
-    if (!form.discount) errors.discount = "Podaj poziom rabatu.";
-    if (!form.brands) errors.brands = "Wybierz markę.";
+      errors.to = currentLanguage.errors.invalidDates;
+    if (!form.discount) errors.discount = currentLanguage.errors.discount;
+    if (!form.brands) errors.brands = currentLanguage.errors.brand;
+    if (!form.product) errors.product = currentLanguage.errors.product;
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setError("Sprawdź wymagane pola formularza.");
@@ -263,234 +445,524 @@ export default function PromotionFormModal({
     setError("");
     setFieldErrors({});
     setPreviewUrl("");
+    setImageFile(null);
+  };
+
+  const marketRetailers = form.market === "CZ" ? czRetailers : retailers;
+  const marketBrandOptions = getMarketBrandOptions(
+    form.market,
+    brandsByMarket[form.market],
+  );
+  const marketProductOptions = productsList.filter(
+    (item) => item.market === form.market,
+  );
+
+  const saveBrand = () => {
+    const trimmed = newBrandName.trim();
+    if (!trimmed) return;
+
+    addBrand(trimmed, form.market as "PL" | "CZ");
+    setForm((current) => ({ ...current, brands: trimmed }));
+    setNewBrandName("");
+    setBrandModalOpen(false);
+  };
+
+  const saveProduct = () => {
+    const productName = newProduct.name.trim();
+    const brandName = newProduct.brand.trim();
+
+    if (!productName || !brandName) return;
+
+    const createdProduct: Product = {
+      id: `USER-${Date.now()}`,
+      name: productName,
+      brand: brandName,
+      category: newProduct.category as Product["category"],
+      price: Number(newProduct.price || 0),
+      currency: form.market === "CZ" ? "CZK" : "PLN",
+      market: form.market,
+      retailer:
+        newProduct.retailer ||
+        form.retailer ||
+        marketRetailers[0] ||
+        retailers[0],
+      rating: 0,
+      stock: 1,
+      competitorDiscount: Number(form.discount.match(/\d+/)?.[0] || 0),
+      image:
+        newProduct.image ||
+        "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
+      fromDate: form.from || "2026-01-01",
+      toDate: form.to || "2026-12-31",
+      promotionName: productName,
+      description: newProduct.description || "User-created product",
+      promotionDescription: newProduct.description || "User-created product",
+      terms: "User-created product",
+      priceAfterDiscount: Number(newProduct.price || 0),
+    };
+
+    addProduct(createdProduct);
+    setForm((current) => ({
+      ...current,
+      product: productName,
+      brands: brandName,
+      category: categories.includes(current.category)
+        ? current.category
+        : current.category || "Pielęgnacja",
+    }));
+    setNewProduct({
+      name: "",
+      brand: "",
+      category: productCategories[0],
+      price: "",
+      description: "",
+      retailer: "",
+      image: "",
+    });
+    setProductModalOpen(false);
   };
 
   return (
-    <Modal open={open} onClose={onClose} aria-labelledby="promotion-form-title">
-      <Box
-        className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
-        sx={{
-          p: 4,
-        }}
-      >
+    <>
+      <Modal open={open} onClose={onClose} aria-labelledby="promotion-form-title">
         <Box
-          component="form"
-          onSubmit={submit}
-          className="flex flex-col gap-4 h-full"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
+          sx={{
+            p: 4,
+          }}
         >
           <Box
-            className="flex items-start justify-between gap-4 sticky"
-            id="promotion-form-title"
+            component="form"
+            onSubmit={submit}
+            className="flex flex-col gap-4 h-full"
           >
-            <Box>
-              <Typography
-                sx={{ color: "#173c35", fontSize: 22, fontWeight: 800 }}
-              >
-                Dodaj promocję
-              </Typography>
-              <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>
-                Wprowadź dane kampanii. Zapisana promocja pozostanie w języku
-                polskim.
-              </Typography>
-            </Box>
-            <Button
-              onClick={onClose}
-              aria-label="Zamknij"
-              sx={{ minWidth: 40, color: "#65736f" }}
+            <Box
+              className="flex items-start justify-between gap-4 sticky"
+              id="promotion-form-title"
             >
-              <CloseRounded />
-            </Button>
-          </Box>
-          <Box className="flex flex-col gap-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            <Box className="mb-4 flex items-center justify-between">
-              <Typography
-                sx={{ color: "#48665d", fontSize: 13, fontWeight: 700 }}
-              >
-                Rynek *
-              </Typography>
-              <Box className="flex gap-1 rounded-l bg-[#f2f7f5]">
-                {(["PL", "CZ"] as const).map((market) => (
-                  <Button
-                    key={market}
-                    onClick={() => update("market", market)}
-                    variant={form.market === market ? "contained" : "text"}
-                    size="small"
-                    sx={{
-                      minWidth: 56,
-                      backgroundColor:
-                        form.market === market ? "#286e5e" : "transparent",
-                      color: form.market === market ? "white" : "#65736f",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {market}
-                  </Button>
-                ))}
+              <Box>
+                <Typography
+                  sx={{ color: "#173c35", fontSize: 22, fontWeight: 800 }}
+                >
+                  {currentLanguage.addPromotion}
+                </Typography>
+                <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>
+                  {form.market === "CZ"
+                    ? "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu."
+                    : "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim."}
+                </Typography>
               </Box>
-            </Box>
-            <Box className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <FormField
-                label="Nazwa promocji"
-                value={form.name}
-                onValueChange={(value) => update("name", value)}
-                required
-                error={fieldErrors.name}
-                placeholder="Wpisz nazwę promocji"
-              />
-              <FormField
-                type="select"
-                label="Kategoria produktu"
-                value={form.category}
-                onValueChange={(value) => update("category", value)}
-                options={categories.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-                required
-                placeholder="Kategoria produktu"
-              />
-              <FormField
-                type="date"
-                label="Data rozpoczęcia"
-                value={form.from}
-                onValueChange={(value) => update("from", value)}
-                required
-                error={fieldErrors.from}
-                placeholder="DD/MM/YYYY"
-              />
-              <FormField
-                type="date"
-                label="Data zakończenia"
-                value={form.to}
-                onValueChange={(value) => update("to", value)}
-                required
-                error={fieldErrors.to}
-                placeholder="DD/MM/YYYY"
-              />
-              <FormField
-                type="select"
-                label="Zasięg promocji"
-                value={form.scope}
-                onValueChange={(value) => update("scope", value)}
-                options={scopes.map((item) => ({ label: item, value: item }))}
-                placeholder="Zasięg promocji"
-              />
-              <FormField
-                type="select"
-                label="Kanał promocyjny"
-                value={form.channel}
-                onValueChange={(value) => update("channel", value)}
-                options={channels.map((item) => ({ label: item, value: item }))}
-                placeholder="Kanał promocyjny"
-              />
-              <FormField
-                type="select"
-                label="Marka"
-                value={form.brands}
-                onValueChange={(value) => update("brands", value)}
-                options={brands.map((item) => ({ label: item, value: item }))}
-                required
-                error={fieldErrors.brands}
-                placeholder="Marka"
-              />
-              <FormField
-                type="select"
-                label="Sprzedawca"
-                value={form.retailer}
-                onValueChange={(value) => update("retailer", value)}
-                options={retailers.map((item) => ({
-                  label: item,
-                  value: item,
-                }))}
-                placeholder="Sprzedawca"
-              />
-              <FormField
-                label="Poziom i typ rabatu"
-                placeholder="np. -25% powyżej 99 PLN"
-                value={form.discount}
-                onValueChange={(value) => update("discount", value)}
-                required
-                error={fieldErrors.discount}
-              />
-              <FormField
-                label="Próg zakupowy"
-                placeholder="np. 99 PLN"
-                value={form.threshold}
-                onValueChange={(value) => update("threshold", value)}
-              />
-              <FormField
-                type="number"
-                label="Liczba SKU"
-                value={form.skuCount}
-                onValueChange={(value) => update("skuCount", value)}
-                placeholder="Wpisz liczbę SKU"
-              />
-              <FormField
-                label="Średni rabat rynkowy"
-                placeholder="np. 18%"
-                value={form.averageMarketDiscount}
-                onValueChange={(value) =>
-                  update("averageMarketDiscount", value)
-                }
-              />
-              <FormField
-                className="md:col-span-2"
-                multiline
-                minRows={3}
-                label="Uwagi i warunki"
-                placeholder="Regulamin, wyjątki, ograniczenia..."
-                value={form.notes}
-                onValueChange={(value) => update("notes", value)}
-              />
               <Button
-                component="label"
-                variant="outlined"
-                startIcon={<AddPhotoAlternateRounded />}
-                className="md:col-span-2 !justify-start !border-[#dce6e2] !py-3 !text-[#48665d] !normal-case"
+                onClick={onClose}
+                aria-label="Zamknij"
+                sx={{ minWidth: 40, color: "#65736f" }}
               >
-                <span>
-                  {form.creativeName || "Prześlij screenshot lub kreację"}
-                </span>
-                <input
-                  hidden
-                  type="file"
-                  accept="image/*"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    handleCreativeUpload(file);
-                  }}
-                />
+                <CloseRounded />
               </Button>
             </Box>
-            {error && (
-              <Typography sx={{ color: "#b55a50", fontSize: 13, mt: 2 }}>
-                {error}
-              </Typography>
-            )}
+            <Box className="flex flex-col gap-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+              <Box className="mb-4 flex items-center justify-between">
+                <Typography
+                  sx={{ color: "#48665d", fontSize: 13, fontWeight: 700 }}
+                >
+                  {currentLanguage.market}
+                </Typography>
+                <Box className="flex gap-1 rounded-l bg-[#f2f7f5]">
+                  {(["PL", "CZ"] as const).map((market) => (
+                    <Button
+                      key={market}
+                      onClick={() => {
+                        update("market", market);
+                        setForm((current) => ({
+                          ...current,
+                          market,
+                          brands: "",
+                          product: "",
+                          retailer: "",
+                        }));
+                      }}
+                      variant={form.market === market ? "contained" : "text"}
+                      size="small"
+                      sx={{
+                        minWidth: 56,
+                        backgroundColor:
+                          form.market === market ? "#286e5e" : "transparent",
+                        color: form.market === market ? "white" : "#65736f",
+                        fontWeight: 800,
+                      }}
+                    >
+                      {market}
+                    </Button>
+                  ))}
+                </Box>
+              </Box>
+
+              {/* Image Upload Section with Preview */}
+              <Box className="mb-2">
+                {previewUrl ? (
+                  <Box className="relative rounded-lg overflow-hidden border border-[#dce6e2]">
+                    <Box className="relative">
+                      <img
+                        src={previewUrl}
+                        alt="Promotion preview"
+                        className="w-full h-auto max-h-[200px] object-contain bg-[#f8faf9]"
+                      />
+                      <Box className="absolute top-2 right-2 flex gap-1">
+                        <IconButton
+                          size="small"
+                          sx={{
+                            bgcolor: 'white',
+                            '&:hover': { bgcolor: '#f5f5f5' },
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                          }}
+                          onClick={() => {
+                            // Trigger file input for editing
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.accept = 'image/*';
+                            input.onchange = (e) => {
+                              const file = (e.target as HTMLInputElement).files?.[0];
+                              if (file) handleImageUpload(file);
+                            };
+                            input.click();
+                          }}
+                          disabled={ocrLoading}
+                        >
+                          <EditRounded sx={{ fontSize: 18 }} />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          sx={{
+                            bgcolor: 'white',
+                            '&:hover': { bgcolor: '#f5f5f5' },
+                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                          }}
+                          onClick={removeImage}
+                          disabled={ocrLoading}
+                        >
+                          <DeleteOutlineRounded sx={{ fontSize: 18 }} />
+                        </IconButton>
+                      </Box>
+                      {ocrLoading && (
+                        <Box className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <Box className="bg-white px-4 py-2 rounded-lg flex items-center gap-2">
+                            <Box
+                              component="span"
+                              sx={{
+                                width: 16,
+                                height: 16,
+                                border: "2px solid #bfd2ce",
+                                borderTopColor: "#286e5e",
+                                borderRadius: "50%",
+                                display: "inline-block",
+                                animation: "spin 0.8s linear infinite",
+                              }}
+                            />
+                            <Typography sx={{ fontSize: 13, color: "#173c35" }}>
+                              {currentLanguage.loading}
+                            </Typography>
+                          </Box>
+                        </Box>
+                      )}
+                    </Box>
+                    <Box className="px-3 py-2 bg-[#f8faf9] flex items-center justify-between">
+                      <Typography sx={{ fontSize: 12, color: "#65736f" }}>
+                        {form.creativeName}
+                      </Typography>
+                      <Typography sx={{ fontSize: 11, color: "#82908b" }}>
+                        {imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ''}
+                      </Typography>
+                    </Box>
+                  </Box>
+                ) : (
+                  <Box
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive ? 'border-[#286e5e] bg-[#f0f7f5]' : 'border-[#dce6e2] hover:border-[#286e5e]'
+                      } ${ocrLoading ? 'pointer-events-none opacity-60' : ''}`}
+                  >
+                    <input {...getInputProps()} disabled={ocrLoading} />
+                    <AddPhotoAlternateRounded sx={{ fontSize: 40, color: "#82908b", mb: 1 }} />
+                    <Typography sx={{ color: "#48665d", fontSize: 14, fontWeight: 500 }}>
+                      {isDragActive ? 'Upuść obraz tutaj' : currentLanguage.upload}
+                    </Typography>
+                    <Typography sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}>
+                      PNG, JPG, WEBP (max 5MB)
+                    </Typography>
+                    {ocrLoading && (
+                      <Typography sx={{ color: "#286e5e", fontSize: 12, mt: 1 }}>
+                        {currentLanguage.loading}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+              </Box>
+
+              <Box className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <FormField
+                  label={currentLanguage.promoName}
+                  value={form.name}
+                  onValueChange={(value) => update("name", value)}
+                  required
+                  error={fieldErrors.name}
+                  placeholder="Enter promotion name"
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.productCategory}
+                  value={form.category}
+                  onValueChange={(value) => update("category", value)}
+                  options={categories.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                  required
+                  placeholder="Product category"
+                />
+                <FormField
+                  type="date"
+                  label={currentLanguage.startDate}
+                  value={form.from}
+                  onValueChange={(value) => update("from", value)}
+                  required
+                  error={fieldErrors.from}
+                  placeholder="DD/MM/YYYY"
+                />
+                <FormField
+                  type="date"
+                  label={currentLanguage.endDate}
+                  value={form.to}
+                  onValueChange={(value) => update("to", value)}
+                  required
+                  error={fieldErrors.to}
+                  placeholder="DD/MM/YYYY"
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.scope}
+                  value={form.scope}
+                  onValueChange={(value) => update("scope", value)}
+                  options={scopes.map((item) => ({ label: item, value: item }))}
+                  placeholder="Promotion scope"
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.channel}
+                  value={form.channel}
+                  onValueChange={(value) => update("channel", value)}
+                  options={channels.map((item) => ({ label: item, value: item }))}
+                  placeholder="Promotion channel"
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.brand}
+                  value={form.brands}
+                  onValueChange={(value) => update("brands", value)}
+                  options={marketBrandOptions.map((item) => ({ label: item, value: item }))}
+                  required
+                  error={fieldErrors.brands}
+                  placeholder={currentLanguage.brand}
+                  labelAction={{ label: `${currentLanguage.add} brand`, onClick: () => setBrandModalOpen(true) }}
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.product}
+                  value={form.product}
+                  onValueChange={(value) => {
+                    const nextProduct = String(value);
+                    const selected = marketProductOptions.find((item) => item.name === nextProduct);
+
+                    setForm((current) => ({
+                      ...current,
+                      product: nextProduct,
+                      brands: selected?.brand || current.brands,
+                      category: selected?.category
+                        ? categories.find((item) =>
+                          item ===
+                          {
+                            Skincare: "Pielęgnacja",
+                            Fragrance: "Perfumy",
+                            Makeup: "Makijaż",
+                            Haircare: "Włosy",
+                          }[selected.category]) || current.category
+                        : current.category,
+                      retailer: selected?.retailer || current.retailer,
+                    }));
+                  }}
+                  options={marketProductOptions.map((item) => ({
+                    label: `${item.name} · ${item.brand}`,
+                    value: item.name,
+                  }))}
+                  required
+                  error={fieldErrors.product}
+                  placeholder={currentLanguage.product}
+                  labelAction={{ label: `${currentLanguage.add} product`, onClick: () => setProductModalOpen(true) }}
+                />
+                <FormField
+                  type="select"
+                  label={currentLanguage.retailer}
+                  value={form.retailer}
+                  onValueChange={(value) => update("retailer", value)}
+                  options={marketRetailers.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
+                  placeholder={currentLanguage.retailer}
+                />
+                <FormField
+                  label={currentLanguage.discount}
+                  placeholder="np. -25% powyżej 99 PLN"
+                  value={form.discount}
+                  onValueChange={(value) => update("discount", value)}
+                  required
+                  error={fieldErrors.discount}
+                />
+                <FormField
+                  label={currentLanguage.threshold}
+                  placeholder="e.g. 999 CZK"
+                  value={form.threshold}
+                  onValueChange={(value) => update("threshold", value)}
+                />
+                <FormField
+                  type="number"
+                  label={currentLanguage.sku}
+                  value={form.skuCount}
+                  onValueChange={(value) => update("skuCount", value)}
+                  placeholder="Wpisz liczbę SKU"
+                />
+                <FormField
+                  label={currentLanguage.avgDiscount}
+                  placeholder="e.g. 18%"
+                  value={form.averageMarketDiscount}
+                  onValueChange={(value) =>
+                    update("averageMarketDiscount", value)
+                  }
+                />
+                <FormField
+                  className="md:col-span-2"
+                  multiline
+                  minRows={3}
+                  label={currentLanguage.notes}
+                  placeholder="Terms, exclusions, conditions..."
+                  value={form.notes}
+                  onValueChange={(value) => update("notes", value)}
+                />
+              </Box>
+              {error && (
+                <Typography sx={{ color: "#b55a50", fontSize: 13, mt: 2 }}>
+                  {error}
+                </Typography>
+              )}
+            </Box>
+            <Box className="flex justify-end gap-2 sticky">
+              <Button
+                onClick={onClose}
+                sx={{ color: "#65736f", textTransform: "none" }}
+              >
+                {currentLanguage.cancel}
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                startIcon={<SaveRounded />}
+                sx={{
+                  backgroundColor: "#286e5e",
+                  textTransform: "none",
+                  "&:hover": { backgroundColor: "#1d594b" },
+                }}
+              >
+                {currentLanguage.save}
+              </Button>
+            </Box>
           </Box>
-          <Box className="flex justify-end gap-2 sticky">
-            <Button
-              onClick={onClose}
-              sx={{ color: "#65736f", textTransform: "none" }}
-            >
-              Anuluj
+        </Box>
+      </Modal>
+
+      <Modal open={brandModalOpen} onClose={() => setBrandModalOpen(false)}>
+        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
+          <Typography sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}>
+            {currentLanguage.addBrandTitle}
+          </Typography>
+          <FormField
+            label={currentLanguage.brandNameLabel}
+            value={newBrandName}
+            onValueChange={(value) => setNewBrandName(String(value))}
+            placeholder={currentLanguage.brandNamePlaceholder}
+            className="mb-2"
+          />
+          <Box className="flex justify-end gap-2">
+            <Button onClick={() => setBrandModalOpen(false)} sx={{ color: "#65736f", textTransform: "none" }}>
+              {currentLanguage.cancel}
             </Button>
-            <Button
-              type="submit"
-              variant="contained"
-              startIcon={<SaveRounded />}
-              sx={{
-                backgroundColor: "#286e5e",
-                textTransform: "none",
-                "&:hover": { backgroundColor: "#1d594b" },
-              }}
-            >
-              Zapisz promocję
+            <Button variant="contained" onClick={saveBrand} sx={{ backgroundColor: "#286e5e", textTransform: "none" }}>
+              {currentLanguage.saveBrand}
             </Button>
           </Box>
         </Box>
-      </Box>
-    </Modal>
+      </Modal>
+
+      <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)}>
+        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
+          <Typography sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}>
+            {currentLanguage.addProductTitle}
+          </Typography>
+          <Box className="grid gap-3">
+            <FormField
+              label={currentLanguage.productNameLabel}
+              value={newProduct.name}
+              onValueChange={(value) => setNewProduct((current) => ({ ...current, name: String(value) }))}
+              placeholder={currentLanguage.productNamePlaceholder}
+            />
+            <FormField
+              type="select"
+              label={currentLanguage.brandSelectLabel}
+              value={newProduct.brand}
+              onValueChange={(value) => setNewProduct((current) => ({ ...current, brand: String(value) }))}
+              options={marketBrandOptions.map((item) => ({ label: item, value: item }))}
+              placeholder={currentLanguage.brandSelectPlaceholder}
+            />
+            <FormField
+              type="select"
+              label={currentLanguage.categorySelectLabel}
+              value={newProduct.category}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  category: value as Product["category"],
+                }))
+              }
+              options={productCategories.map((item) => ({ label: item, value: item }))}
+              placeholder={currentLanguage.categorySelectPlaceholder}
+            />
+            <FormField
+              type="number"
+              label={currentLanguage.priceLabel}
+              value={newProduct.price}
+              onValueChange={(value) => setNewProduct((current) => ({ ...current, price: String(value) }))}
+              placeholder={currentLanguage.pricePlaceholder}
+            />
+            <FormField
+              label={currentLanguage.descriptionLabel}
+              value={newProduct.description}
+              onValueChange={(value) => setNewProduct((current) => ({ ...current, description: String(value) }))}
+              placeholder={currentLanguage.descriptionPlaceholder}
+            />
+            <FormField
+              label={currentLanguage.retailerLabel}
+              value={newProduct.retailer}
+              onValueChange={(value) => setNewProduct((current) => ({ ...current, retailer: String(value) }))}
+              placeholder={currentLanguage.retailerPlaceholder}
+            />
+          </Box>
+          <Box className="mt-4 flex justify-end gap-2">
+            <Button onClick={() => setProductModalOpen(false)} sx={{ color: "#65736f", textTransform: "none" }}>
+              {currentLanguage.cancel}
+            </Button>
+            <Button variant="contained" onClick={saveProduct} sx={{ backgroundColor: "#286e5e", textTransform: "none" }}>
+              {currentLanguage.saveProduct}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+    </>
   );
 }

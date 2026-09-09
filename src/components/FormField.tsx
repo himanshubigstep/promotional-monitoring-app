@@ -23,6 +23,11 @@ export type FormFieldOption = {
     value: string;
 };
 
+type LabelAction = {
+    label: string;
+    onClick: () => void;
+};
+
 type CommonProps = {
     label: string;
     value: string | number | string[];
@@ -33,6 +38,7 @@ type CommonProps = {
     placeholder?: string;
     fullWidth?: boolean;
     className?: string;
+    labelAction?: LabelAction;
 };
 
 type TextFieldProps = CommonProps & {
@@ -97,6 +103,59 @@ export default function FormField(props: FormFieldProps) {
     const error = Boolean(props.error);
     const helperText = getErrorMessage(props.error, props.helperText);
 
+    const renderFieldLabel = () => (
+        <Box
+            sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 1,
+                mb: 0.75,
+            }}
+        >
+            <Typography
+                component="label"
+                sx={{
+                    display: "block",
+                    color: error ? "#b55a50" : "#48665d",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    lineHeight: 1.4,
+                }}
+            >
+                {props.label}
+                {props.required ? " *" : ""}
+            </Typography>
+
+            {props.labelAction && (
+                <Box
+                    component="button"
+                    type="button"
+                    onClick={props.labelAction.onClick}
+                    sx={{
+                        border: "none",
+                        background: "transparent",
+                        color: "#286e5e",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        padding: 0,
+                        lineHeight: 1.4,
+                        textDecoration: "underline",
+                        textUnderlineOffset: "2px",
+                        whiteSpace: "nowrap",
+                        fontFamily: "inherit",
+                        '&:hover': {
+                            color: "#1e534b",
+                        },
+                    }}
+                >
+                    {props.labelAction.label}
+                </Box>
+            )}
+        </Box>
+    );
+
     /*
      * --------------------------------------------------------------------------
      * SELECT / MULTISELECT
@@ -129,19 +188,7 @@ export default function FormField(props: FormFieldProps) {
 
         return (
             <Box className={props.className}>
-                <Typography
-                    component="label"
-                    sx={{
-                        display: "block",
-                        color: error ? "#b55a50" : "#48665d",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        mb: 0.75,
-                    }}
-                >
-                    {props.label}
-                    {props.required ? " *" : ""}
-                </Typography>
+                {renderFieldLabel()}
 
                 <FormControl
                     fullWidth={props.fullWidth !== false}
@@ -268,19 +315,7 @@ export default function FormField(props: FormFieldProps) {
 
         return (
             <Box className={props.className}>
-                <Typography
-                    component="label"
-                    sx={{
-                        display: "block",
-                        color: error ? "#b55a50" : "#48665d",
-                        fontSize: 12,
-                        fontWeight: 700,
-                        mb: 0.75,
-                    }}
-                >
-                    {props.label}
-                    {props.required ? " *" : ""}
-                </Typography>
+                {renderFieldLabel()}
 
                 <ThemeProvider theme={datePickerTheme}>
                     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -537,19 +572,7 @@ export default function FormField(props: FormFieldProps) {
 
     return (
         <Box className={props.className}>
-            <Typography
-                component="label"
-                sx={{
-                    display: "block",
-                    color: error ? "#b55a50" : "#48665d",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    mb: 0.75,
-                }}
-            >
-                {props.label}
-                {props.required ? " *" : ""}
-            </Typography>
+            {renderFieldLabel()}
 
             <TextField
                 required={props.required}

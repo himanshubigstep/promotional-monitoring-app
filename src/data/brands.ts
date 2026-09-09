@@ -1,5 +1,27 @@
 // Initial PL brand seed from Sephora Poland's public A-Z directory.
 // The context keeps this list extensible for brands added by users.
+export const czDummyBrands = [
+  "CZ Demo Brand Prague",
+  "CZ Demo Brand Brno",
+  "CZ Demo Brand Ostrava",
+  "Demo Beauty Lab",
+  "City Glow",
+] as const;
+
+export const getMarketBrandOptions = (
+  market: "PL" | "CZ" | "All",
+  customBrands: string[] = [],
+) => {
+  const baseBrands =
+    market === "CZ"
+      ? [...czDummyBrands]
+      : market === "PL"
+        ? [...sephoraBrands]
+        : [...sephoraBrands, ...czDummyBrands];
+
+  return Array.from(new Set([...baseBrands, ...customBrands]));
+};
+
 export const sephoraBrands = [
   "Sephora Collection",
   "Chanel",

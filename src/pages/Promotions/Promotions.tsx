@@ -17,7 +17,6 @@ import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
-import type { Product } from "../../data/productTypes";
 
 const today = "2026-09-08";
 const fallbackImage =
@@ -66,7 +65,7 @@ export default function Promotions() {
     (savedPage - 1) * savedPageSize,
     savedPage * savedPageSize,
   );
-  const downloadUpdatedProducts = () => { if (!catalog || !Array.isArray(catalog) || catalog.length === 0) { return; } const headers = Object.keys(catalog[0]) as Array<keyof Product>; const table = ` <table border="1"> <thead> <tr> ${headers.map((header) => `<th>${String(header)}</th>`).join("")} </tr> </thead> <tbody> ${catalog.map((product) => ` <tr> ${headers.map((header) => `<td>${String(product[header] ?? "")}</td>`).join("")} </tr> `).join("")} </tbody> </table> `; const blob = new Blob([table], { type: "application/vnd.ms-excel", }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "products.updated.xls"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
+  const downloadUpdatedProducts = () => { if (!catalog || !Array.isArray(catalog) || catalog.length === 0) { return; } const headers = Object.keys(catalog[0]); const table = ` <table border="1"> <thead> <tr> ${headers.map((header) => `<th>${String(header)}</th>`).join("")} </tr> </thead> <tbody> ${catalog.map((product) => ` <tr> ${headers.map((header) => `<td>${String(product[header as keyof typeof product] ?? "")}</td>`).join("")} </tr> `).join("")} </tbody> </table> `; const blob = new Blob([table], { type: "application/vnd.ms-excel", }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "products.updated.xls"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
   useEffect(() => {
     setPage(1);
     setSavedPage(1);

@@ -1,12 +1,11 @@
 import { CalendarMonthRounded, DownloadRounded } from "@mui/icons-material";
 import { Box, Button, Card, Chip, Tooltip, Typography } from "@mui/material";
 import { useMemo, useState } from "react";
-import products from "../../data/products.json";
+import { catalog } from "../../data/catalog";
 import type { Product } from "../../data/productTypes";
 import { useAppContext } from "../../context/AppContext";
 import YearFilter from "../../components/YearFilter";
 
-const catalog = products as Product[];
 const months = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"

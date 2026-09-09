@@ -14,13 +14,11 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import products from "../../data/products.json";
-import type { Product } from "../../data/productTypes";
+import { catalog } from "../../data/catalog";
 import { useAppContext } from "../../context/AppContext";
 
 export default function StoreComparison() {
   const { filters } = useAppContext();
-  const catalog: Product[] = products as Product[];
   const categoryProducts = catalog.filter(
     (product) =>
       (filters.market === "All" || product.market === filters.market) &&
