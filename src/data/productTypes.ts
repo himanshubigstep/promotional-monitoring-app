@@ -1,0 +1,21 @@
+export type Product = {
+  id: string;
+  name: string;
+  brand: string;
+  category: "Skincare" | "Fragrance" | "Makeup" | "Haircare";
+  price: number;
+  currency: "PLN" | "CZK";
+  market: "PL" | "CZ";
+  retailer: string;
+  rating: number;
+  stock: number;
+  competitorDiscount: number;
+  image: string;
+  fromDate: string;
+  toDate: string;
+  promotionName: string;
+  description: string;
+  promotionDescription: string;
+  terms: string;
+  priceAfterDiscount: number;
+};
