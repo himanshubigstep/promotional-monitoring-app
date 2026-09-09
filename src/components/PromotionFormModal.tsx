@@ -1,24 +1,15 @@
-import React, { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import {
   AddPhotoAlternateRounded,
   CloseRounded,
+  DeleteOutlineRounded,
   SaveRounded,
 } from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Modal,
-  OutlinedInput,
-  Select,
-  TextField,
-  Typography,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Button, Modal, Typography } from "@mui/material";
 import { createWorker } from "tesseract.js";
 import type { Promotion } from "../context/AppContext";
+import FormField from "./FormField";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
@@ -62,18 +53,21 @@ const channels = [
   "Aplikacja mobilna",
 ];
 
-type FormState = Omit<Promotion, "id" | "createdAt">;
+// Update FormState to have brands as string instead of array
+type FormState = Omit<Promotion, "id" | "createdAt"> & {
+  brands: string; // Override brands to be string
+};
 
 const emptyForm: FormState = {
   market: "PL",
   name: "",
   from: "",
   to: "",
-  scope: "Omnichannel",
-  channel: "Website",
-  category: "Skincare",
-  brands: [],
-  retailer: "Rossmann Polska",
+  scope: "",
+  channel: "",
+  category: "",
+  brands: "",
+  retailer: "",
   discount: "",
   threshold: "",
   skuCount: 1,
@@ -123,7 +117,7 @@ const extractPromotionFields = (rawText: string) => {
   const averageMarketDiscount = avgMatch ? avgMatch[1].replace(/\s+/g, "") : "";
 
   // Known-list matches
-  const matchedBrands = findKnownMatches(text, brands, true) as string[];
+  const matchedBrand = findKnownMatches(text, brands) as string;
   const matchedRetailer = findKnownMatches(text, retailers) as string;
   const matchedCategory = findKnownMatches(text, categories) as string;
 
@@ -138,7 +132,7 @@ const extractPromotionFields = (rawText: string) => {
     discount,
     threshold,
     averageMarketDiscount,
-    brands: matchedBrands,
+    brands: matchedBrand,
     retailer: matchedRetailer,
     category: matchedCategory,
     name: nameCandidate || "",
@@ -156,8 +150,10 @@ export default function PromotionFormModal({
   onClose: () => void;
   onSave: (promotion: FormState) => void;
 }) {
+  const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState(false);
 
   const update = (
@@ -166,6 +162,38 @@ export default function PromotionFormModal({
   ) => {
     setForm((current) => ({ ...current, [field]: value }));
   };
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : "";
+
+      setForm((current) => ({
+        ...current,
+        creativeName: file.name,
+        creativeData: result,
+      }));
+
+      setPreviewUrl(result);
+    };
+
+    reader.readAsDataURL(file);
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+    },
+    multiple: false,
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
+  });
 
   const handleCreativeUpload = async (file: File) => {
     // 1) Save the ORIGINAL image for preview/storage (don't show the user
@@ -217,27 +245,41 @@ export default function PromotionFormModal({
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
-    if (
-      !form.name ||
-      !form.from ||
-      !form.to ||
-      !form.discount ||
-      form.brands.length === 0
-    ) {
-      setError("Uzupełnij wymagane pola: nazwa, daty, rabat i marka.");
+    const errors: Record<string, string> = {};
+    if (!form.name) errors.name = "Podaj nazwę promocji.";
+    if (!form.from) errors.from = "Wybierz datę rozpoczęcia.";
+    if (!form.to) errors.to = "Wybierz datę zakończenia.";
+    if (form.from && form.to && form.from > form.to)
+      errors.to = "Data zakończenia musi być po dacie rozpoczęcia.";
+    if (!form.discount) errors.discount = "Podaj poziom rabatu.";
+    if (!form.brands) errors.brands = "Wybierz markę.";
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError("Sprawdź wymagane pola formularza.");
       return;
     }
     onSave(form);
     setForm(emptyForm);
     setError("");
+    setFieldErrors({});
+    setPreviewUrl("");
   };
 
   return (
     <Modal open={open} onClose={onClose} aria-labelledby="promotion-form-title">
-      <Box className="absolute left-1/2 top-1/2 max-h-[calc(100vh-32px)] w-[calc(100%-32px)] max-w-[900px] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-2xl bg-white shadow-2xl p-4">
-        <Box component="form" onSubmit={submit}>
+      <Box
+        className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
+        sx={{
+          p: 4,
+        }}
+      >
+        <Box
+          component="form"
+          onSubmit={submit}
+          className="flex flex-col gap-4 h-full"
+        >
           <Box
-            className="flex items-start justify-between gap-4 mb-4"
+            className="flex items-start justify-between gap-4 sticky"
             id="promotion-form-title"
           >
             <Box>
@@ -259,7 +301,7 @@ export default function PromotionFormModal({
               <CloseRounded />
             </Button>
           </Box>
-          <Box>
+          <Box className="flex flex-col gap-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
             <Box className="mb-4 flex items-center justify-between">
               <Typography
                 sx={{ color: "#48665d", fontSize: 13, fontWeight: 700 }}
@@ -287,163 +329,127 @@ export default function PromotionFormModal({
               </Box>
             </Box>
             <Box className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <TextField
-                required
+              <FormField
                 label="Nazwa promocji"
                 value={form.name}
-                onChange={(event) => update("name", event.target.value)}
-                fullWidth
-              />
-              <FormControl required fullWidth>
-                <InputLabel>Kategoria produktu</InputLabel>
-                <Select
-                  label="Kategoria produktu"
-                  value={form.category}
-                  onChange={(event) => update("category", event.target.value)}
-                >
-                  {categories.map((item) => (
-                    <MenuItem key={item} value={item}>
-                      {item}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
+                onValueChange={(value) => update("name", value)}
                 required
+                error={fieldErrors.name}
+                placeholder="Wpisz nazwę promocji"
+              />
+              <FormField
+                type="select"
+                label="Kategoria produktu"
+                value={form.category}
+                onValueChange={(value) => update("category", value)}
+                options={categories.map((item) => ({
+                  label: item,
+                  value: item,
+                }))}
+                required
+                placeholder="Kategoria produktu"
+              />
+              <FormField
                 type="date"
-                label="Od"
-                slotProps={{ inputLabel: { shrink: true } }}
+                label="Data rozpoczęcia"
                 value={form.from}
-                onChange={(event) => update("from", event.target.value)}
-              />
-              <TextField
+                onValueChange={(value) => update("from", value)}
                 required
+                error={fieldErrors.from}
+                placeholder="DD/MM/YYYY"
+              />
+              <FormField
                 type="date"
-                label="Do"
-                slotProps={{ inputLabel: { shrink: true } }}
+                label="Data zakończenia"
                 value={form.to}
-                onChange={(event) => update("to", event.target.value)}
-              />
-              <FormControl fullWidth>
-                <InputLabel>Zakres promocji</InputLabel>
-                <Select
-                  label="Zakres promocji"
-                  value={form.scope}
-                  onChange={(event) => update("scope", event.target.value)}
-                >
-                  {scopes.map((item) => (
-                    <MenuItem key={item} value={item}>
-                      {item}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel>Kanał promocyjny</InputLabel>
-                <Select
-                  label="Kanał promocyjny"
-                  value={form.channel}
-                  onChange={(event) => update("channel", event.target.value)}
-                >
-                  {channels.map((item) => (
-                    <MenuItem key={item} value={item}>
-                      {item}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl required fullWidth>
-                <InputLabel>Marki uczestniczące</InputLabel>
-                <Select
-                  multiple
-                  input={<OutlinedInput label="Marki uczestniczące" />}
-                  value={form.brands}
-                  onChange={(event) =>
-                    update(
-                      "brands",
-                      typeof event.target.value === "string"
-                        ? event.target.value.split(",")
-                        : event.target.value,
-                    )
-                  }
-                >
-                  {brands.map((item) => (
-                    <MenuItem key={item} value={item}>
-                      {item}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth>
-                <InputLabel>Sprzedawca</InputLabel>
-                <Select
-                  label="Sprzedawca"
-                  value={form.retailer}
-                  onChange={(event) => update("retailer", event.target.value)}
-                >
-                  {retailers.map((item) => (
-                    <MenuItem key={item} value={item}>
-                      {item}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <TextField
+                onValueChange={(value) => update("to", value)}
                 required
+                error={fieldErrors.to}
+                placeholder="DD/MM/YYYY"
+              />
+              <FormField
+                type="select"
+                label="Zasięg promocji"
+                value={form.scope}
+                onValueChange={(value) => update("scope", value)}
+                options={scopes.map((item) => ({ label: item, value: item }))}
+                placeholder="Zasięg promocji"
+              />
+              <FormField
+                type="select"
+                label="Kanał promocyjny"
+                value={form.channel}
+                onValueChange={(value) => update("channel", value)}
+                options={channels.map((item) => ({ label: item, value: item }))}
+                placeholder="Kanał promocyjny"
+              />
+              <FormField
+                type="select"
+                label="Marka"
+                value={form.brands}
+                onValueChange={(value) => update("brands", value)}
+                options={brands.map((item) => ({ label: item, value: item }))}
+                required
+                error={fieldErrors.brands}
+                placeholder="Marka"
+              />
+              <FormField
+                type="select"
+                label="Sprzedawca"
+                value={form.retailer}
+                onValueChange={(value) => update("retailer", value)}
+                options={retailers.map((item) => ({
+                  label: item,
+                  value: item,
+                }))}
+                placeholder="Sprzedawca"
+              />
+              <FormField
                 label="Poziom i typ rabatu"
-                placeholder="-25% powyżej 99 PLN"
+                placeholder="np. -25% powyżej 99 PLN"
                 value={form.discount}
-                onChange={(event) => update("discount", event.target.value)}
+                onValueChange={(value) => update("discount", value)}
+                required
+                error={fieldErrors.discount}
               />
-              <TextField
+              <FormField
                 label="Próg zakupowy"
-                placeholder="99 PLN"
+                placeholder="np. 99 PLN"
                 value={form.threshold}
-                onChange={(event) => update("threshold", event.target.value)}
+                onValueChange={(value) => update("threshold", value)}
               />
-              <TextField
+              <FormField
                 type="number"
                 label="Liczba SKU"
-                slotProps={{ htmlInput: { min: 1 } }}
                 value={form.skuCount}
-                onChange={(event) =>
-                  update("skuCount", Number(event.target.value))
-                }
+                onValueChange={(value) => update("skuCount", value)}
+                placeholder="Wpisz liczbę SKU"
               />
-              <TextField
+              <FormField
                 label="Średni rabat rynkowy"
-                placeholder="18%"
+                placeholder="np. 18%"
                 value={form.averageMarketDiscount}
-                onChange={(event) =>
-                  update("averageMarketDiscount", event.target.value)
+                onValueChange={(value) =>
+                  update("averageMarketDiscount", value)
                 }
               />
-              <TextField
+              <FormField
                 className="md:col-span-2"
                 multiline
                 minRows={3}
                 label="Uwagi i warunki"
                 placeholder="Regulamin, wyjątki, ograniczenia..."
                 value={form.notes}
-                onChange={(event) => update("notes", event.target.value)}
+                onValueChange={(value) => update("notes", value)}
               />
               <Button
                 component="label"
                 variant="outlined"
-                disabled={ocrLoading}
-                startIcon={
-                  ocrLoading ? (
-                    <CircularProgress size={16} />
-                  ) : (
-                    <AddPhotoAlternateRounded />
-                  )
-                }
+                startIcon={<AddPhotoAlternateRounded />}
                 className="md:col-span-2 !justify-start !border-[#dce6e2] !py-3 !text-[#48665d] !normal-case"
               >
                 <span>
-                  {ocrLoading
-                    ? "Odczytywanie danych z obrazu..."
-                    : form.creativeName || "Prześlij screenshot lub kreację"}
+                  {form.creativeName || "Prześlij screenshot lub kreację"}
                 </span>
                 <input
                   hidden
@@ -463,7 +469,7 @@ export default function PromotionFormModal({
               </Typography>
             )}
           </Box>
-          <Box className="flex justify-end gap-2 mt-4">
+          <Box className="flex justify-end gap-2 sticky">
             <Button
               onClick={onClose}
               sx={{ color: "#65736f", textTransform: "none" }}

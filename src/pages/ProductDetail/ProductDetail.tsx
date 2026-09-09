@@ -57,11 +57,11 @@ export default function ProductDetail() {
           elevation={0}
           className="overflow-hidden rounded-2xl border border-[#edf1ef] bg-white"
         >
-          <Box className="relative min-h-[360px] bg-[#e7f3ee]">
+          <Box className="relative max-h-[400px] bg-[#e7f3ee]">
             <img
               src={product.image}
               alt={product.name}
-              className="h-full min-h-[360px] w-full object-cover"
+              className="h-full max-h-[400px] w-full object-cover"
               onError={(event) => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = fallbackImage;

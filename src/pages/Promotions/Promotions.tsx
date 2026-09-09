@@ -9,14 +9,15 @@ import {
   Button,
   Card,
   Chip,
-  Pagination,
   TextField,
   Typography,
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
+import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
+import type { Product } from "../../data/productTypes";
 
 const today = "2026-09-08";
 const fallbackImage =
@@ -27,7 +28,9 @@ export default function Promotions() {
   const [formOpen, setFormOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [savedPage, setSavedPage] = useState(1);
   const pageSize = 10;
+  const savedPageSize = 10;
   const filteredProducts = useMemo(
     () =>
       catalog.filter((product) => {
@@ -39,6 +42,7 @@ export default function Promotions() {
           (product.name.toLowerCase().includes(search.toLowerCase()) ||
             product.brand.toLowerCase().includes(search.toLowerCase()) ||
             product.category.toLowerCase().includes(search.toLowerCase())) &&
+          (!filters.search || product.name.toLowerCase().includes(filters.search.toLowerCase()) || product.brand.toLowerCase().includes(filters.search.toLowerCase())) &&
           (filters.category === "All" ||
             product.category === filters.category) &&
           (filters.market === "All" || product.market === filters.market) &&
@@ -54,17 +58,18 @@ export default function Promotions() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const downloadUpdatedProducts = () => {
-    const blob = new Blob([JSON.stringify(catalog, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "products.updated.json";
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+  const savedPromotions = promotions.filter(
+    (promotion) =>
+      filters.market === "All" || promotion.market === filters.market,
+  );
+  const visibleSavedPromotions = savedPromotions.slice(
+    (savedPage - 1) * savedPageSize,
+    savedPage * savedPageSize,
+  );
+  const downloadUpdatedProducts = () => { if (!catalog || !Array.isArray(catalog) || catalog.length === 0) { return; } const headers = Object.keys(catalog[0]) as Array<keyof Product>; const table = ` <table border="1"> <thead> <tr> ${headers.map((header) => `<th>${String(header)}</th>`).join("")} </tr> </thead> <tbody> ${catalog.map((product) => ` <tr> ${headers.map((header) => `<td>${String(product[header] ?? "")}</td>`).join("")} </tr> `).join("")} </tbody> </table> `; const blob = new Blob([table], { type: "application/vnd.ms-excel", }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = "products.updated.xls"; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url); };
   useEffect(() => {
     setPage(1);
+    setSavedPage(1);
   }, [filters]);
 
   return (
@@ -93,27 +98,8 @@ export default function Promotions() {
               Add promotion
             </Button>
           )}
-          <Button
-            variant="outlined"
-            startIcon={<FilterAltRounded />}
-            sx={{
-              borderColor: "#dce6e2",
-              color: "#4c625b",
-              textTransform: "none",
-            }}
-          >
-            Use global filters
-          </Button>
         </Box>
       </Box>
-      {!canEdit && (
-        <Box className="rounded-xl border border-[#f0ddba] bg-[#fff8e9] px-4 py-3">
-          <Typography sx={{ color: "#896d38", fontSize: 13, fontWeight: 600 }}>
-            Viewer mode: you can inspect products and promotions, but cannot
-            create a promotion.
-          </Typography>
-        </Box>
-      )}
       <Card
         elevation={0}
         className="rounded-2xl border border-[#edf1ef] bg-white"
@@ -207,35 +193,25 @@ export default function Promotions() {
             );
           })}
         </Box>
-        <Box className="flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ef] p-4">
-          <Typography sx={{ color: "#94a09c", fontSize: 12 }}>
-            Showing {filteredProducts.length ? (page - 1) * pageSize + 1 : 0}-
-            {Math.min(page * pageSize, filteredProducts.length)} of{" "}
-            {filteredProducts.length} products
-          </Typography>
-          <Pagination
-            count={Math.max(1, Math.ceil(filteredProducts.length / pageSize))}
-            page={page}
-            onChange={(_, value) => setPage(value)}
-            sx={{
-              "& .Mui-selected": {
-                backgroundColor: "#286e5e !important",
-                color: "white",
-              },
-            }}
-          />
-        </Box>
+        <AppPagination
+          count={Math.ceil(filteredProducts.length / pageSize)}
+          page={page}
+          onChange={setPage}
+          total={filteredProducts.length}
+          pageSize={pageSize}
+          itemLabel="products"
+        />
       </Card>
       {promotions.length > 0 && (
         <Card elevation={0} className="rounded-2xl border border-[#edf1ef] bg-white">
-          <Box className="border-b border-[#edf1ef] p-5">
+          <Box className="p-4">
             <Box className="flex flex-wrap items-start justify-between gap-3">
               <Box>
-                <Typography sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}>Zapisane promocje</Typography>
-                <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>Kampanie dodane w formularzu, zachowane w języku polskim.</Typography>
+                <Typography sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}>Saved Promotions</Typography>
+                <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>Campaigns added via the form, saved in Polish.</Typography>
               </Box>
               <Button variant="outlined" size="small" startIcon={<DownloadRounded />} onClick={downloadUpdatedProducts} sx={{ borderColor: "#dce6e2", color: "#286e5e", textTransform: "none" }}>
-                Pobierz zaktualizowany JSON
+                Download
               </Button>
             </Box>
           </Box>
@@ -246,10 +222,8 @@ export default function Promotions() {
               <Typography sx={{ color: "#52746a", fontSize: 12, mt: 0.5 }}>{lastAddedProduct.market} · {lastAddedProduct.brand} · {lastAddedProduct.retailer} · {lastAddedProduct.fromDate} - {lastAddedProduct.toDate} · -{lastAddedProduct.competitorDiscount}%</Typography>
             </Box>
           )}
-          <Box className="grid grid-cols-1 gap-3 p-5 md:grid-cols-2">
-            {promotions
-              .filter((promotion) => filters.market === "All" || promotion.market === filters.market)
-              .map((promotion) => (
+          <Box className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
+            {visibleSavedPromotions.map((promotion) => (
                 <Box key={promotion.id} className="rounded-xl border border-[#edf1ef] p-4">
                   <Box className="flex items-start justify-between gap-3">
                     <Box>
@@ -257,7 +231,7 @@ export default function Promotions() {
                         {promotion.name}
                       </Typography>
                       <Typography sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}>
-                        {promotion.brands.join(", ")} · {promotion.retailer}
+                        {promotion.brands} · {promotion.retailer}
                       </Typography>
                     </Box>
                     <Chip label={promotion.discount} size="small" sx={{ backgroundColor: "#e1f2ed", color: "#28715f", fontWeight: 800 }} />
@@ -268,6 +242,14 @@ export default function Promotions() {
                 </Box>
               ))}
           </Box>
+          <AppPagination
+            count={Math.ceil(savedPromotions.length / savedPageSize)}
+            page={savedPage}
+            onChange={setSavedPage}
+            total={savedPromotions.length}
+            pageSize={savedPageSize}
+            itemLabel="saved promotions"
+          />
         </Card>
       )}
       <PromotionFormModal

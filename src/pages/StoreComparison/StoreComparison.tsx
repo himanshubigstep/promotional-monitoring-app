@@ -15,21 +15,50 @@ import {
   Typography,
 } from "@mui/material";
 import products from "../../data/products.json";
+import type { Product } from "../../data/productTypes";
 import { useAppContext } from "../../context/AppContext";
 
 export default function StoreComparison() {
   const { filters } = useAppContext();
-  const categoryProducts = products.filter((product) => (filters.market === "All" || product.market === filters.market) &&
-    (filters.category === "All" || product.category === filters.category) &&
-    (filters.retailer === "All" || product.retailer === filters.retailer) &&
-    (!filters.fromDate || product.toDate >= filters.fromDate) &&
-    (!filters.toDate || product.fromDate <= filters.toDate));
-  const retailers = Array.from(new Set(categoryProducts.map((product) => product.retailer))).map((retailer) => {
-    const offers = categoryProducts.filter((product) => product.retailer === retailer);
-    const discount = Math.round(offers.reduce((sum, product) => sum + product.competitorDiscount, 0) / offers.length);
-    const latest = offers.reduce((current, product) => product.toDate > current.toDate ? product : current, offers[0]);
-    const trend = offers.slice().sort((left, right) => left.fromDate.localeCompare(right.fromDate)).map((product) => product.competitorDiscount);
-    return [retailer, discount, Math.max(0, discount - 2), latest.fromDate, latest.toDate, trend] as const;
+  const catalog: Product[] = products as Product[];
+  const categoryProducts = catalog.filter(
+    (product) =>
+      (filters.market === "All" || product.market === filters.market) &&
+      (!filters.search ||
+        product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+        product.brand.toLowerCase().includes(filters.search.toLowerCase())) &&
+      (filters.category === "All" || product.category === filters.category) &&
+      (filters.retailer === "All" || product.retailer === filters.retailer) &&
+      (!filters.fromDate || product.toDate >= filters.fromDate) &&
+      (!filters.toDate || product.fromDate <= filters.toDate),
+  );
+  const retailers = Array.from(
+    new Set(categoryProducts.map((product) => product.retailer)),
+  ).map((retailer) => {
+    const offers = categoryProducts.filter(
+      (product) => product.retailer === retailer,
+    );
+    const discount = Math.round(
+      offers.reduce((sum, product) => sum + product.competitorDiscount, 0) /
+        offers.length,
+    );
+    const latest = offers.reduce(
+      (current, product) =>
+        product.toDate > current.toDate ? product : current,
+      offers[0],
+    );
+    const trend = offers
+      .slice()
+      .sort((left, right) => left.fromDate.localeCompare(right.fromDate))
+      .map((product) => product.competitorDiscount);
+    return [
+      retailer,
+      discount,
+      Math.max(0, discount - 2),
+      latest.fromDate,
+      latest.toDate,
+      trend,
+    ] as const;
   });
   const averageMarket = Math.round(
     categoryProducts.reduce(
@@ -179,12 +208,17 @@ export default function StoreComparison() {
                       />
                     </TableCell>
                     <TableCell>
-                      <Box className="flex h-8 items-end gap-1" title="Historical discount trend">
+                      <Box
+                        className="flex h-8 items-end gap-1"
+                        title="Historical discount trend"
+                      >
                         {trendValues.map((value, index) => (
                           <Box
                             key={index}
                             className="w-1.5 rounded-t bg-[#80bbaa]"
-                            sx={{ height: `${Math.max(18, ((value - trendMin) / Math.max(trendMax - trendMin, 1)) * 82)}%` }}
+                            sx={{
+                              height: `${Math.max(18, ((value - trendMin) / Math.max(trendMax - trendMin, 1)) * 82)}%`,
+                            }}
                           />
                         ))}
                       </Box>

@@ -12,7 +12,6 @@ import {
   Card,
   CardContent,
   Chip,
-  Pagination,
   TextField,
   Typography,
 } from "@mui/material";
@@ -21,6 +20,7 @@ import products from "../../data/products.json";
 import type { Product } from "../../data/productTypes";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
+import AppPagination from "../../components/AppPagination";
 import YearFilter from "../../components/YearFilter";
 
 const catalog = products as Product[];
@@ -59,6 +59,7 @@ const Dashboard = () => {
             product.category
               .toLowerCase()
               .includes(catalogSearch.toLowerCase())) &&
+          (!filters.search || product.name.toLowerCase().includes(filters.search.toLowerCase()) || product.brand.toLowerCase().includes(filters.search.toLowerCase())) &&
           (filters.category === "All" ||
             product.category === filters.category) &&
           (filters.market === "All" || product.market === filters.market) &&
@@ -71,7 +72,9 @@ const Dashboard = () => {
       }),
     [catalogSearch, filters],
   );
-  const chartProducts = filteredProducts.filter((product) => !chartYear || product.fromDate.startsWith(chartYear));
+  const chartProducts = filteredProducts.filter(
+    (product) => !chartYear || chartYear === "All" || product.fromDate.startsWith(chartYear)
+  );
   const analytics = useMemo(() => {
     const monthValues = months.map((_, monthIndex) => {
       const month = String(monthIndex + 1).padStart(2, "0");
@@ -87,6 +90,25 @@ const Dashboard = () => {
     const peak = Math.max(...monthValues, 0);
     return { monthValues, average, active, peak, peakMonth: months[monthValues.indexOf(peak)] };
   }, [chartProducts]);
+  const yearlyTrend = useMemo(
+    () =>
+      Array.from(
+        new Set(catalog.flatMap((product) => [product.fromDate.slice(0, 4), product.toDate.slice(0, 4)])),
+      )
+        .sort()
+        .map((year) => {
+          const yearProducts = filteredProducts.filter((product) => product.fromDate.startsWith(year));
+          return {
+            year,
+            offers: yearProducts.length,
+            open: yearProducts.length ? yearProducts[0].competitorDiscount : 0,
+            close: yearProducts.length ? yearProducts[yearProducts.length - 1].competitorDiscount : 0,
+            high: yearProducts.length ? Math.max(...yearProducts.map((product) => product.competitorDiscount)) : 0,
+            low: yearProducts.length ? Math.min(...yearProducts.map((product) => product.competitorDiscount)) : 0,
+          };
+        }),
+    [filteredProducts],
+  );
   const catalogProducts = filteredProducts.slice(
     (catalogPage - 1) * catalogPageSize,
     catalogPage * catalogPageSize,
@@ -109,7 +131,7 @@ const Dashboard = () => {
     setExpiredPage(1);
   }, [filters]);
   return (
-    <Box className="flex flex-col gap-5">
+    <Box className="flex flex-col gap-4">
       <Card
         elevation={0}
         className="rounded-2xl border border-[#dcece6] bg-[#eaf6f1]"
@@ -153,27 +175,71 @@ const Dashboard = () => {
           </Card>
         ))}
       </Box>
-      <Card elevation={0} className="rounded-2xl border border-[#edf1ef] bg-white">
-        <CardContent className="!p-6">
-          <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
-            <Box>
-              <Typography sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}>Poland promotion trend</Typography>
-              <Typography sx={{ color: "#8a9894", fontSize: 13, mt: 0.5 }}>Average discount by start month across selected historical offers.</Typography>
-            </Box>
-            <Chip label={`${chartProducts.length} offers · PL only`} size="small" sx={{ backgroundColor: "#e1f2ed", color: "#286e5e", fontWeight: 700 }} />
-          </Box>
-          <Box className="flex h-48 items-end gap-2 border-b border-l border-[#dfeae5] px-3 pb-2 sm:gap-4">
-            {analytics.monthValues.map((value, index) => (
-              <Box key={months[index]} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
-                <Typography sx={{ color: value ? "#286e5e" : "#b7c4bf", fontSize: 10, fontWeight: 800 }}>{value ? `${value}%` : "-"}</Typography>
-                <Box className="w-full max-w-10 rounded-t-md" sx={{ height: `${Math.max((value / Math.max(analytics.peak, 1)) * 125, value ? 10 : 2)}px`, backgroundColor: value === analytics.peak ? "#d88e3f" : "#7dbba8" }} />
-                <Typography sx={{ color: "#82908b", fontSize: 10 }}>{months[index]}</Typography>
+      <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card elevation={0} className="rounded-2xl border border-[#dcece6] bg-white">
+          <CardContent className="!p-6">
+            <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
+              <Box>
+                <Typography sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}>Poland promotion trend</Typography>
+                <Typography sx={{ color: "#718c83", fontSize: 13, mt: 0.5 }}>Monthly discount movement for the selected chart year.</Typography>
               </Box>
-            ))}
-          </Box>
-          <YearFilter selectedYear={chartYear} onChange={setChartYear} />
-        </CardContent>
-      </Card>
+              <Chip label={`${chartProducts.length} offers`} size="small" sx={{ backgroundColor: "#e5f6ef", color: "#286e5e", fontWeight: 700 }} />
+            </Box>
+            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#dfeae5] px-3 pb-2 sm:gap-4">
+              {analytics.monthValues.map((value, index) => (
+                <Box key={months[index]} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <Typography sx={{ color: value ? "#286e5e" : "#b7c4bf", fontSize: 10, fontWeight: 800 }}>{value ? `${value}%` : "-"}</Typography>
+                  <Box className="w-full max-w-10 rounded-t-md" sx={{ height: `${Math.max((value / Math.max(analytics.peak, 1)) * 125, value ? 10 : 2)}px`, backgroundColor: value === analytics.peak ? "#d88e3f" : "#7dbba8" }} />
+                  <Typography sx={{ color: "#82908b", fontSize: 10 }}>{months[index]}</Typography>
+                </Box>
+              ))}
+            </Box>
+            <YearFilter selectedYear={chartYear} onChange={setChartYear} />
+          </CardContent>
+        </Card>
+        <Card elevation={0} className="rounded-2xl border border-[#dcece6] bg-[#fffaf1]">
+          <CardContent className="!p-6">
+            <Typography sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}>Promotion pulse by year</Typography>
+            <Typography sx={{ color: "#718c83", fontSize: 13, mt: 0.5 }}>All available years, with filtered offer volume.</Typography>
+            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#eadfca] px-3 pb-2">
+              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#eadfca]" />
+              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#eadfca]" />
+              {yearlyTrend.map((item) => {
+                const chartMax = Math.max(...yearlyTrend.map((trend) => trend.high), 1);
+                const scale = (value: number) => `${Math.max(5, (value / chartMax) * 145)}px`;
+                const rising = item.close >= item.open;
+                return (
+                  <Box key={item.year} className="flex h-full min-w-12 flex-col items-center justify-end gap-1">
+                    <Typography sx={{ color: rising ? "#286e5e" : "#c46f76", fontSize: 10, fontWeight: 800 }}>
+                      {item.close}%
+                    </Typography>
+                    <Box className="relative flex h-36 items-center justify-center" title={`${item.year}: low ${item.low}%, open ${item.open}%, close ${item.close}%, high ${item.high}%`}>
+                      <Box className="absolute w-px bg-[#718c83]" sx={{ height: scale(item.high) }} />
+                      <Box className="relative w-6 rounded-sm" sx={{ height: scale(Math.abs(item.close - item.open)), minHeight: 8, backgroundColor: rising ? "#62b49a" : "#df8a91", border: `1px solid ${rising ? "#286e5e" : "#b25b52"}` }} />
+                    </Box>
+                    <Typography sx={{ color: "#718c83", fontSize: 11, fontWeight: 700 }}>{item.year}</Typography>
+                    <Typography sx={{ color: "#9aa9a3", fontSize: 10 }}>{item.offers} offers</Typography>
+                  </Box>
+                );
+              })}
+            </Box>
+            <Box className="grid grid-cols-3 gap-2">
+              {yearlyTrend.map((item) => (
+                <Box key={item.year} className="rounded-lg bg-white/70 px-2 py-1.5 text-center">
+                  <Typography sx={{ color: "#718c83", fontSize: 10 }}>{item.year}</Typography>
+                  <Typography sx={{ color: "#c4772f", fontSize: 12, fontWeight: 800 }}>{item.low}-{item.high}% range</Typography>
+                </Box>
+              ))}
+            </Box>
+            {/* <Box className="mt-5 rounded-xl bg-white/70 p-3">
+              <Typography sx={{ color: "#286e5e", fontSize: 12, fontWeight: 800 }}>Reading the trend</Typography>
+              <Typography sx={{ color: "#718c83", fontSize: 12, lineHeight: 1.6, mt: 0.5 }}>
+                Compare the yearly peaks with the monthly panel to spot when promotional pressure rises or cools.
+              </Typography>
+            </Box> */}
+          </CardContent>
+        </Card>
+      </Box>
       <Card
         elevation={0}
         className="rounded-2xl border border-[#edf1ef] bg-white"
@@ -285,31 +351,14 @@ const Dashboard = () => {
               </Box>
             ))}
           </Box>
-          <Box className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ef] pt-4">
-            <Typography sx={{ color: "#94a09c", fontSize: 12 }}>
-              Showing{" "}
-              {filteredProducts.length
-                ? (catalogPage - 1) * catalogPageSize + 1
-                : 0}
-              -
-              {Math.min(catalogPage * catalogPageSize, filteredProducts.length)}{" "}
-              of {filteredProducts.length} products
-            </Typography>
-            <Pagination
-              count={Math.max(
-                1,
-                Math.ceil(filteredProducts.length / catalogPageSize),
-              )}
-              page={catalogPage}
-              onChange={(_, value) => setCatalogPage(value)}
-              sx={{
-                "& .Mui-selected": {
-                  backgroundColor: "#286e5e !important",
-                  color: "white",
-                },
-              }}
-            />
-          </Box>
+          <AppPagination
+            count={Math.ceil(filteredProducts.length / catalogPageSize)}
+            page={catalogPage}
+            onChange={setCatalogPage}
+            total={filteredProducts.length}
+            pageSize={catalogPageSize}
+            itemLabel="products"
+          />
         </CardContent>
       </Card>
       <Card
@@ -346,7 +395,7 @@ const Dashboard = () => {
                 to={`/products/${product.id}`}
                 className="overflow-hidden rounded-xl border border-[#edf1ef] no-underline"
               >
-                <Box className="relative h-20 bg-[#eef6f2]">
+                <Box className="relative h-32 bg-[#eef6f2]">
                   <img
                     src={product.image}
                     alt={product.name}
@@ -393,18 +442,14 @@ const Dashboard = () => {
               </Box>
             ))}
           </Box>
-          <Box className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-[#edf1ef] pt-4">
-            <Typography sx={{ color: "#94a09c", fontSize: 12 }}>
-              Showing {expiredProducts.length ? (expiredPage - 1) * expiredPageSize + 1 : 0}-
-              {Math.min(expiredPage * expiredPageSize, expiredProducts.length)} of {expiredProducts.length} archived promotions
-            </Typography>
-            <Pagination
-              count={Math.max(1, Math.ceil(expiredProducts.length / expiredPageSize))}
-              page={expiredPage}
-              onChange={(_, value) => setExpiredPage(value)}
-              sx={{ "& .Mui-selected": { backgroundColor: "#286e5e !important", color: "white" } }}
-            />
-          </Box>
+          <AppPagination
+            count={Math.ceil(expiredProducts.length / expiredPageSize)}
+            page={expiredPage}
+            onChange={setExpiredPage}
+            total={expiredProducts.length}
+            pageSize={expiredPageSize}
+            itemLabel="archived promotions"
+          />
         </CardContent>
       </Card>
     </Box>
