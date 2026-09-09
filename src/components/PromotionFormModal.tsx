@@ -185,7 +185,7 @@ export default function PromotionFormModal({
     reader.readAsDataURL(file);
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive } = ({
     onDrop,
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
