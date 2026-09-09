@@ -11,6 +11,7 @@ import type { Product } from "../data/productTypes";
 export type UserRole = "Admin" | "Data Analytics" | "Viewer";
 
 export type PromotionFilters = {
+  search: string;
   category: string;
   fromDate: string;
   toDate: string;
@@ -20,6 +21,7 @@ export type PromotionFilters = {
 };
 
 export const emptyPromotionFilters: PromotionFilters = {
+  search: "",
   category: "All",
   fromDate: "",
   toDate: "",
@@ -28,7 +30,14 @@ export const emptyPromotionFilters: PromotionFilters = {
   market: "All",
 };
 
-export const filterYears = ["2024", "2025", "2026", "2027"];
+export const filterYears = Array.from(
+  new Set(
+    products.flatMap((product) => [
+      product.fromDate.slice(0, 4),
+      product.toDate.slice(0, 4),
+    ]),
+  ),
+).sort();
 export const filterMonths = [
   ["01", "January"],
   ["02", "February"],
@@ -71,7 +80,7 @@ export type Promotion = {
   scope: string;
   channel: string;
   category: string;
-  brands: string[];
+  brands: string;
   retailer: string;
   discount: string;
   threshold: string;
@@ -109,7 +118,7 @@ function promotionsFromProducts(): Promotion[] {
       scope: "Wielokanałowa",
       channel: "Sklep stacjonarny",
       category: product.category,
-      brands: [product.brand],
+      brands: product.brand,
       retailer: product.retailer,
       discount: `-${product.competitorDiscount}%`,
       threshold: "",
@@ -122,27 +131,56 @@ function promotionsFromProducts(): Promotion[] {
     }));
 }
 
+const englishPromotionValues: Record<string, string> = {
+  Pielęgnacja: "Skincare",
+  Perfumy: "Fragrance",
+  Makijaż: "Makeup",
+  Włosy: "Haircare",
+  Wielokanałowa: "Omnichannel",
+  "Tylko e-commerce": "E-commerce only",
+  "Tylko aplikacja mobilna": "Mobile app only",
+  "Media społecznościowe": "Social media",
+  "Strona internetowa": "Website",
+  Telewizja: "TV",
+  "E-mail": "Email",
+  "Sklep stacjonarny": "In-store",
+  "Aplikacja mobilna": "Mobile app",
+};
+
+function toEnglish(value: string) {
+  return englishPromotionValues[value] || value;
+}
+
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>("Admin");
   const [promotions, setPromotions] = useState<Promotion[]>(
     promotionsFromProducts,
   );
   const [addedProducts, setAddedProducts] = useState<Product[]>([]);
-  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
+  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(
+    null,
+  );
   const [filters, setFilters] = useState<PromotionFilters>(
     emptyPromotionFilters,
   );
 
   const addPromotion = useCallback(
     (promotion: Omit<Promotion, "id" | "createdAt">) => {
-      const next = {
+      const normalizedPromotion = {
         ...promotion,
+        category: toEnglish(promotion.category),
+        scope: toEnglish(promotion.scope),
+        channel: toEnglish(promotion.channel),
+      };
+      const next = {
+        ...normalizedPromotion,
         id: `PROMO-${String(promotions.length + 1).padStart(3, "0")}`,
         createdAt: new Date().toISOString().slice(0, 10),
       };
       const updated = [next, ...promotions];
       setPromotions(updated);
-      const discountMatch = promotion.discount.match(/(\d+(?:\.\d+)?)/);
+      const discountMatch =
+        normalizedPromotion.discount.match(/(\d+(?:\.\d+)?)/);
       const discount = discountMatch ? Number(discountMatch[1]) : 0;
       const categoryMap: Record<string, Product["category"]> = {
         Pielęgnacja: "Skincare",
@@ -153,8 +191,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const product: Product = {
         id: next.id,
         name: next.name,
-        brand: next.brands[0] || "",
-        category: categoryMap[next.category] || (next.category as Product["category"]),
+        brand: next.brands || "",
+        category:
+          categoryMap[next.category] || (next.category as Product["category"]),
         price: 0,
         currency: "PLN",
         market: next.market,
@@ -162,7 +201,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rating: 0,
         stock: next.skuCount,
         competitorDiscount: discount,
-        image: promotion.creativeData || "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
+        image:
+          promotion.creativeData ||
+          "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
         fromDate: next.from,
         toDate: next.to,
         promotionName: next.name,
