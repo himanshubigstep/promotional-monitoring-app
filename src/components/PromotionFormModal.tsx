@@ -15,8 +15,11 @@ import {
   Select,
   TextField,
   Typography,
+  CircularProgress,
 } from "@mui/material";
+import { createWorker } from "tesseract.js";
 import type { Promotion } from "../context/AppContext";
+import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
 const brands = [
@@ -80,6 +83,70 @@ const emptyForm: FormState = {
   averageMarketDiscount: "",
 };
 
+// --- OCR helpers -----------------------------------------------------
+
+// Strip Polish diacritics + lowercase, so "Rossmann Polska" matches
+// even if OCR reads "Rossmann Polsko" or drops a diacritic mark.
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+// Find the best match from a known list (brands / retailers / categories)
+// by checking if the list item appears (loosely) inside the OCR text.
+const findKnownMatches = (text: string, list: string[], multiple = false) => {
+  const normalizedText = normalize(text);
+  const matches = list.filter((item) =>
+    normalizedText.includes(normalize(item)),
+  );
+  return multiple ? matches : matches[0] || "";
+};
+
+const extractPromotionFields = (rawText: string) => {
+  const text = rawText.replace(/\s+/g, " ").trim();
+  console.log("OCR text:", text);
+  // Discount: "-25%", "25% rabatu", "rabat -30%"
+  const discountMatch = text.match(/-?\d{1,3}\s?%(?:\s?(?:rabat[u]?|off))?/i);
+  const discount = discountMatch ? discountMatch[0].replace(/\s+/g, "") : "";
+
+  // Threshold: "powyżej 99 PLN", "od 99 zł", "powyżej 99zł"
+  const thresholdMatch = text.match(
+    /(?:powyżej|od)\s?\d{1,4}(?:[.,]\d{1,2})?\s?(?:PLN|zł|CZK|Kč)/i,
+  );
+  const threshold = thresholdMatch ? thresholdMatch[0] : "";
+
+  // Average market discount: a second "%" figure often labeled "średni"
+  const avgMatch = text.match(
+    /średni[a-ząęćłńóśźż]*\s?rabat[a-ząęćłńóśźż]*\D{0,10}(\d{1,3}\s?%)/i,
+  );
+  const averageMarketDiscount = avgMatch ? avgMatch[1].replace(/\s+/g, "") : "";
+
+  // Known-list matches
+  const matchedBrands = findKnownMatches(text, brands, true) as string[];
+  const matchedRetailer = findKnownMatches(text, retailers) as string;
+  const matchedCategory = findKnownMatches(text, categories) as string;
+
+  // Name: fall back to the longest readable line that isn't just numbers/%
+  const nameCandidate = rawText
+    .split("\n")
+    .map((l) => l.trim())
+    .filter((l) => l.length > 4 && !/^[\d\s%.,-]+$/.test(l))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return {
+    discount,
+    threshold,
+    averageMarketDiscount,
+    brands: matchedBrands,
+    retailer: matchedRetailer,
+    category: matchedCategory,
+    name: nameCandidate || "",
+  };
+};
+
+// -----------------------------------------------------------------------
+
 export default function PromotionFormModal({
   open,
   onClose,
@@ -91,12 +158,61 @@ export default function PromotionFormModal({
 }) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
+  const [ocrLoading, setOcrLoading] = useState(false);
 
   const update = (
     field: keyof FormState,
     value: string | number | string[],
   ) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleCreativeUpload = async (file: File) => {
+    // 1) Save the ORIGINAL image for preview/storage (don't show the user
+    //    the grayscale-processed version — that's just for OCR internally)
+    const reader = new FileReader();
+    reader.onload = () => {
+      update("creativeName", file.name);
+      update(
+        "creativeData",
+        typeof reader.result === "string" ? reader.result : "",
+      );
+    };
+    reader.readAsDataURL(file);
+
+    // 2) Preprocess + run OCR on the processed version
+    setOcrLoading(true);
+    try {
+      const processedFile = await preprocessImageForOCR(file, {
+        scale: 1.5,
+        contrast: 1.4,
+        grayscale: true,
+      });
+
+      const worker = await createWorker(["eng", "pol"]);
+      const {
+        data: { text },
+      } = await worker.recognize(processedFile);
+      await worker.terminate();
+
+      const extracted = extractPromotionFields(text);
+
+      setForm((current) => ({
+        ...current,
+        discount: current.discount || extracted.discount,
+        threshold: current.threshold || extracted.threshold,
+        averageMarketDiscount:
+          current.averageMarketDiscount || extracted.averageMarketDiscount,
+        brands: current.brands.length ? current.brands : extracted.brands,
+        retailer: extracted.retailer || current.retailer,
+        category: extracted.category || current.category,
+        name: current.name || extracted.name,
+      }));
+    } catch (err) {
+      console.error("OCR extraction failed:", err);
+    } finally {
+      setOcrLoading(false);
+    }
   };
 
   const submit = (event: React.FormEvent) => {
@@ -131,7 +247,8 @@ export default function PromotionFormModal({
                 Dodaj promocję
               </Typography>
               <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>
-                Wprowadź dane kampanii. Zapisana promocja pozostanie w języku polskim.
+                Wprowadź dane kampanii. Zapisana promocja pozostanie w języku
+                polskim.
               </Typography>
             </Box>
             <Button
@@ -313,11 +430,20 @@ export default function PromotionFormModal({
               <Button
                 component="label"
                 variant="outlined"
-                startIcon={<AddPhotoAlternateRounded />}
+                disabled={ocrLoading}
+                startIcon={
+                  ocrLoading ? (
+                    <CircularProgress size={16} />
+                  ) : (
+                    <AddPhotoAlternateRounded />
+                  )
+                }
                 className="md:col-span-2 !justify-start !border-[#dce6e2] !py-3 !text-[#48665d] !normal-case"
               >
                 <span>
-                  {form.creativeName || "Prześlij screenshot lub kreację"}
+                  {ocrLoading
+                    ? "Odczytywanie danych z obrazu..."
+                    : form.creativeName || "Prześlij screenshot lub kreację"}
                 </span>
                 <input
                   hidden
@@ -326,12 +452,7 @@ export default function PromotionFormModal({
                   onChange={(event) => {
                     const file = event.target.files?.[0];
                     if (!file) return;
-                    const reader = new FileReader();
-                    reader.onload = () => {
-                      update("creativeName", file.name);
-                      update("creativeData", typeof reader.result === "string" ? reader.result : "");
-                    };
-                    reader.readAsDataURL(file);
+                    handleCreativeUpload(file);
                   }}
                 />
               </Button>
