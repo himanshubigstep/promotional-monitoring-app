@@ -1039,7 +1039,25 @@ export default function PromotionFormModal({
               <Button
                 type="submit"
                 variant="contained"
-                startIcon={<SaveRounded />}
+                disabled={submitting}
+                startIcon={
+                  submitting ? (
+                    <Box
+                      component="span"
+                      sx={{
+                        width: 16,
+                        height: 16,
+                        border: "2px solid #bfd2ce",
+                        borderTopColor: "white",
+                        borderRadius: "50%",
+                        display: "inline-block",
+                        animation: "spin 0.8s linear infinite",
+                      }}
+                    />
+                  ) : (
+                    <SaveRounded />
+                  )
+                }
                 sx={{
                   backgroundColor: "#286e5e",
                   textTransform: "none",
