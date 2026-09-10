@@ -7,15 +7,26 @@ import { useAppContext } from "../../context/AppContext";
 import YearFilter from "../../components/YearFilter";
 
 const months = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const brandColors: Record<string, string> = {
-  "L'Oréal": "#286e5e",
-  Nivea: "#d88e3f",
-  Dove: "#816bb3",
-  Garnier: "#c46f76",
+  "L'Oréal": "#000000",
+  Nivea: "#c59a3f",
+  Dove: "#e50043",
+  Garnier: "#333333",
+  "Sephora Collection": "#000000",
 };
 
 export default function PromotionalCalendar() {
@@ -33,11 +44,17 @@ export default function PromotionalCalendar() {
           (filters.market === "All" || product.market === filters.market) &&
           (!filters.search ||
             product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            product.brand.toLowerCase().includes(filters.search.toLowerCase())) &&
-          (filters.category === "All" || product.category === filters.category) &&
-          (filters.retailer === "All" || product.retailer === filters.retailer) &&
+            product.brand
+              .toLowerCase()
+              .includes(filters.search.toLowerCase())) &&
+          (filters.category === "All" ||
+            product.category === filters.category) &&
+          (filters.retailer === "All" ||
+            product.retailer === filters.retailer) &&
           product.competitorDiscount >= minimumDiscount &&
-          (!chartYear || chartYear === "All" || product.fromDate.startsWith(chartYear))
+          (!chartYear ||
+            chartYear === "All" ||
+            product.fromDate.startsWith(chartYear))
         );
       }),
     [filters, chartYear],
@@ -50,10 +67,13 @@ export default function PromotionalCalendar() {
       const end = new Date(product.toDate);
       const startMonth = start.getMonth(); // 0 - 11
       const endMonth = end.getMonth(); // 0 - 11
-      
+
       // Calculate offset percentages for exact timeline placement
       const leftPercent = (startMonth / 12) * 100;
-      const widthPercent = Math.max(((endMonth - startMonth + 1) / 12) * 100, 8);
+      const widthPercent = Math.max(
+        ((endMonth - startMonth + 1) / 12) * 100,
+        8,
+      );
 
       return {
         ...product,
@@ -76,7 +96,7 @@ export default function PromotionalCalendar() {
           ${catalog
             .map(
               (p) =>
-                `<tr>${headers.map((h) => `<td>${String(p[h] ?? "")}</td>`).join("")}</tr>`
+                `<tr>${headers.map((h) => `<td>${String(p[h] ?? "")}</td>`).join("")}</tr>`,
             )
             .join("")}
         </tbody>
@@ -98,12 +118,19 @@ export default function PromotionalCalendar() {
       <Box className="flex flex-wrap items-center justify-between gap-3">
         <Box>
           <Box className="flex items-center gap-2">
-            <CalendarMonthRounded sx={{ color: "#286e5e" }} />
-            <Typography sx={{ color: "#173c35", fontSize: 22, fontWeight: 800 }}>
+            <CalendarMonthRounded sx={{ color: "#e50043" }} />
+            <Typography
+              sx={{
+                color: "#000000",
+                fontSize: 20,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
+            >
               Promotional Campaign Timeline
             </Typography>
           </Box>
-          <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: "#757575", fontSize: 13, mt: 0.5 }}>
             Gantt chart view of store campaigns, durations, and offer intensity.
           </Typography>
         </Box>
@@ -112,24 +139,45 @@ export default function PromotionalCalendar() {
           size="small"
           startIcon={<DownloadRounded />}
           onClick={downloadUpdatedProducts}
-          sx={{ borderColor: "#dce6e2", color: "#286e5e", textTransform: "none" }}
+          sx={{
+            borderColor: "#d1d1d1",
+            color: "#000000",
+            fontWeight: 700,
+            fontSize: 12.5,
+            textTransform: "none",
+            "&:hover": { borderColor: "#000000", backgroundColor: "#f5f5f5" },
+          }}
         >
           Export Timeline
         </Button>
       </Box>
 
       {/* Main Gantt Chart Card */}
-      <Card elevation={0} className="rounded-2xl border border-[#edf1ef] bg-white">
+      <Card
+        elevation={0}
+        className="rounded-xl border border-[#e5e5e5] bg-white"
+      >
         <Box className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Box className="p-4" sx={{ minWidth: 1000 }}>
             {/* Timeline Header (Months) */}
-            <Box className="grid grid-cols-[220px_1fr] border-b border-[#edf1ef] pb-3">
-              <Typography sx={{ color: "#82908b", fontSize: 12, fontWeight: 800 }}>
+            <Box className="grid grid-cols-[220px_1fr] border-b border-[#e5e5e5] pb-3">
+              <Typography
+                sx={{
+                  color: "#757575",
+                  fontSize: 11,
+                  fontWeight: 800,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}
+              >
                 CAMPAIGN / STORE
               </Typography>
               <Box className="grid grid-cols-12 text-center">
                 {months.map((month) => (
-                  <Typography key={month} sx={{ color: "#173c35", fontSize: 12, fontWeight: 800 }}>
+                  <Typography
+                    key={month}
+                    sx={{ color: "#000000", fontSize: 12, fontWeight: 800 }}
+                  >
                     {month}
                   </Typography>
                 ))}
@@ -137,41 +185,61 @@ export default function PromotionalCalendar() {
             </Box>
 
             {/* Gantt Rows */}
-            <Box className="divide-y divide-[#f4f7f6]">
+            <Box className="divide-y divide-[#f0f0f0]">
               {ganttRows.length === 0 ? (
                 <Box className="py-8 text-center">
-                  <Typography sx={{ color: "#82908b", fontSize: 14 }}>
+                  <Typography sx={{ color: "#757575", fontSize: 13 }}>
                     No campaigns found for the selected year and filters.
                   </Typography>
                 </Box>
               ) : (
                 ganttRows.map((item) => {
-                  const barColor = brandColors[item.brand] || "#286e5e";
+                  const barColor = brandColors[item.brand] || "#000000";
                   return (
-                    <Box key={item.id} className="grid grid-cols-[220px_1fr] items-center py-2.5">
+                    <Box
+                      key={item.id}
+                      className="grid grid-cols-[220px_1fr] items-center py-2.5"
+                    >
                       {/* Left Sidebar Label */}
                       <Box className="pr-3">
-                        <Typography sx={{ color: "#173c35", fontSize: 13, fontWeight: 700, lineHeight: 1.2 }}>
+                        <Typography
+                          sx={{
+                            color: "#000000",
+                            fontSize: 13,
+                            fontWeight: 700,
+                            lineHeight: 1.2,
+                          }}
+                        >
                           {item.name}
                         </Typography>
                         <Box className="mt-1 flex items-center gap-1.5">
                           <Chip
                             label={item.retailer}
                             size="small"
-                            sx={{ height: 18, fontSize: 10, bg: "#f0f4f2", color: "#48665d", fontWeight: 700 }}
+                            sx={{
+                              height: 18,
+                              fontSize: 10,
+                              bgcolor: "#f5f5f5",
+                              color: "#333333",
+                              fontWeight: 700,
+                              borderRadius: "4px",
+                            }}
                           />
-                          <Typography sx={{ color: "#82908b", fontSize: 11 }}>
+                          <Typography sx={{ color: "#757575", fontSize: 11 }}>
                             {item.brand}
                           </Typography>
                         </Box>
                       </Box>
 
                       {/* Right Timeline Grid Canvas */}
-                      <Box className="relative flex h-9 items-center rounded-lg bg-[#f9fbfa] px-1">
+                      <Box className="relative flex h-9 items-center rounded bg-[#f7f7f8] px-1">
                         {/* Month Grid Lines */}
                         <Box className="absolute inset-0 grid grid-cols-12 pointer-events-none">
                           {months.map((m, idx) => (
-                            <Box key={m} className={`h-full ${idx < 11 ? "border-r border-[#edf1ef]" : ""}`} />
+                            <Box
+                              key={m}
+                              className={`h-full ${idx < 11 ? "border-r border-[#e5e5e5]" : ""}`}
+                            />
                           ))}
                         </Box>
 
@@ -181,8 +249,14 @@ export default function PromotionalCalendar() {
                           placement="top"
                           title={
                             <Box className="p-1">
-                              <Typography sx={{ fontSize: 12, fontWeight: 800 }}>{item.name}</Typography>
-                              <Typography sx={{ fontSize: 11 }}>Discount: {item.competitorDiscount}%</Typography>
+                              <Typography
+                                sx={{ fontSize: 12, fontWeight: 800 }}
+                              >
+                                {item.name}
+                              </Typography>
+                              <Typography sx={{ fontSize: 11 }}>
+                                Discount: {item.competitorDiscount}%
+                              </Typography>
                               <Typography sx={{ fontSize: 11 }}>
                                 Duration: {item.fromDate} to {item.toDate}
                               </Typography>
@@ -190,7 +264,7 @@ export default function PromotionalCalendar() {
                           }
                         >
                           <Box
-                            className="absolute flex h-7 items-center justify-between rounded-md px-2.5 transition-all hover:brightness-110 shadow-sm"
+                            className="absolute flex h-7 items-center justify-between rounded px-2.5 transition-all hover:brightness-110 shadow-sm cursor-pointer"
                             sx={{
                               left: `${item.leftPercent}%`,
                               width: `${item.widthPercent}%`,
@@ -198,10 +272,25 @@ export default function PromotionalCalendar() {
                               color: "#fff",
                             }}
                           >
-                            <Typography sx={{ fontSize: 11, fontWeight: 800, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                            <Typography
+                              sx={{
+                                fontSize: 11,
+                                fontWeight: 800,
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
                               -{item.competitorDiscount}%
                             </Typography>
-                            <Typography sx={{ fontSize: 10, opacity: 0.85, fontWeight: 700, display: { xs: "none", sm: "block" } }}>
+                            <Typography
+                              sx={{
+                                fontSize: 10,
+                                opacity: 0.9,
+                                fontWeight: 700,
+                                display: { xs: "none", sm: "block" },
+                              }}
+                            >
                               {item.durationMonths}m
                             </Typography>
                           </Box>
@@ -216,7 +305,7 @@ export default function PromotionalCalendar() {
         </Box>
 
         {/* Footer Filter */}
-        <Box className="border-t border-[#edf1ef] px-4 py-2">
+        <Box className="border-t border-[#e5e5e5] px-4 py-2">
           <YearFilter selectedYear={chartYear} onChange={setChartYear} />
         </Box>
       </Card>

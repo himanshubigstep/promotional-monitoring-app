@@ -31,16 +31,28 @@ export default function BrandAnalytics() {
       (filters.retailer === "All" || product.retailer === filters.retailer),
   );
   const filteredProducts = baseProducts.filter(
-    (product: Product) => !brandYear || brandYear === "All" || product.fromDate.startsWith(brandYear),
+    (product: Product) =>
+      !brandYear ||
+      brandYear === "All" ||
+      product.fromDate.startsWith(brandYear),
   );
   const summaryProducts = baseProducts.filter(
-    (product: Product) => !summaryYear || summaryYear === "All" || product.fromDate.startsWith(summaryYear),
+    (product: Product) =>
+      !summaryYear ||
+      summaryYear === "All" ||
+      product.fromDate.startsWith(summaryYear),
   );
   const categoryProducts = baseProducts.filter(
-    (product: Product) => !categoryYear || categoryYear === "All" || product.fromDate.startsWith(categoryYear),
+    (product: Product) =>
+      !categoryYear ||
+      categoryYear === "All" ||
+      product.fromDate.startsWith(categoryYear),
   );
   const heatmapProducts = baseProducts.filter(
-    (product: Product) => !heatmapYear || heatmapYear === "All" || product.fromDate.startsWith(heatmapYear),
+    (product: Product) =>
+      !heatmapYear ||
+      heatmapYear === "All" ||
+      product.fromDate.startsWith(heatmapYear),
   );
   const brands = Array.from(
     new Set(filteredProducts.map((product) => product.brand)),
@@ -50,13 +62,13 @@ export default function BrandAnalytics() {
     );
     const discount = Math.round(
       offers.reduce((sum, product) => sum + product.competitorDiscount, 0) /
-      offers.length,
+        offers.length,
     );
     return [
       brand,
       `${offers.length} offers`,
       discount,
-      ["#286e5e", "#e09b48", "#8670bb", "#d27679"][index % 4],
+      ["#000000", "#e50043", "#c59a3f", "#333333"][index % 4],
     ] as const;
   });
   const brandsPerPage = 5;
@@ -83,21 +95,21 @@ export default function BrandAnalytics() {
         categoryProducts
           .filter((product) => product.category === category)
           .reduce((sum, product) => sum + product.competitorDiscount, 0) /
-        Math.max(
-          categoryProducts.filter((product) => product.category === category)
-            .length,
-          1,
-        ),
+          Math.max(
+            categoryProducts.filter((product) => product.category === category)
+              .length,
+            1,
+          ),
       ),
     }))
     .sort((left, right) => right.discount - left.discount);
   const averageDiscount = summaryProducts.length
     ? Math.round(
-      summaryProducts.reduce(
-        (sum, product) => sum + product.competitorDiscount,
-        0,
-      ) / summaryProducts.length,
-    )
+        summaryProducts.reduce(
+          (sum, product) => sum + product.competitorDiscount,
+          0,
+        ) / summaryProducts.length,
+      )
     : 0;
   const weeklyActivity = weeks.map((week, index) => {
     const weekProducts = summaryProducts.filter((product) => {
@@ -109,11 +121,11 @@ export default function BrandAnalytics() {
       count: weekProducts.length,
       discount: weekProducts.length
         ? Math.round(
-          weekProducts.reduce(
-            (sum, product) => sum + product.competitorDiscount,
-            0,
-          ) / weekProducts.length,
-        )
+            weekProducts.reduce(
+              (sum, product) => sum + product.competitorDiscount,
+              0,
+            ) / weekProducts.length,
+          )
         : 0,
     };
   });
@@ -130,31 +142,38 @@ export default function BrandAnalytics() {
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#edf1ef] bg-white"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
-              sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+              sx={{
+                color: "#000000",
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
             >
-              Average market discount vs. brand
+              Average Market Discount vs. Brand
             </Typography>
-            <Typography sx={{ color: "#8a9894", fontSize: 13, mb: 5, mt: 0.5 }}>
-              Benchmark the competitive pressure before setting your offer.
+            <Typography
+              sx={{ color: "#757575", fontSize: 12.5, mb: 4, mt: 0.5 }}
+            >
+              Benchmark competitive discount pressure across beauty brands.
             </Typography>
             {visibleBrands.map(([name, revenue, score, color]) => (
-              <Box key={name} className="mb-6">
-                <Box className="mb-2 flex justify-between">
+              <Box key={name} className="mb-5">
+                <Box className="mb-1.5 flex justify-between">
                   <Typography
-                    sx={{ color: "#34534a", fontSize: 14, fontWeight: 700 }}
+                    sx={{ color: "#111111", fontSize: 13.5, fontWeight: 700 }}
                   >
                     {name}
                   </Typography>
                   <Box className="flex gap-3">
-                    <Typography sx={{ color: "#8a9894", fontSize: 12 }}>
+                    <Typography sx={{ color: "#757575", fontSize: 12 }}>
                       Market {averageDiscount}%
                     </Typography>
                     <Typography
-                      sx={{ color: "#5f746c", fontSize: 13, fontWeight: 700 }}
+                      sx={{ color: "#000000", fontSize: 12.5, fontWeight: 800 }}
                     >
                       Brand {score}%
                     </Typography>
@@ -164,12 +183,12 @@ export default function BrandAnalytics() {
                   variant="determinate"
                   value={Number(score)}
                   sx={{
-                    height: 9,
-                    borderRadius: 5,
-                    backgroundColor: "#edf2ef",
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#f0f0f0",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: color,
-                      borderRadius: 5,
+                      borderRadius: 4,
                     },
                   }}
                 />
@@ -190,56 +209,66 @@ export default function BrandAnalytics() {
         </Card>
         <Card
           elevation={0}
-          className="overflow-hidden rounded-2xl border border-[#eadfca] bg-[#fffaf1]"
-          sx={{ boxShadow: "0 14px 34px rgba(197, 155, 83, 0.12)" }}
+          className="overflow-hidden rounded-xl border border-[#e5e5e5] bg-white"
         >
-          <Box className="h-1.5 bg-[#d88e3f]" />
+          <Box className="h-1 bg-[#000000]" />
           <CardContent className="!p-6">
             <Box className="flex items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
-                    color: "#b36d2c",
+                    color: "#e50043",
                     fontSize: 11,
                     fontWeight: 800,
                     letterSpacing: 1.2,
                     textTransform: "uppercase",
                   }}
                 >
-                  Promotion summary
+                  Promotion Summary
                 </Typography>
-                <Typography sx={{ color: "#81958e", fontSize: 12, mt: 0.5 }}>
-                  A quick read on campaign pressure
+                <Typography sx={{ color: "#757575", fontSize: 12, mt: 0.5 }}>
+                  Campaign intensity snapshot
                 </Typography>
               </Box>
-              <Box className="rounded-full bg-[#f7e7c9] px-3 py-1">
-                <Typography sx={{ color: "#a66529", fontSize: 11, fontWeight: 800 }}>
-                  {!summaryYear || summaryYear === "All" ? "All years" : summaryYear}
+              <Box className="rounded bg-[#f5f5f5] border border-[#e5e5e5] px-2.5 py-0.5">
+                <Typography
+                  sx={{ color: "#111111", fontSize: 11, fontWeight: 700 }}
+                >
+                  {!summaryYear || summaryYear === "All"
+                    ? "All years"
+                    : summaryYear}
                 </Typography>
               </Box>
             </Box>
             <Typography
               sx={{
-                color: "#173c35",
-                fontSize: 24,
+                color: "#000000",
+                fontSize: 22,
                 fontWeight: 800,
-                lineHeight: 1.25,
-                mt: 2.5,
+                lineHeight: 1.3,
+                mt: 2,
+                letterSpacing: "-0.01em",
               }}
             >
-              {strongestCategory} has the highest average discount in the
-              selected data.
+              {strongestCategory} leads discount depth across monitored data.
             </Typography>
             <Typography
-              sx={{ color: "#718c83", fontSize: 13, lineHeight: 1.7, mt: 1.5 }}
+              sx={{ color: "#666666", fontSize: 13, lineHeight: 1.6, mt: 1.5 }}
             >
-              {summaryProducts.length} Polish offers are included, with an
-              average discount of {averageDiscount}%. Use this view to compare
-              brand pressure before setting a campaign.
+              {summaryProducts.length} offers are included, with an average
+              discount of {averageDiscount}%. Compare brand campaigns before
+              launching upcoming seasonal offers.
             </Typography>
-            <Box className="mt-6 grid grid-cols-2 gap-3 border-t border-[#eadfca] pt-5">
-              <Box className="rounded-xl border border-[#eee2cc] bg-white/75 p-3">
-                <Typography sx={{ color: "#718c83", fontSize: 11, fontWeight: 700 }}>
+            <Box className="mt-5 grid grid-cols-2 gap-3 border-t border-[#f0f0f0] pt-4">
+              <Box className="rounded-lg border border-[#e5e5e5] bg-[#fafafa] p-3">
+                <Typography
+                  sx={{
+                    color: "#757575",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
                   Discount by category
                 </Typography>
                 <Box className="mt-3 flex h-24 items-end gap-2">
@@ -249,22 +278,36 @@ export default function BrandAnalytics() {
                       className="flex min-w-0 flex-1 flex-col items-center gap-1"
                     >
                       <Box
-                        className="w-full rounded-t-sm bg-[#62b49a]"
+                        className="w-full rounded-t-sm"
                         sx={{
                           height: `${Math.max(8, Math.min(item.discount * 2.5, 72))}px`,
-                          opacity: item.category === strongestCategory ? 1 : 0.55,
+                          backgroundColor:
+                            item.category === strongestCategory
+                              ? "#e50043"
+                              : "#111111",
+                          opacity:
+                            item.category === strongestCategory ? 1 : 0.65,
                         }}
                         title={`${item.category}: ${item.discount}%`}
                       />
-                      <Typography sx={{ color: "#718c83", fontSize: 9, fontWeight: 700 }}>
+                      <Typography
+                        sx={{ color: "#757575", fontSize: 9, fontWeight: 700 }}
+                      >
                         {item.category.slice(0, 3)}
                       </Typography>
                     </Box>
                   ))}
                 </Box>
               </Box>
-              <Box className="rounded-xl border border-[#eee2cc] bg-white/75 p-3">
-                <Typography sx={{ color: "#718c83", fontSize: 11, fontWeight: 700 }}>
+              <Box className="rounded-lg border border-[#e5e5e5] bg-[#fafafa] p-3">
+                <Typography
+                  sx={{
+                    color: "#757575",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                  }}
+                >
                   Weekly offer activity
                 </Typography>
                 <Box className="mt-3 flex h-24 items-end gap-1">
@@ -274,14 +317,17 @@ export default function BrandAnalytics() {
                       className="flex min-w-0 flex-1 flex-col items-center gap-1"
                     >
                       <Box
-                        className="w-full rounded-t-sm bg-[#d88e3f]"
+                        className="w-full rounded-t-sm"
                         sx={{
                           height: `${Math.max(8, Math.min((item.count / Math.max(summaryProducts.length, 1)) * 72, 72))}px`,
-                          opacity: item.count ? 1 : 0.25,
+                          backgroundColor: "#c59a3f",
+                          opacity: item.count ? 1 : 0.3,
                         }}
                         title={`${item.week}: ${item.count} offers, ${item.discount}% average discount`}
                       />
-                      <Typography sx={{ color: "#718c83", fontSize: 9, fontWeight: 700 }}>
+                      <Typography
+                        sx={{ color: "#757575", fontSize: 9, fontWeight: 700 }}
+                      >
                         {item.week}
                       </Typography>
                     </Box>
@@ -289,17 +335,28 @@ export default function BrandAnalytics() {
                 </Box>
               </Box>
             </Box>
-            <Box className="mt-5 flex items-end justify-between gap-3 rounded-xl bg-[#173c35] px-4 py-3.5">
+            <Box className="mt-4 flex items-end justify-between gap-3 rounded-xl bg-[#000000] px-4 py-3 text-white">
               <Box>
-                <Typography sx={{ color: "#b9d9ce", fontSize: 11 }}>
+                <Typography
+                  sx={{ color: "#9e9e9e", fontSize: 11, fontWeight: 600 }}
+                >
                   Latest promotion year
                 </Typography>
-                <Typography sx={{ color: "white", fontSize: 27, fontWeight: 800, mt: 0.5 }}>
+                <Typography
+                  sx={{
+                    color: "white",
+                    fontSize: 24,
+                    fontWeight: 800,
+                    mt: 0.25,
+                  }}
+                >
                   {latestYear || "All history"}
                 </Typography>
               </Box>
-              <Typography sx={{ color: "#e8b36e", fontSize: 22, fontWeight: 800 }}>
-                {averageDiscount}%
+              <Typography
+                sx={{ color: "#e50043", fontSize: 22, fontWeight: 800 }}
+              >
+                {averageDiscount}% avg
               </Typography>
             </Box>
             <YearFilter selectedYear={summaryYear} onChange={setSummaryYear} />
@@ -309,31 +366,39 @@ export default function BrandAnalytics() {
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#edf1ef] bg-white"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <CardContent className="!p-6">
             <Box className="mb-4 flex items-center justify-between">
               <Box>
                 <Typography
-                  sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+                  sx={{
+                    color: "#000000",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    letterSpacing: "-0.01em",
+                  }}
                 >
-                  Promotion intensity heatmap
+                  Promotion Intensity Heatmap
                 </Typography>
-                <Typography sx={{ color: "#8a9894", fontSize: 13, mt: 0.5 }}>
+                <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
                   Seasonality across the last eight weeks
                 </Typography>
               </Box>
-              <Box className="flex gap-1">
-                <Box className="h-3 w-3 rounded-sm bg-[#e7f3ee]" />
-                <Box className="h-3 w-3 rounded-sm bg-[#9ed0bd]" />
-                <Box className="h-3 w-3 rounded-sm bg-[#4d9d89]" />
-                <Box className="h-3 w-3 rounded-sm bg-[#236653]" />
+              <Box className="flex items-center gap-1">
+                <Box className="h-3 w-3 rounded-xs bg-[#f5f5f5]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#fca5b7]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#e50043]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#99002c]" />
               </Box>
             </Box>
             <Box className="grid grid-cols-9 gap-2 text-center">
               <Box />
               {weeks.map((week) => (
-                <Typography key={week} sx={{ color: "#9aa7a3", fontSize: 10 }}>
+                <Typography
+                  key={week}
+                  sx={{ color: "#757575", fontSize: 10, fontWeight: 600 }}
+                >
                   {week}
                 </Typography>
               ))}
@@ -342,7 +407,7 @@ export default function BrandAnalytics() {
                   <React.Fragment key={category}>
                     <Typography
                       sx={{
-                        color: "#557069",
+                        color: "#111111",
                         fontSize: 11,
                         fontWeight: 700,
                         textAlign: "left",
@@ -364,28 +429,28 @@ export default function BrandAnalytics() {
                       );
                       const intensity = weekProducts.length
                         ? Math.min(
-                          3,
-                          Math.floor(
-                            weekProducts.reduce(
-                              (sum, product) =>
-                                sum + product.competitorDiscount,
-                              0,
-                            ) /
-                            weekProducts.length /
-                            10,
-                          ),
-                        )
+                            3,
+                            Math.floor(
+                              weekProducts.reduce(
+                                (sum, product) =>
+                                  sum + product.competitorDiscount,
+                                0,
+                              ) /
+                                weekProducts.length /
+                                10,
+                            ),
+                          )
                         : 0;
                       return (
                         <Box
                           key={`${category}-${week}`}
-                          className="h-8 rounded-md"
+                          className="h-8 rounded-sm transition-all"
                           sx={{
                             backgroundColor: [
-                              "#e7f3ee",
-                              "#9ed0bd",
-                              "#4d9d89",
-                              "#236653",
+                              "#f5f5f5",
+                              "#fca5b7",
+                              "#e50043",
+                              "#99002c",
                             ][intensity],
                           }}
                         />
@@ -400,25 +465,32 @@ export default function BrandAnalytics() {
         </Card>
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#edf1ef] bg-white"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
-              sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+              sx={{
+                color: "#000000",
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
             >
-              Top-promoted categories
+              Top-Promoted Categories
             </Typography>
-            <Typography sx={{ color: "#8a9894", fontSize: 13, mb: 4, mt: 0.5 }}>
+            <Typography
+              sx={{ color: "#757575", fontSize: 12.5, mb: 4, mt: 0.5 }}
+            >
               Ranked by discount level and SKU coverage
             </Typography>
             {categoryTotals.map((item, index) => (
               <Box key={item.category} className="mb-4 flex items-center gap-3">
                 <Typography
                   sx={{
-                    color: "#a0aca8",
-                    fontSize: 13,
+                    color: "#9e9e9e",
+                    fontSize: 12,
                     fontWeight: 800,
-                    width: 18,
+                    width: 20,
                   }}
                 >
                   0{index + 1}
@@ -426,7 +498,7 @@ export default function BrandAnalytics() {
                 <Box className="flex-1">
                   <Box className="mb-1 flex justify-between">
                     <Typography
-                      sx={{ color: "#34534a", fontSize: 13, fontWeight: 700 }}
+                      sx={{ color: "#111111", fontSize: 13, fontWeight: 700 }}
                     >
                       {item.category}
                     </Typography>
@@ -434,10 +506,11 @@ export default function BrandAnalytics() {
                       label={`${item.discount}% avg`}
                       size="small"
                       sx={{
-                        backgroundColor: "#e1f2ed",
-                        color: "#28715f",
+                        backgroundColor: "#000000",
+                        color: "#ffffff",
                         fontWeight: 700,
                         fontSize: 10,
+                        borderRadius: "4px",
                       }}
                     />
                   </Box>
@@ -447,9 +520,9 @@ export default function BrandAnalytics() {
                     sx={{
                       height: 6,
                       borderRadius: 4,
-                      backgroundColor: "#edf2ef",
+                      backgroundColor: "#f0f0f0",
                       "& .MuiLinearProgress-bar": {
-                        backgroundColor: "#73b8a5",
+                        backgroundColor: "#e50043",
                         borderRadius: 4,
                       },
                     }}
@@ -457,7 +530,10 @@ export default function BrandAnalytics() {
                 </Box>
               </Box>
             ))}
-            <YearFilter selectedYear={categoryYear} onChange={setCategoryYear} />
+            <YearFilter
+              selectedYear={categoryYear}
+              onChange={setCategoryYear}
+            />
           </CardContent>
         </Card>
       </Box>

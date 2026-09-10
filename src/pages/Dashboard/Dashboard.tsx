@@ -234,109 +234,155 @@ const Dashboard = () => {
     <Box className="flex flex-col gap-4">
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#dcece6] bg-[#eaf6f1]"
+        className="rounded-xl border border-[#e5e5e5] bg-[#000000] text-white relative overflow-hidden"
       >
-        <CardContent className="!p-6">
-          <Typography sx={{ color: "#52746a", fontSize: 13, fontWeight: 700 }}>
-            {getGreeting()}, {role}
+        <Box className="absolute top-0 left-0 right-0 h-1 sephora-stripes" />
+        <CardContent className="!p-6 pt-7">
+          <Box className="flex items-center gap-2 mb-1">
+            <Typography
+              sx={{
+                color: "#e50043",
+                fontSize: 11,
+                fontWeight: 800,
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+              }}
+            >
+              Sephora Intelligence Hub
+            </Typography>
+            <Typography sx={{ color: "#757575", fontSize: 11 }}>•</Typography>
+            <Typography
+              sx={{ color: "#9e9e9e", fontSize: 11, fontWeight: 600 }}
+            >
+              {getGreeting()}, {role}
+            </Typography>
+          </Box>
+          <Typography
+            sx={{
+              color: "#ffffff",
+              fontSize: { xs: 22, md: 28 },
+              fontWeight: 800,
+              letterSpacing: "-0.02em",
+              mt: 0.5,
+            }}
+          >
+            Promotional & Competitor Monitor
           </Typography>
           <Typography
             sx={{
-              color: "#173c35",
-              fontSize: { xs: 24, md: 30 },
-              fontWeight: 800,
-              mt: 1,
+              color: "#b3b3b3",
+              fontSize: 13.5,
+              mt: 0.8,
+              maxWidth: "700px",
             }}
           >
-            Your promotion workspace is ready.
-          </Typography>
-          <Typography sx={{ color: "#607d74", fontSize: 14, mt: 1 }}>
-            Review active product offers, upcoming campaign dates, and expired
-            discounts.
+            Track Poland & international retail promotions, analyze discount
+            depth across competitors, and optimize campaign timings.
           </Typography>
         </CardContent>
       </Card>
+
       <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           [
-            "Polish offers tracked",
+            "Offers tracked",
             filteredProducts.length,
-            "PL catalog",
-            <LocalOfferRounded />,
+            "Active catalog",
+            <LocalOfferRounded sx={{ color: "#e50043" }} />,
           ],
           [
             "Active today",
             analytics.active,
-            "across selected stores",
-            <StorefrontRounded />,
+            "across monitored retailers",
+            <StorefrontRounded sx={{ color: "#000000" }} />,
           ],
           [
             "Average discount",
             `${analytics.average}%`,
-            "selected history",
-            <TrendingUpRounded />,
+            "across active campaigns",
+            <TrendingUpRounded sx={{ color: "#c59a3f" }} />,
           ],
           [
             "Peak month",
             analytics.peakMonth || "No data",
-            `${analytics.peak}% average discount`,
-            <TrendingDownRounded />,
+            `${analytics.peak}% max monthly avg`,
+            <TrendingDownRounded sx={{ color: "#e50043" }} />,
           ],
         ].map(([label, value, detail, icon]) => (
           <Card
             key={String(label)}
             elevation={0}
-            className="rounded-2xl border border-[#edf1ef] bg-white"
+            className="rounded-xl border border-[#e5e5e5] bg-white transition-all hover:border-[#111111]"
           >
             <CardContent className="!p-5">
               <Box className="flex items-center justify-between">
                 <Typography
-                  sx={{ color: "#82908b", fontSize: 12, fontWeight: 700 }}
+                  sx={{
+                    color: "#757575",
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    letterSpacing: "0.05em",
+                    textTransform: "uppercase",
+                  }}
                 >
                   {label}
                 </Typography>
-                <Box sx={{ color: "#286e5e" }}>{icon}</Box>
+                <Box>{icon}</Box>
               </Box>
               <Typography
-                sx={{ color: "#173c35", fontSize: 27, fontWeight: 800, mt: 1 }}
+                sx={{
+                  color: "#000000",
+                  fontSize: 26,
+                  fontWeight: 800,
+                  mt: 1,
+                  letterSpacing: "-0.02em",
+                }}
               >
                 {value}
               </Typography>
-              <Typography sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}>
+              <Typography sx={{ color: "#757575", fontSize: 12, mt: 0.5 }}>
                 {detail}
               </Typography>
             </CardContent>
           </Card>
         ))}
       </Box>
+
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#dcece6] bg-white"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <CardContent className="!p-6">
             <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <Box>
                 <Typography
-                  sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+                  sx={{
+                    color: "#000000",
+                    fontSize: 16,
+                    fontWeight: 800,
+                    letterSpacing: "-0.01em",
+                  }}
                 >
-                  Poland promotion trend
+                  Poland Promotion Trend
                 </Typography>
-                <Typography sx={{ color: "#718c83", fontSize: 13, mt: 0.5 }}>
-                  Monthly discount movement for the selected chart year.
+                <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+                  Monthly discount movement for the selected year.
                 </Typography>
               </Box>
               <Chip
                 label={`${chartProducts.length} offers`}
                 size="small"
                 sx={{
-                  backgroundColor: "#e5f6ef",
-                  color: "#286e5e",
+                  backgroundColor: "#000000",
+                  color: "#ffffff",
                   fontWeight: 700,
+                  fontSize: 11,
+                  borderRadius: "4px",
                 }}
               />
             </Box>
-            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#dfeae5] px-3 pb-2 sm:gap-4">
+            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#e5e5e5] px-3 pb-2 sm:gap-4">
               {analytics.monthValues.map((value, index) => (
                 <Box
                   key={months[index]}
@@ -344,7 +390,12 @@ const Dashboard = () => {
                 >
                   <Typography
                     sx={{
-                      color: value ? "#286e5e" : "#b7c4bf",
+                      color:
+                        value === analytics.peak
+                          ? "#e50043"
+                          : value
+                            ? "#111111"
+                            : "#bdbdbd",
                       fontSize: 10,
                       fontWeight: 800,
                     }}
@@ -352,14 +403,20 @@ const Dashboard = () => {
                     {value ? `${value}%` : "-"}
                   </Typography>
                   <Box
-                    className="w-full max-w-10 rounded-t-md"
+                    className="w-full max-w-10 rounded-t-sm transition-all"
                     sx={{
                       height: `${Math.max((value / Math.max(analytics.peak, 1)) * 125, value ? 10 : 2)}px`,
                       backgroundColor:
-                        value === analytics.peak ? "#d88e3f" : "#7dbba8",
+                        value === analytics.peak
+                          ? "#e50043"
+                          : value
+                            ? "#111111"
+                            : "#eeeeee",
                     }}
                   />
-                  <Typography sx={{ color: "#82908b", fontSize: 10 }}>
+                  <Typography
+                    sx={{ color: "#757575", fontSize: 10, fontWeight: 600 }}
+                  >
                     {months[index]}
                   </Typography>
                 </Box>
@@ -368,22 +425,28 @@ const Dashboard = () => {
             <YearFilter selectedYear={chartYear} onChange={setChartYear} />
           </CardContent>
         </Card>
+
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#dcece6] bg-[#fffaf1]"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
-              sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+              sx={{
+                color: "#000000",
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
             >
-              Promotion pulse by year
+              Promotion Pulse by Year
             </Typography>
-            <Typography sx={{ color: "#718c83", fontSize: 13, mt: 0.5 }}>
+            <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
               All available years, with filtered offer volume.
             </Typography>
-            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#eadfca] px-3 pb-2">
-              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#eadfca]" />
-              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#eadfca]" />
+            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#e5e5e5] px-3 pb-2">
+              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#e5e5e5]" />
+              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#e5e5e5]" />
               {yearlyTrend.map((item) => {
                 const chartMax = Math.max(
                   ...yearlyTrend.map((trend) => trend.high),
@@ -399,7 +462,7 @@ const Dashboard = () => {
                   >
                     <Typography
                       sx={{
-                        color: rising ? "#286e5e" : "#c46f76",
+                        color: rising ? "#e50043" : "#757575",
                         fontSize: 10,
                         fontWeight: 800,
                       }}
@@ -411,7 +474,7 @@ const Dashboard = () => {
                       title={`${item.year}: low ${item.low}%, open ${item.open}%, close ${item.close}%, high ${item.high}%`}
                     >
                       <Box
-                        className="absolute w-px bg-[#718c83]"
+                        className="absolute w-px bg-[#757575]"
                         sx={{ height: scale(item.high) }}
                       />
                       <Box
@@ -419,63 +482,65 @@ const Dashboard = () => {
                         sx={{
                           height: scale(Math.abs(item.close - item.open)),
                           minHeight: 8,
-                          backgroundColor: rising ? "#62b49a" : "#df8a91",
-                          border: `1px solid ${rising ? "#286e5e" : "#b25b52"}`,
+                          backgroundColor: rising ? "#e50043" : "#222222",
+                          border: `1px solid ${rising ? "#c8003a" : "#000000"}`,
                         }}
                       />
                     </Box>
                     <Typography
-                      sx={{ color: "#718c83", fontSize: 11, fontWeight: 700 }}
+                      sx={{ color: "#111111", fontSize: 11, fontWeight: 700 }}
                     >
                       {item.year}
                     </Typography>
-                    <Typography sx={{ color: "#9aa9a3", fontSize: 10 }}>
+                    <Typography sx={{ color: "#757575", fontSize: 10 }}>
                       {item.offers} offers
                     </Typography>
                   </Box>
                 );
               })}
             </Box>
-            <Box className="grid grid-cols-3 gap-2">
+            <Box className="grid grid-cols-3 gap-2 mt-4">
               {yearlyTrend.map((item) => (
                 <Box
                   key={item.year}
-                  className="rounded-lg bg-white/70 px-2 py-1.5 text-center"
+                  className="rounded-lg bg-[#f7f7f8] border border-[#eeeeee] px-2 py-1.5 text-center"
                 >
-                  <Typography sx={{ color: "#718c83", fontSize: 10 }}>
+                  <Typography
+                    sx={{ color: "#757575", fontSize: 10, fontWeight: 600 }}
+                  >
                     {item.year}
                   </Typography>
                   <Typography
-                    sx={{ color: "#c4772f", fontSize: 12, fontWeight: 800 }}
+                    sx={{ color: "#000000", fontSize: 12, fontWeight: 800 }}
                   >
                     {item.low}-{item.high}% range
                   </Typography>
                 </Box>
               ))}
             </Box>
-            {/* <Box className="mt-5 rounded-xl bg-white/70 p-3">
-              <Typography sx={{ color: "#286e5e", fontSize: 12, fontWeight: 800 }}>Reading the trend</Typography>
-              <Typography sx={{ color: "#718c83", fontSize: 12, lineHeight: 1.6, mt: 0.5 }}>
-                Compare the yearly peaks with the monthly panel to spot when promotional pressure rises or cools.
-              </Typography>
-            </Box> */}
           </CardContent>
         </Card>
       </Box>
+
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#edf1ef] bg-white"
+        className="rounded-xl border border-[#e5e5e5] bg-white"
       >
         <CardContent className="!p-6">
           <Box className="mb-5 flex items-center justify-between">
             <Box>
               <Typography
-                sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+                sx={{
+                  color: "#000000",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: "-0.01em",
+                }}
               >
-                Product promotion catalog
+                Product Promotion Catalog
               </Typography>
-              <Typography sx={{ color: "#8a9894", fontSize: 13, mt: 0.5 }}>
-                Unsplash imagery, competitor offers, and promotion end dates
+              <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+                Monitored products, competitor offers, and promotion end dates
               </Typography>
             </Box>
             <Button
@@ -483,7 +548,12 @@ const Dashboard = () => {
               to="/promotions"
               size="small"
               endIcon={<ChevronRightRounded />}
-              sx={{ color: "#2c7565", textTransform: "none", fontWeight: 700 }}
+              sx={{
+                color: "#000000",
+                textTransform: "none",
+                fontWeight: 700,
+                "&:hover": { color: "#e50043" },
+              }}
             >
               Manage promotions
             </Button>
@@ -498,10 +568,12 @@ const Dashboard = () => {
             }}
             slotProps={{
               input: {
-                startAdornment: <SearchRounded sx={{ color: "#93a29d" }} />,
+                startAdornment: (
+                  <SearchRounded sx={{ color: "#9e9e9e", mr: 1 }} />
+                ),
               },
             }}
-            sx={{ mb: 3, minWidth: 300 }}
+            sx={{ mb: 3, minWidth: 320 }}
           />
           <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {catalogProducts.map((product) => (
@@ -509,9 +581,9 @@ const Dashboard = () => {
                 component={Link}
                 to={`/products/${product.id}`}
                 key={product.id}
-                className="overflow-hidden rounded-xl border border-[#edf1ef] no-underline"
+                className="overflow-hidden rounded-xl border border-[#e5e5e5] no-underline bg-white transition-all hover:border-[#000000] hover:shadow-md"
               >
-                <Box className="relative h-32 bg-[#eef6f2]">
+                <Box className="relative h-36 bg-[#f7f7f8]">
                   <img
                     src={product.image}
                     alt={product.name}
@@ -526,13 +598,16 @@ const Dashboard = () => {
                     size="small"
                     sx={{
                       position: "absolute",
-                      left: 6,
-                      top: 6,
+                      left: 8,
+                      top: 8,
                       backgroundColor:
-                        product.toDate >= today ? "#e1f2ed" : "#fce7e3",
-                      color: product.toDate >= today ? "#28715f" : "#b25b52",
+                        product.toDate >= today ? "#000000" : "#eeeeee",
+                      color: product.toDate >= today ? "#ffffff" : "#757575",
                       fontSize: 10,
                       fontWeight: 800,
+                      letterSpacing: "0.04em",
+                      textTransform: "uppercase",
+                      borderRadius: "4px",
                     }}
                   />
                   {canEdit && product.toDate < today && (
@@ -548,45 +623,63 @@ const Dashboard = () => {
                         position: "absolute",
                         right: 6,
                         top: 6,
-                        backgroundColor: "rgba(255, 255, 255, 0.9)",
-                        color: "#b25b52",
+                        backgroundColor: "rgba(255, 255, 255, 0.95)",
+                        color: "#e50043",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#fce7e3",
-                          color: "#993c33",
+                          backgroundColor: "#fff0f3",
+                          color: "#c8003a",
                         },
                       }}
                     >
                       <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                     </IconButton>
                   )}
-                  <Box className="absolute bottom-1 right-1 rounded-full bg-white/90 px-1.5 py-0.5">
+                  <Box className="absolute bottom-2 right-2 rounded bg-[#e50043] px-2 py-0.5 shadow-sm">
                     <Typography
-                      sx={{ color: "#b25b52", fontSize: 10, fontWeight: 800 }}
+                      sx={{
+                        color: "#ffffff",
+                        fontSize: 11,
+                        fontWeight: 800,
+                        letterSpacing: "0.02em",
+                      }}
                     >
                       -{product.competitorDiscount}%
                     </Typography>
                   </Box>
                 </Box>
-                <Box className="p-2">
+                <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#31534a",
+                      color: "#757575",
                       display: "block",
-                      fontSize: 13,
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {product.brand}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      color: "#111111",
+                      display: "block",
+                      fontSize: 12.5,
                       fontWeight: 700,
                       lineHeight: 1.3,
+                      mt: 0.25,
                     }}
                   >
                     {product.name}
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#286e5e",
+                      color: "#757575",
                       display: "block",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      mt: 0.5,
+                      fontSize: 11,
+                      fontWeight: 600,
+                      mt: 0.75,
                     }}
                   >
                     Ends {product.toDate}
@@ -605,19 +698,25 @@ const Dashboard = () => {
           />
         </CardContent>
       </Card>
+
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#edf1ef] bg-white"
+        className="rounded-xl border border-[#e5e5e5] bg-white"
       >
         <CardContent className="!p-6">
           <Box className="mb-4 flex items-center justify-between">
             <Box>
               <Typography
-                sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+                sx={{
+                  color: "#000000",
+                  fontSize: 16,
+                  fontWeight: 800,
+                  letterSpacing: "-0.01em",
+                }}
               >
-                Expired promotions
+                Expired Promotions
               </Typography>
-              <Typography sx={{ color: "#8a9894", fontSize: 13, mt: 0.5 }}>
+              <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
                 Historical discounts that are no longer active.
               </Typography>
             </Box>
@@ -625,16 +724,17 @@ const Dashboard = () => {
               label={`${expiredProducts.length} archived`}
               size="small"
               sx={{
-                backgroundColor: "#f0f2f1",
-                color: "#687b74",
+                backgroundColor: "#f5f5f5",
+                color: "#757575",
                 fontWeight: 700,
+                borderRadius: "4px",
               }}
             />
           </Box>
           {expiredProducts.length === 0 ? (
             <Typography
               sx={{
-                color: "#8a9894",
+                color: "#757575",
                 fontSize: 13,
                 py: 4,
                 textAlign: "center",
@@ -649,13 +749,13 @@ const Dashboard = () => {
                   key={product.id}
                   component={Link}
                   to={`/products/${product.id}`}
-                  className="group relative overflow-hidden rounded-xl border border-[#edf1ef] no-underline"
+                  className="group relative overflow-hidden rounded-xl border border-[#e5e5e5] no-underline bg-white transition-all hover:border-[#000000]"
                 >
-                  <Box className="relative h-32 bg-[#eef6f2]">
+                  <Box className="relative h-32 bg-[#f7f7f8]">
                     <img
                       src={product.image}
                       alt={product.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover grayscale-[30%]"
                       onError={(event) => {
                         event.currentTarget.onerror = null;
                         event.currentTarget.src = fallbackImage;
@@ -668,10 +768,11 @@ const Dashboard = () => {
                         position: "absolute",
                         left: 8,
                         top: 8,
-                        backgroundColor: "#fce7e3",
-                        color: "#b25b52",
+                        backgroundColor: "#eeeeee",
+                        color: "#757575",
                         fontSize: 10,
                         fontWeight: 800,
+                        borderRadius: "4px",
                       }}
                     />
                     {canEdit && (
@@ -687,33 +788,33 @@ const Dashboard = () => {
                           position: "absolute",
                           right: 8,
                           top: 8,
-                          backgroundColor: "rgba(255, 255, 255, 0.9)",
-                          color: "#b25b52",
+                          backgroundColor: "rgba(255, 255, 255, 0.95)",
+                          color: "#e50043",
                           padding: "4px",
                           "&:hover": {
-                            backgroundColor: "#fce7e3",
-                            color: "#993c33",
+                            backgroundColor: "#fff0f3",
+                            color: "#c8003a",
                           },
                         }}
                       >
-                        <DeleteOutlineRounded sx={{ fontSize: 18 }} />
+                        <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                       </IconButton>
                     )}
                   </Box>
                   <Box className="p-3">
                     <Typography
-                      sx={{ color: "#31534a", fontSize: 12, fontWeight: 800 }}
+                      sx={{ color: "#111111", fontSize: 12, fontWeight: 700 }}
                     >
                       {product.name}
                     </Typography>
                     <Typography
-                      sx={{ color: "#82908b", fontSize: 11, mt: 0.5 }}
+                      sx={{ color: "#757575", fontSize: 11, mt: 0.5 }}
                     >
                       {product.fromDate} - {product.toDate}
                     </Typography>
                     <Typography
                       sx={{
-                        color: "#b25b52",
+                        color: "#e50043",
                         fontSize: 11,
                         fontWeight: 800,
                         mt: 1,

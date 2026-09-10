@@ -73,30 +73,37 @@ export default function StoreComparison() {
       <Box className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           [
-            "Best current offer",
+            "Best Current Offer",
             `${Math.max(...retailers.map((retailer) => Number(retailer[1])))}%`,
           ],
-          ["Average market discount", `${averageMarket}%`],
-          ["Active retailer campaigns", String(activeCount)],
+          ["Average Market Discount", `${averageMarket}%`],
+          ["Active Retailer Campaigns", String(activeCount)],
         ].map(([label, value]) => (
           <Card
             key={label}
             elevation={0}
-            className="rounded-2xl border border-[#edf1ef] bg-white"
+            className="rounded-xl border border-[#e5e5e5] bg-white transition-all hover:border-[#111111]"
           >
             <Box className="p-5">
               <Typography
                 sx={{
-                  color: "#8a9894",
-                  fontSize: 12,
+                  color: "#757575",
+                  fontSize: 11.5,
                   fontWeight: 700,
+                  letterSpacing: "0.05em",
                   textTransform: "uppercase",
                 }}
               >
                 {label}
               </Typography>
               <Typography
-                sx={{ color: "#173c35", fontSize: 22, fontWeight: 800, mt: 1 }}
+                sx={{
+                  color: "#000000",
+                  fontSize: 24,
+                  fontWeight: 800,
+                  mt: 1,
+                  letterSpacing: "-0.01em",
+                }}
               >
                 {value}
               </Typography>
@@ -106,19 +113,24 @@ export default function StoreComparison() {
       </Box>
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#edf1ef] bg-white"
+        className="rounded-xl border border-[#e5e5e5] bg-white"
       >
-        <Box className="border-b border-[#edf1ef] px-5 py-4">
+        <Box className="border-b border-[#e5e5e5] px-5 py-4">
           <Box className="flex items-center gap-2">
-            <FilterAltRounded sx={{ color: "#286e5e", fontSize: 18 }} />
+            <FilterAltRounded sx={{ color: "#e50043", fontSize: 18 }} />
             <Typography
-              sx={{ color: "#173c35", fontSize: 17, fontWeight: 800 }}
+              sx={{
+                color: "#000000",
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: "-0.01em",
+              }}
             >
-              Retailer discount comparison
+              Retailer Discount Comparison
             </Typography>
           </Box>
-          <Typography sx={{ color: "#8a9894", fontSize: 13, mt: 0.5 }}>
-            Your discount versus competitor stores, with campaign dates and
+          <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+            Sephora discount versus competitor stores, with campaign dates and
             status.
           </Typography>
         </Box>
@@ -138,10 +150,12 @@ export default function StoreComparison() {
                   <TableCell
                     key={header}
                     sx={{
-                      color: "#8a9894",
+                      color: "#757575",
                       fontSize: 11,
                       fontWeight: 800,
                       textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      backgroundColor: "#fafafa",
                     }}
                   >
                     {header}
@@ -159,17 +173,17 @@ export default function StoreComparison() {
                 return (
                   <TableRow key={retailer[0]} hover>
                     <TableCell
-                      sx={{ color: "#274a41", fontSize: 13, fontWeight: 800 }}
+                      sx={{ color: "#000000", fontSize: 13, fontWeight: 700 }}
                     >
                       {retailer[0]}
                     </TableCell>
                     <TableCell
-                      sx={{ color: "#b25b52", fontSize: 14, fontWeight: 800 }}
+                      sx={{ color: "#e50043", fontSize: 13.5, fontWeight: 800 }}
                     >
                       -{retailer[1]}%
                     </TableCell>
                     <TableCell
-                      sx={{ color: "#28715f", fontSize: 14, fontWeight: 800 }}
+                      sx={{ color: "#000000", fontSize: 13.5, fontWeight: 800 }}
                     >
                       -{retailer[2]}%
                     </TableCell>
@@ -185,13 +199,14 @@ export default function StoreComparison() {
                         }
                         size="small"
                         sx={{
-                          backgroundColor: gap >= 0 ? "#e1f2ed" : "#fce7e3",
-                          color: gap >= 0 ? "#28715f" : "#b25b52",
+                          backgroundColor: gap >= 0 ? "#000000" : "#fff0f3",
+                          color: gap >= 0 ? "#ffffff" : "#e50043",
                           fontWeight: 800,
+                          borderRadius: "4px",
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ color: "#687b74", fontSize: 13 }}>
+                    <TableCell sx={{ color: "#666666", fontSize: 12.5 }}>
                       {retailer[3]} - {retailer[4]}
                     </TableCell>
                     <TableCell>
@@ -199,9 +214,13 @@ export default function StoreComparison() {
                         label={active ? "Active" : "Expired"}
                         size="small"
                         sx={{
-                          backgroundColor: active ? "#e1f2ed" : "#f0f2f1",
-                          color: active ? "#28715f" : "#687b74",
+                          backgroundColor: active ? "#000000" : "#eeeeee",
+                          color: active ? "#ffffff" : "#757575",
                           fontWeight: 800,
+                          fontSize: 10,
+                          borderRadius: "4px",
+                          letterSpacing: "0.04em",
+                          textTransform: "uppercase",
                         }}
                       />
                     </TableCell>
@@ -213,7 +232,7 @@ export default function StoreComparison() {
                         {trendValues.map((value, index) => (
                           <Box
                             key={index}
-                            className="w-1.5 rounded-t bg-[#80bbaa]"
+                            className="w-1.5 rounded-t bg-[#111111]"
                             sx={{
                               height: `${Math.max(18, ((value - trendMin) / Math.max(trendMax - trendMin, 1)) * 82)}%`,
                             }}

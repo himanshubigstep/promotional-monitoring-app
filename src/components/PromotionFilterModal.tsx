@@ -48,23 +48,24 @@ export default function PromotionFilterModal({
       onClose={onClose}
       aria-labelledby="promotion-filter-title"
     >
-      <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-4 shadow-2xl">
+      <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-2xl border border-[#e5e5e5]">
         <Box
-          className="mb-4 flex items-start justify-between gap-4"
+          className="mb-4 flex items-start justify-between gap-4 border-b border-[#f0f0f0] pb-3"
           id="promotion-filter-title"
         >
           <Box>
             <Box className="flex items-center gap-2">
-              <FilterAltRounded sx={{ color: "#286e5e" }} />
-              <span className="font-bold text-[#173c35]">
-                Promotion filters
+              <FilterAltRounded sx={{ color: "#e50043" }} />
+              <span className="font-bold text-black text-base tracking-tight">
+                Promotion Filters
               </span>
             </Box>
-            <span className="text-xs text-[#82908b]">
-              Filter products, campaigns, and store offers.
+            <span className="text-xs text-[#757575] mt-0.5 block">
+              Filter products, campaigns, and store offers across Sephora &
+              competitors.
             </span>
           </Box>
-          <Button onClick={onClose} sx={{ minWidth: 40, color: "#65736f" }}>
+          <Button onClick={onClose} sx={{ minWidth: 40, color: "#111111" }}>
             <CloseRounded />
           </Button>
         </Box>
@@ -116,17 +117,31 @@ export default function PromotionFilterModal({
             ]}
           />
         </Box>
-        <Box className="mt-4 flex justify-end gap-2">
+        <Box className="mt-5 flex justify-end gap-2 border-t border-[#f0f0f0] pt-4">
           <Button
             onClick={() => onApply(emptyPromotionFilters)}
-            sx={{ color: "#65736f", textTransform: "none" }}
+            sx={{
+              color: "#666666",
+              textTransform: "none",
+              fontWeight: 600,
+              fontSize: 13,
+              "&:hover": { color: "#000000", backgroundColor: "#f5f5f5" },
+            }}
           >
             Clear filters
           </Button>
           <Button
             onClick={onClose}
             variant="contained"
-            sx={{ backgroundColor: "#286e5e", textTransform: "none" }}
+            sx={{
+              backgroundColor: "#000000",
+              color: "#ffffff",
+              textTransform: "none",
+              fontWeight: 700,
+              fontSize: 13,
+              px: 3,
+              "&:hover": { backgroundColor: "#222222" },
+            }}
           >
             Apply filters
           </Button>

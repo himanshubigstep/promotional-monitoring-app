@@ -611,21 +611,21 @@ export default function PromotionFormModal({
         aria-labelledby="promotion-form-title"
       >
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white shadow-2xl relative border border-[#e5e5e5]"
           sx={{
             p: 4,
           }}
         >
           {ocrLoading && (
-            <Box className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-white/75 backdrop-blur-[1px]">
-              <Box className="flex items-center gap-3 rounded-xl bg-[#173c35] px-4 py-3 text-white shadow-lg">
+            <Box className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-white/80 backdrop-blur-[1px]">
+              <Box className="flex items-center gap-3 rounded-xl bg-[#000000] px-5 py-3.5 text-white shadow-xl">
                 <Box
                   component="span"
                   sx={{
                     width: 18,
                     height: 18,
-                    border: "2px solid rgba(255,255,255,0.35)",
-                    borderTopColor: "#ffffff",
+                    border: "2px solid rgba(255,255,255,0.3)",
+                    borderTopColor: "#e50043",
                     borderRadius: "50%",
                     display: "inline-block",
                     animation: "spin 0.8s linear infinite",
@@ -643,16 +643,16 @@ export default function PromotionFormModal({
             className="flex flex-col gap-4 h-full"
           >
             <Box
-              className="flex items-start justify-between gap-4 sticky"
+              className="flex items-start justify-between gap-4 sticky pb-3 border-b border-[#e5e5e5]"
               id="promotion-form-title"
             >
               <Box>
                 <Typography
-                  sx={{ color: "#173c35", fontSize: 22, fontWeight: 800 }}
+                  sx={{ color: "#000000", fontSize: 20, fontWeight: 800, letterSpacing: "-0.01em" }}
                 >
                   {currentLanguage.addPromotion}
                 </Typography>
-                <Typography sx={{ color: "#82908b", fontSize: 13, mt: 0.5 }}>
+                <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
                   {form.market === "CZ"
                     ? "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu."
                     : "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim."}
@@ -661,19 +661,19 @@ export default function PromotionFormModal({
               <Button
                 onClick={onClose}
                 aria-label="Zamknij"
-                sx={{ minWidth: 40, color: "#65736f" }}
+                sx={{ minWidth: 36, width: 36, height: 36, color: "#000000", p: 0, borderRadius: "50%", "&:hover": { backgroundColor: "#f5f5f5" } }}
               >
                 <CloseRounded />
               </Button>
             </Box>
             <Box className="flex flex-col gap-4 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-              <Box className="mb-4 flex items-center justify-between">
+              <Box className="mb-2 flex items-center justify-between">
                 <Typography
-                  sx={{ color: "#48665d", fontSize: 13, fontWeight: 700 }}
+                  sx={{ color: "#000000", fontSize: 12, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.05em" }}
                 >
                   {currentLanguage.market}
                 </Typography>
-                <Box className="flex gap-1 rounded-l bg-[#f2f7f5]">
+                <Box className="flex gap-1 rounded bg-[#f5f5f5] p-1">
                   {(["PL", "CZ"] as const).map((market) => (
                     <Button
                       key={market}
@@ -691,11 +691,16 @@ export default function PromotionFormModal({
                       variant={form.market === market ? "contained" : "text"}
                       size="small"
                       sx={{
-                        minWidth: 56,
+                        minWidth: 54,
                         backgroundColor:
-                          form.market === market ? "#286e5e" : "transparent",
-                        color: form.market === market ? "white" : "#65736f",
+                          form.market === market ? "#000000" : "transparent",
+                        color: form.market === market ? "#ffffff" : "#666666",
                         fontWeight: 800,
+                        boxShadow: "none",
+                        "&:hover": {
+                          backgroundColor: form.market === market ? "#111111" : "#e5e5e5",
+                          boxShadow: "none",
+                        },
                       }}
                     >
                       {market}
@@ -707,12 +712,12 @@ export default function PromotionFormModal({
               {/* Image Upload Section with Preview */}
               <Box className="mb-2">
                 {previewUrl ? (
-                  <Box className="relative rounded-lg overflow-hidden border border-[#dce6e2]">
+                  <Box className="relative rounded-lg overflow-hidden border border-[#e5e5e5]">
                     <Box className="relative">
                       <img
                         src={previewUrl}
                         alt="Promotion preview"
-                        className="w-full h-auto max-h-[200px] object-contain bg-[#f8faf9]"
+                        className="w-full h-auto max-h-[200px] object-contain bg-[#f7f7f8]"
                       />
                       <Box className="absolute top-2 right-2 flex gap-1">
                         <IconButton
@@ -723,7 +728,6 @@ export default function PromotionFormModal({
                             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                           }}
                           onClick={() => {
-                            // Trigger file input for editing
                             const input = document.createElement("input");
                             input.type = "file";
                             input.accept = "image/*";
@@ -736,7 +740,7 @@ export default function PromotionFormModal({
                           }}
                           disabled={ocrLoading}
                         >
-                          <EditRounded sx={{ fontSize: 18 }} />
+                          <EditRounded sx={{ fontSize: 18, color: "#000000" }} />
                         </IconButton>
                         <IconButton
                           size="small"
@@ -748,7 +752,7 @@ export default function PromotionFormModal({
                           onClick={removeImage}
                           disabled={ocrLoading}
                         >
-                          <DeleteOutlineRounded sx={{ fontSize: 18 }} />
+                          <DeleteOutlineRounded sx={{ fontSize: 18, color: "#e50043" }} />
                         </IconButton>
                       </Box>
                       {ocrLoading && (
@@ -759,25 +763,25 @@ export default function PromotionFormModal({
                               sx={{
                                 width: 16,
                                 height: 16,
-                                border: "2px solid #bfd2ce",
-                                borderTopColor: "#286e5e",
+                                border: "2px solid #e5e5e5",
+                                borderTopColor: "#e50043",
                                 borderRadius: "50%",
                                 display: "inline-block",
                                 animation: "spin 0.8s linear infinite",
                               }}
                             />
-                            <Typography sx={{ fontSize: 13, color: "#173c35" }}>
+                            <Typography sx={{ fontSize: 13, color: "#000000", fontWeight: 700 }}>
                               {currentLanguage.loading}
                             </Typography>
                           </Box>
                         </Box>
                       )}
                     </Box>
-                    <Box className="px-3 py-2 bg-[#f8faf9] flex items-center justify-between">
-                      <Typography sx={{ fontSize: 12, color: "#65736f" }}>
+                    <Box className="px-3 py-2 bg-[#f7f7f8] flex items-center justify-between border-t border-[#e5e5e5]">
+                      <Typography sx={{ fontSize: 12, color: "#000000", fontWeight: 600 }}>
                         {form.creativeName}
                       </Typography>
-                      <Typography sx={{ fontSize: 11, color: "#82908b" }}>
+                      <Typography sx={{ fontSize: 11, color: "#757575" }}>
                         {imageFile
                           ? `${(imageFile.size / 1024).toFixed(0)} KB`
                           : ""}
@@ -787,31 +791,31 @@ export default function PromotionFormModal({
                 ) : (
                   <Box
                     {...getRootProps()}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                    className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
                       isDragActive
-                        ? "border-[#286e5e] bg-[#f0f7f5]"
-                        : "border-[#dce6e2] hover:border-[#286e5e]"
+                        ? "border-[#000000] bg-[#f7f7f8]"
+                        : "border-[#d1d1d1] hover:border-[#000000] bg-[#fafafa]"
                     } ${ocrLoading ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <input {...getInputProps()} disabled={ocrLoading} />
                     <AddPhotoAlternateRounded
-                      sx={{ fontSize: 40, color: "#82908b", mb: 1 }}
+                      sx={{ fontSize: 36, color: "#757575", mb: 1 }}
                     />
                     <Typography
-                      sx={{ color: "#48665d", fontSize: 14, fontWeight: 500 }}
+                      sx={{ color: "#000000", fontSize: 13, fontWeight: 700 }}
                     >
                       {isDragActive
                         ? "Upuść obraz tutaj"
                         : currentLanguage.upload}
                     </Typography>
                     <Typography
-                      sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}
+                      sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}
                     >
                       PNG, JPG, WEBP (max 5MB)
                     </Typography>
                     {ocrLoading && (
                       <Typography
-                        sx={{ color: "#286e5e", fontSize: 12, mt: 1 }}
+                        sx={{ color: "#e50043", fontSize: 12, mt: 1, fontWeight: 700 }}
                       >
                         {currentLanguage.loading}
                       </Typography>
@@ -1016,15 +1020,15 @@ export default function PromotionFormModal({
                 />
               </Box>
               {error && (
-                <Typography sx={{ color: "#b55a50", fontSize: 13, mt: 2 }}>
+                <Typography sx={{ color: "#e50043", fontSize: 13, mt: 2, fontWeight: 700 }}>
                   {error}
                 </Typography>
               )}
             </Box>
-            <Box className="flex justify-end gap-2 sticky">
+            <Box className="flex justify-end gap-2 sticky pt-3 border-t border-[#e5e5e5]">
               <Button
                 onClick={onClose}
-                sx={{ color: "#65736f", textTransform: "none" }}
+                sx={{ color: "#757575", textTransform: "none", fontWeight: 700 }}
               >
                 {currentLanguage.cancel}
               </Button>
@@ -1039,7 +1043,7 @@ export default function PromotionFormModal({
                       sx={{
                         width: 16,
                         height: 16,
-                        border: "2px solid #bfd2ce",
+                        border: "2px solid #666666",
                         borderTopColor: "white",
                         borderRadius: "50%",
                         display: "inline-block",
@@ -1051,9 +1055,11 @@ export default function PromotionFormModal({
                   )
                 }
                 sx={{
-                  backgroundColor: "#286e5e",
+                  backgroundColor: "#000000",
+                  color: "#ffffff",
                   textTransform: "none",
-                  "&:hover": { backgroundColor: "#1d594b" },
+                  fontWeight: 800,
+                  "&:hover": { backgroundColor: "#222222" },
                 }}
               >
                 {currentLanguage.save}
@@ -1064,9 +1070,9 @@ export default function PromotionFormModal({
       </Modal>
 
       <Modal open={brandModalOpen} onClose={() => setBrandModalOpen(false)}>
-        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
+        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-2xl border border-[#e5e5e5]">
           <Typography
-            sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}
+            sx={{ color: "#000000", fontSize: 18, fontWeight: 800, mb: 2 }}
           >
             {currentLanguage.addBrandTitle}
           </Typography>
@@ -1075,19 +1081,19 @@ export default function PromotionFormModal({
             value={newBrandName}
             onValueChange={(value) => setNewBrandName(String(value))}
             placeholder={currentLanguage.brandNamePlaceholder}
-            className="mb-2"
+            className="mb-4"
           />
           <Box className="flex justify-end gap-2">
             <Button
               onClick={() => setBrandModalOpen(false)}
-              sx={{ color: "#65736f", textTransform: "none" }}
+              sx={{ color: "#757575", textTransform: "none", fontWeight: 700 }}
             >
               {currentLanguage.cancel}
             </Button>
             <Button
               variant="contained"
               onClick={saveBrand}
-              sx={{ backgroundColor: "#286e5e", textTransform: "none" }}
+              sx={{ backgroundColor: "#000000", color: "#ffffff", textTransform: "none", fontWeight: 800, "&:hover": { backgroundColor: "#222222" } }}
             >
               {currentLanguage.saveBrand}
             </Button>
@@ -1096,9 +1102,9 @@ export default function PromotionFormModal({
       </Modal>
 
       <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)}>
-        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
+        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-2xl border border-[#e5e5e5]">
           <Typography
-            sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}
+            sx={{ color: "#000000", fontSize: 18, fontWeight: 800, mb: 2 }}
           >
             {currentLanguage.addProductTitle}
           </Typography>
@@ -1184,14 +1190,14 @@ export default function PromotionFormModal({
           <Box className="mt-4 flex justify-end gap-2">
             <Button
               onClick={() => setProductModalOpen(false)}
-              sx={{ color: "#65736f", textTransform: "none" }}
+              sx={{ color: "#757575", textTransform: "none", fontWeight: 700 }}
             >
               {currentLanguage.cancel}
             </Button>
             <Button
               variant="contained"
               onClick={saveProduct}
-              sx={{ backgroundColor: "#286e5e", textTransform: "none" }}
+              sx={{ backgroundColor: "#000000", color: "#ffffff", textTransform: "none", fontWeight: 800, "&:hover": { backgroundColor: "#222222" } }}
             >
               {currentLanguage.saveProduct}
             </Button>

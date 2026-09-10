@@ -21,16 +21,21 @@ export default function ProductDetail() {
     return (
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#edf1ef] bg-white p-6"
+        className="rounded-xl border border-[#e5e5e5] bg-white p-6"
       >
-        <Typography sx={{ color: "#173c35", fontWeight: 800 }}>
+        <Typography sx={{ color: "#000000", fontWeight: 800 }}>
           Product not found
         </Typography>
         <Button
           component={Link}
           to="/promotions"
           startIcon={<ArrowBackRounded />}
-          sx={{ mt: 2, color: "#286e5e", textTransform: "none" }}
+          sx={{
+            mt: 2,
+            color: "#000000",
+            fontWeight: 700,
+            textTransform: "none",
+          }}
         >
           Back to promotions
         </Button>
@@ -46,8 +51,10 @@ export default function ProductDetail() {
         startIcon={<ArrowBackRounded />}
         sx={{
           alignSelf: "flex-start",
-          color: "#286e5e",
+          color: "#000000",
+          fontWeight: 700,
           textTransform: "none",
+          "&:hover": { backgroundColor: "#f5f5f5" },
         }}
       >
         Back to promotions
@@ -55,30 +62,35 @@ export default function ProductDetail() {
       <Box className="grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_1fr]">
         <Card
           elevation={0}
-          className="overflow-hidden rounded-2xl border border-[#edf1ef] bg-white"
+          className="overflow-hidden rounded-xl border border-[#e5e5e5] bg-white"
         >
-          <Box className="relative max-h-[400px] bg-[#e7f3ee]">
+          <Box className="relative max-h-[420px] bg-[#f7f7f8]">
             <img
               src={product.image}
               alt={product.name}
-              className="h-full max-h-[400px] w-full object-cover"
+              className="h-full max-h-[420px] w-full object-cover"
               onError={(event) => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = fallbackImage;
               }}
             />
-            <Box className="absolute left-5 top-5 rounded-full bg-white/90 px-3 py-2">
+            <Box className="absolute left-4 top-4 rounded bg-[#e50043] px-3 py-1.5 shadow">
               <Typography
-                sx={{ color: "#b25b52", fontSize: 13, fontWeight: 800 }}
+                sx={{
+                  color: "#ffffff",
+                  fontSize: 13,
+                  fontWeight: 800,
+                  letterSpacing: "0.02em",
+                }}
               >
-                -{product.competitorDiscount}% competitor offer
+                -{product.competitorDiscount}% COMPETITOR OFFER
               </Typography>
             </Box>
           </Box>
         </Card>
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#edf1ef] bg-white"
+          className="rounded-xl border border-[#e5e5e5] bg-white"
         >
           <Box className="p-6">
             <Box className="mb-4 flex items-center gap-2">
@@ -86,66 +98,85 @@ export default function ProductDetail() {
                 label={product.market}
                 size="small"
                 sx={{
-                  backgroundColor: "#e9eefb",
-                  color: "#52658d",
+                  backgroundColor: "#f5f5f5",
+                  color: "#333333",
                   fontWeight: 800,
+                  fontSize: 11,
+                  borderRadius: "4px",
                 }}
               />
               <Chip
-                label={isExpired ? "Expired promotion" : "Active promotion"}
+                label={isExpired ? "EXPIRED PROMO" : "ACTIVE PROMO"}
                 size="small"
                 sx={{
-                  backgroundColor: isExpired ? "#f0f2f1" : "#e1f2ed",
-                  color: isExpired ? "#687b74" : "#28715f",
+                  backgroundColor: isExpired ? "#eeeeee" : "#000000",
+                  color: isExpired ? "#757575" : "#ffffff",
                   fontWeight: 800,
+                  fontSize: 10,
+                  borderRadius: "4px",
+                  letterSpacing: "0.04em",
                 }}
               />
               <Chip
                 label={product.category}
                 size="small"
                 sx={{
-                  backgroundColor: "#e1f2ed",
-                  color: "#28715f",
+                  backgroundColor: "#fff0f3",
+                  color: "#e50043",
                   fontWeight: 800,
+                  fontSize: 11,
+                  borderRadius: "4px",
                 }}
               />
             </Box>
             <Typography
               sx={{
-                color: "#173c35",
-                fontSize: { xs: 26, md: 34 },
+                color: "#000000",
+                fontSize: { xs: 24, md: 30 },
                 fontWeight: 800,
-                lineHeight: 1.1,
+                lineHeight: 1.15,
+                letterSpacing: "-0.01em",
               }}
             >
               {product.name}
             </Typography>
-            <Typography sx={{ color: "#52746a", fontSize: 15, mt: 1 }}>
+            <Typography
+              sx={{
+                color: "#757575",
+                fontSize: 14,
+                fontWeight: 700,
+                mt: 1,
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+              }}
+            >
               {product.brand}
             </Typography>
             <Typography
-              sx={{ color: "#687b74", fontSize: 14, lineHeight: 1.7, mt: 3 }}
+              sx={{ color: "#555555", fontSize: 14, lineHeight: 1.7, mt: 2.5 }}
             >
               {product.description}
             </Typography>
-            <Divider sx={{ my: 3 }} />
+            <Divider sx={{ my: 3, borderColor: "#e5e5e5" }} />
             <Box className="grid grid-cols-2 gap-4">
               <Box>
                 <Typography
                   sx={{
-                    color: "#8a9894",
+                    color: "#757575",
                     fontSize: 11,
                     fontWeight: 700,
                     textTransform: "uppercase",
+                    letterSpacing: "0.04em",
                   }}
                 >
-                  Current price
+                  Regular Price
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#173c35",
-                    fontSize: 22,
-                    fontWeight: 800,
+                    color: "#757575",
+                    fontSize: 20,
+                    fontWeight: 600,
+                    textDecoration: "line-through",
                     mt: 0.5,
                   }}
                 >
@@ -155,18 +186,19 @@ export default function ProductDetail() {
               <Box>
                 <Typography
                   sx={{
-                    color: "#8a9894",
+                    color: "#e50043",
                     fontSize: 11,
-                    fontWeight: 700,
+                    fontWeight: 800,
                     textTransform: "uppercase",
+                    letterSpacing: "0.04em",
                   }}
                 >
-                  After discount
+                  Promo Price
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#286e5e",
-                    fontSize: 22,
+                    color: "#e50043",
+                    fontSize: 24,
                     fontWeight: 800,
                     mt: 0.5,
                   }}
@@ -177,39 +209,41 @@ export default function ProductDetail() {
               <Box>
                 <Typography
                   sx={{
-                    color: "#8a9894",
+                    color: "#757575",
                     fontSize: 11,
                     fontWeight: 700,
                     textTransform: "uppercase",
+                    letterSpacing: "0.04em",
                   }}
                 >
                   Rating
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#31534a",
+                    color: "#000000",
                     fontSize: 15,
                     fontWeight: 700,
                     mt: 0.5,
                   }}
                 >
-                  {product.rating} / 5
+                  ★ {product.rating} / 5
                 </Typography>
               </Box>
               <Box>
                 <Typography
                   sx={{
-                    color: "#8a9894",
+                    color: "#757575",
                     fontSize: 11,
                     fontWeight: 700,
                     textTransform: "uppercase",
+                    letterSpacing: "0.04em",
                   }}
                 >
                   Stock
                 </Typography>
                 <Typography
                   sx={{
-                    color: "#31534a",
+                    color: "#000000",
                     fontSize: 15,
                     fontWeight: 700,
                     mt: 0.5,
@@ -224,79 +258,82 @@ export default function ProductDetail() {
       </Box>
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#edf1ef] bg-white"
+        className="rounded-xl border border-[#e5e5e5] bg-white"
       >
         <Box className="grid grid-cols-1 gap-5 p-6 md:grid-cols-3">
           <Box className="flex gap-3">
-            <CalendarMonthRounded sx={{ color: "#286e5e" }} />
+            <CalendarMonthRounded sx={{ color: "#e50043" }} />
             <Box>
               <Typography
                 sx={{
-                  color: "#8a9894",
+                  color: "#757575",
                   fontSize: 11,
                   fontWeight: 700,
                   textTransform: "uppercase",
+                  letterSpacing: "0.04em",
                 }}
               >
                 Promotion dates
               </Typography>
               <Typography
                 sx={{
-                  color: "#31534a",
-                  fontSize: 15,
+                  color: "#000000",
+                  fontSize: 14,
                   fontWeight: 800,
                   mt: 0.5,
                 }}
               >
-                {product.fromDate} - {product.toDate}
+                {product.fromDate} — {product.toDate}
               </Typography>
             </Box>
           </Box>
           <Box className="flex gap-3">
-            <LocalOfferRounded sx={{ color: "#286e5e" }} />
+            <LocalOfferRounded sx={{ color: "#e50043" }} />
             <Box>
               <Typography
                 sx={{
-                  color: "#8a9894",
+                  color: "#757575",
                   fontSize: 11,
                   fontWeight: 700,
                   textTransform: "uppercase",
+                  letterSpacing: "0.04em",
                 }}
               >
-                Promotion
+                Promotion Campaign
               </Typography>
               <Typography
                 sx={{
-                  color: "#31534a",
-                  fontSize: 15,
+                  color: "#000000",
+                  fontSize: 14,
                   fontWeight: 800,
                   mt: 0.5,
                 }}
               >
                 {product.promotionName}
               </Typography>
-              <Typography sx={{ color: "#687b74", fontSize: 12, mt: 0.5 }}>
+              <Typography sx={{ color: "#666666", fontSize: 12, mt: 0.5 }}>
                 {product.promotionDescription}
               </Typography>
             </Box>
           </Box>
           <Box className="flex gap-3">
-            <StorefrontRounded sx={{ color: "#286e5e" }} />
+            <StorefrontRounded sx={{ color: "#e50043" }} />
             <Box>
               <Typography
                 sx={{
-                  color: "#8a9894",
+                  color: "#757575",
                   fontSize: 11,
                   fontWeight: 700,
                   textTransform: "uppercase",
+                  letterSpacing: "0.04em",
                 }}
               >
                 Terms and conditions
               </Typography>
               <Typography
                 sx={{
-                  color: "#687b74",
-                  fontSize: 13,
+                  color: "#666666",
+                  fontSize: 12.5,
                   lineHeight: 1.5,
                   mt: 0.5,
                 }}

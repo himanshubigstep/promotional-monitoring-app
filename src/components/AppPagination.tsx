@@ -21,8 +21,8 @@ export default function AppPagination({
   const lastItem = Math.min(page * pageSize, total);
 
   return (
-    <Box className="py-4 flex flex-wrap items-center justify-between gap-4 border-t border-[#edf1ef] px-4">
-      <Typography sx={{ color: "#94a09c", fontSize: 12 }}>
+    <Box className="py-3.5 flex flex-wrap items-center justify-between gap-4 border-t border-[#e5e5e5] px-4">
+      <Typography sx={{ color: "#757575", fontSize: 12, fontWeight: 500 }}>
         Showing {firstItem}-{lastItem} of {total} {itemLabel}
       </Typography>
       <Pagination
@@ -31,13 +31,19 @@ export default function AppPagination({
         onChange={(_, value) => onChange(value)}
         size="small"
         sx={{
-          "& .MuiPaginationItem-root": { color: "#557069" },
+          "& .MuiPaginationItem-root": {
+            color: "#444444",
+            fontWeight: 600,
+            fontSize: 12,
+            borderRadius: "6px",
+          },
           "& .Mui-selected": {
-            backgroundColor: "#286e5e !important",
-            color: "white",
+            backgroundColor: "#000000 !important",
+            color: "white !important",
+            fontWeight: 700,
           },
           "& .MuiPaginationItem-root:hover": {
-            backgroundColor: "#e1f2ed",
+            backgroundColor: "#eeeeee",
           },
         }}
       />

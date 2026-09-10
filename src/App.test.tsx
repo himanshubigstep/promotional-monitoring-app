@@ -5,9 +5,9 @@ import FormField from "./components/FormField";
 import { getMarketBrandOptions } from "./data/brands";
 import { getMarketRetailers } from "./data/retailers";
 
-test("renders the PromoPulse dashboard", () => {
+test("renders the Sephora Promotional Monitoring dashboard", () => {
   render(<App />);
-  expect(screen.getAllByText("PromoPulse").length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/SEPHORA/i).length).toBeGreaterThan(0);
 });
 
 test("renders a label action for adding a new option", () => {
@@ -27,13 +27,13 @@ test("renders a label action for adding a new option", () => {
 
 test("scopes retailer and brand options to the selected market", () => {
   expect(getMarketRetailers("PL")).toEqual([
-    "Douglas.pl",
-    "Notino.pl",
-    "superpharm.pl",
-    "hebe.pl",
-    "drogerienatura.pl",
-    "flaconi.pl",
-    "sephora.pl (Your brand)",
+    "Douglas",
+    "Notino",
+    "superpharm",
+    "hebe",
+    "drogerienatura",
+    "flaconi",
+    "sephora",
   ]);
 
   expect(getMarketRetailers("CZ")).toEqual([
