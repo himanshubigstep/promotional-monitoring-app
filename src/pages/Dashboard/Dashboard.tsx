@@ -236,7 +236,7 @@ const Dashboard = () => {
         elevation={0}
         className="rounded-xl border border-[#e5e5e5] bg-[#000000] text-white relative overflow-hidden"
       >
-        <Box className="absolute top-0 left-0 right-0 h-1 sephora-stripes" />
+        <Box className="absolute top-0 left-0 right-0 h-1" />
         <CardContent className="!p-6 pt-7">
           <Box className="flex items-center gap-2 mb-1">
             <Typography

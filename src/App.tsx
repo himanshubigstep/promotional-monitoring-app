@@ -152,7 +152,7 @@ function AppLayout() {
     <Box className="flex h-full flex-col bg-white">
       {/* Sephora Iconic Stripe Top Accent */}
       <Box
-        className="h-1.5 w-full sephora-stripes"
+        className="h-1.5 w-full"
         sx={{ borderBottom: "1px solid #e5e5e5" }}
       />
       <Box className="flex items-center justify-between px-5 py-5 border-b border-[#f0f0f0]">
