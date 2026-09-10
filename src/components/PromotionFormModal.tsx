@@ -13,16 +13,11 @@ import {
   Modal,
   Typography,
   IconButton,
-  Avatar,
 } from "@mui/material";
 import { createWorker } from "tesseract.js";
 import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
-import {
-  czDummyBrands,
-  getMarketBrandOptions,
-  sephoraBrands,
-} from "../data/brands";
+import { getMarketBrandOptions, sephoraBrands } from "../data/brands";
 import type { Product } from "../data/productTypes";
 import { marketCatalog } from "../data/catalog";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
@@ -42,7 +37,6 @@ const productCategories = [
 const brandCatalog = [...sephoraBrands];
 const retailers = [...plRetailers];
 const czRetailers = [...czDummyRetailers];
-const czBrandCatalog = [...czDummyBrands];
 const scopes = ["Wielokanałowa", "Tylko e-commerce", "Tylko aplikacja mobilna"];
 const channels = [
   "Media społecznościowe",
@@ -157,8 +151,7 @@ export default function PromotionFormModal({
   onClose: () => void;
   onSave: (promotion: FormState) => void;
 }) {
-  const { brandsByMarket, productsList, addBrand, addProduct } =
-    useAppContext();
+  const { brandsByMarket, addBrand, addProduct } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
@@ -168,7 +161,6 @@ export default function PromotionFormModal({
   const [newBrandName, setNewBrandName] = useState("");
   const [productModalOpen, setProductModalOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [editMode, setEditMode] = useState(false);
 
   const currentLanguage =
     form.market === "CZ"
@@ -327,24 +319,27 @@ export default function PromotionFormModal({
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const update = (
-    field: keyof FormState,
-    value: string | number | string[],
-  ) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
+  const update = useCallback(
+    (field: keyof FormState, value: string | number | string[]) => {
+      setForm((current) => ({ ...current, [field]: value }));
+    },
+    [],
+  );
 
-  const clearOcrDerivedFields = (current: FormState): FormState => ({
-    ...current,
-    discount: "",
-    threshold: "",
-    averageMarketDiscount: "",
-    brands: "",
-    retailer: "",
-    category: "",
-    name: "",
-    notes: "",
-  });
+  const clearOcrDerivedFields = useCallback(
+    (current: FormState): FormState => ({
+      ...current,
+      discount: "",
+      threshold: "",
+      averageMarketDiscount: "",
+      brands: "",
+      retailer: "",
+      category: "",
+      name: "",
+      notes: "",
+    }),
+    [],
+  );
 
   const removeImage = () => {
     setPreviewUrl("");
@@ -356,7 +351,73 @@ export default function PromotionFormModal({
     }));
   };
 
-  const handleImageUpload = async (file: File) => {
+  // --- shared merge logic -----------------------------------------------
+
+  type ExtractedFields = {
+    discount?: string;
+    threshold?: string;
+    averageMarketDiscount?: string;
+    brands?: string;
+    retailer?: string;
+    category?: string;
+    name?: string;
+    notes?: string;
+  };
+
+  function mergeExtractedIntoForm(
+    current: FormState,
+    extracted: ExtractedFields,
+  ): FormState {
+    return {
+      ...current,
+      discount: extracted.discount || current.discount || "",
+      threshold: extracted.threshold || current.threshold || "",
+      averageMarketDiscount:
+        extracted.averageMarketDiscount || current.averageMarketDiscount || "",
+      brands: extracted.brands || current.brands || "",
+      retailer: extracted.retailer || current.retailer || "",
+      category: extracted.category || current.category || "",
+      name: extracted.name || current.name || "",
+      notes: extracted.notes || current.notes || "",
+    };
+  }
+
+  // --- Tesseract path (local OCR) ----------------------------------------
+
+  async function extractWithTesseract(file: File): Promise<ExtractedFields> {
+    const processedFile = await preprocessImageForOCR(file, {
+      scale: 1.5,
+      contrast: 1.4,
+      grayscale: true,
+    });
+
+    const worker = await createWorker(["eng", "pol"]);
+    const {
+      data: { text },
+    } = await worker.recognize(processedFile);
+    await worker.terminate();
+
+    return extractPromotionFields(text);
+  }
+
+  // --- Gemini path ---------------------------------------------------------
+
+  async function extractWithGemini(file: File): Promise<ExtractedFields> {
+    const raw = await readPromotionFieldsWithGemini(file);
+
+    return {
+      discount: raw.discount || "",
+      threshold: raw.threshold || "",
+      averageMarketDiscount: raw.averageMarketDiscount || "",
+      name: raw.name || "",
+      brands: findKnownMatches(raw.brands || "", brandCatalog) as string,
+      retailer: findKnownMatches(raw.retailer || "", retailers) as string,
+      category: findKnownMatches(raw.category || "", categories) as string,
+      notes: raw.notes || "",
+    };
+  }
+
+  async function handleImageUpload(file: File) {
     setImageFile(file);
     setForm((current) => ({ ...clearOcrDerivedFields(current) }));
 
@@ -395,16 +456,14 @@ export default function PromotionFormModal({
     } finally {
       setOcrLoading(false);
     }
-  };
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    handleImageUpload(file);
-  }, []);
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: (acceptedFiles: File[]) => {
+      const file = acceptedFiles[0];
+      if (!file) return;
+      handleImageUpload(file);
+    },
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
     },
@@ -413,115 +472,10 @@ export default function PromotionFormModal({
     maxSize: 5 * 1024 * 1024,
   });
 
-  // --- shared merge logic -----------------------------------------------
-
-  type ExtractedFields = {
-    discount?: string;
-    threshold?: string;
-    averageMarketDiscount?: string;
-    brands?: string;
-    retailer?: string;
-    category?: string;
-    name?: string;
-    notes?: string;
-  };
-
-  const mergeExtractedIntoForm = (
-    current: FormState,
-    extracted: ExtractedFields,
-  ): FormState => ({
-    ...current,
-    discount: extracted.discount || current.discount || "",
-    threshold: extracted.threshold || current.threshold || "",
-    averageMarketDiscount:
-      extracted.averageMarketDiscount || current.averageMarketDiscount || "",
-    brands: extracted.brands || current.brands || "",
-    retailer: extracted.retailer || current.retailer || "",
-    category: extracted.category || current.category || "",
-    name: extracted.name || current.name || "",
-    notes: extracted.notes || current.notes || "",
-  });
-
-  // --- Tesseract path (local OCR) ----------------------------------------
-
-  const extractWithTesseract = async (file: File): Promise<ExtractedFields> => {
-    const processedFile = await preprocessImageForOCR(file, {
-      scale: 1.5,
-      contrast: 1.4,
-      grayscale: true,
-    });
-
-    const worker = await createWorker(["eng", "pol"]);
-    const {
-      data: { text },
-    } = await worker.recognize(processedFile);
-    await worker.terminate();
-
-    return extractPromotionFields(text);
-  };
-
-  // --- Gemini path ---------------------------------------------------------
-
-  const extractWithGemini = async (file: File): Promise<ExtractedFields> => {
-    const raw = await readPromotionFieldsWithGemini(file);
-
-    return {
-      discount: raw.discount || "",
-      threshold: raw.threshold || "",
-      averageMarketDiscount: raw.averageMarketDiscount || "",
-      name: raw.name || "",
-      brands: findKnownMatches(raw.brands || "", brandCatalog) as string,
-      retailer: findKnownMatches(raw.retailer || "", retailers) as string,
-      category: findKnownMatches(raw.category || "", categories) as string,
-      notes: raw.notes || "",
-    };
-  };
-
   // --- orchestration ---------------------------------------------------------
 
   const isGeminiConfigured = () =>
     Boolean(process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
-
-  const handleCreativeUpload = async (file: File) => {
-    setForm((current) => ({ ...clearOcrDerivedFields(current) }));
-
-    // 1) Save the ORIGINAL image for preview/storage — independent of OCR
-    const reader = new FileReader();
-    reader.onload = () => {
-      update("creativeName", file.name);
-      update(
-        "creativeData",
-        typeof reader.result === "string" ? reader.result : "",
-      );
-    };
-    reader.readAsDataURL(file);
-
-    // 2) Extract fields: prefer Gemini, fall back to Tesseract on any failure
-    setOcrLoading(true);
-    try {
-      let extracted: ExtractedFields;
-
-      if (isGeminiConfigured()) {
-        try {
-          extracted = await extractWithGemini(file);
-        } catch (err) {
-          console.warn(
-            "Gemini extraction failed, falling back to Tesseract:",
-            err,
-          );
-          extracted = await extractWithTesseract(file);
-        }
-      } else {
-        extracted = await extractWithTesseract(file);
-      }
-
-      setForm((current) => mergeExtractedIntoForm(current, extracted));
-    } catch (err) {
-      console.error("OCR extraction failed:", err);
-    } finally {
-      setOcrLoading(false);
-    }
-  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();

@@ -3,6 +3,7 @@ import {
     Box,
     FormControl,
     FormHelperText,
+    ListSubheader,
     MenuItem,
     OutlinedInput,
     Select,
@@ -10,6 +11,7 @@ import {
     Typography,
 } from "@mui/material";
 import type { SelectChangeEvent } from "@mui/material/Select";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -102,6 +104,21 @@ const datePickerTheme = createTheme({
 export default function FormField(props: FormFieldProps) {
     const error = Boolean(props.error);
     const helperText = getErrorMessage(props.error, props.helperText);
+    const isSelectField = props.type === "select" || props.type === "multiselect";
+    const [searchText, setSearchText] = useState("");
+
+    const filteredOptions = useMemo(() => {
+        if (!isSelectField) return [];
+
+        const query = searchText.trim().toLowerCase();
+        if (!query) return props.options ?? [];
+
+        return (props.options ?? []).filter((option) => {
+            const label = option.label.toLowerCase();
+            const val = option.value.toLowerCase();
+            return label.includes(query) || val.includes(query);
+        });
+    }, [isSelectField, props.options, searchText]);
 
     const renderFieldLabel = () => (
         <Box
@@ -161,7 +178,7 @@ export default function FormField(props: FormFieldProps) {
      * SELECT / MULTISELECT
      * --------------------------------------------------------------------------
      */
-    if (props.type === "select" || props.type === "multiselect") {
+    if (isSelectField) {
         const multiple = props.type === "multiselect";
 
         const value = multiple
@@ -199,10 +216,28 @@ export default function FormField(props: FormFieldProps) {
                         multiple={multiple}
                         value={value}
                         onChange={handleChange}
+                        onOpen={() => setSearchText("")}
+                        onClose={() => setSearchText("")}
                         input={
                             multiple ? <OutlinedInput label={props.label} /> : undefined
                         }
                         displayEmpty
+                        MenuProps={{
+                            sx: {
+                                "& .MuiMenu-paper": {
+                                    maxHeight: 280,
+                                    overflow: "hidden",
+                                    borderRadius: "12px",
+                                    border: "1px solid #edf1ef",
+                                    boxShadow: "0px 10px 30px rgba(17, 24, 39, 0.12)",
+                                },
+                                "& .MuiMenu-list": {
+                                    maxHeight: 248,
+                                    overflowY: "auto",
+                                    padding: 0,
+                                },
+                            },
+                        }}
                         renderValue={(selected) => {
                             if (!selected || (Array.isArray(selected) && selected.length === 0)) {
                                 return (
@@ -266,7 +301,48 @@ export default function FormField(props: FormFieldProps) {
                                 {props.placeholder}
                             </MenuItem>
                         )}
-                        {props.options.map((option) => (
+                        <ListSubheader
+                            component="div"
+                            sx={{
+                                position: "sticky",
+                                top: 0,
+                                zIndex: 2,
+                                backgroundColor: "#fff",
+                                borderBottom: "1px solid #edf1ef",
+                                padding: "8px 10px",
+                                lineHeight: 1.2,
+                            }}
+                        >
+                            <TextField
+                                size="small"
+                                fullWidth
+                                value={searchText}
+                                onClick={(event) => event.stopPropagation()}
+                                onChange={(event) => setSearchText(event.target.value)}
+                                placeholder="Search..."
+                                slotProps={{
+                                    input: {
+                                        sx: {
+                                            borderRadius: "8px",
+                                            backgroundColor: "#f8fbfa",
+                                            fontSize: 13,
+                                            height: 36,
+                                            "& fieldset": {
+                                                borderColor: "#dce6e2",
+                                            },
+                                            "&:hover fieldset": {
+                                                borderColor: "#7dbba8",
+                                            },
+                                            "&.Mui-focused fieldset": {
+                                                borderColor: "#286e5e",
+                                                borderWidth: "1px",
+                                            },
+                                        },
+                                    },
+                                }}
+                            />
+                        </ListSubheader>
+                        {filteredOptions.map((option) => (
                             <MenuItem
                                 key={option.value}
                                 value={option.value}
