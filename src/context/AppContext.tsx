@@ -105,9 +105,11 @@ type AppContextValue = {
   brandsByMarket: Record<"PL" | "CZ", string[]>;
   lastAddedProduct: Product | null;
   addPromotion: (promotion: Omit<Promotion, "id" | "createdAt">) => void;
+  updatePromotion: (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => void;
   addBrand: (brand: string, market?: "PL" | "CZ") => void;
   addProduct: (product: Product) => void;
   deleteProduct: (id: string) => void;
+  deletePromotion: (id: string) => void;
   canEdit: boolean;
   filters: PromotionFilters;
   setFilters: (filters: PromotionFilters) => void;
@@ -216,6 +218,72 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updatePromotion = useCallback(
+    (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => {
+      const normalizedPromotion = {
+        ...promotion,
+        category: toEnglish(promotion.category),
+        scope: toEnglish(promotion.scope),
+        channel: toEnglish(promotion.channel),
+      };
+
+      setPromotions((current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                ...normalizedPromotion,
+                id,
+              }
+            : item,
+        ),
+      );
+
+      const discountMatch = normalizedPromotion.discount.match(/(\d+(?:\.\d+)?)/);
+      const discount = discountMatch ? Number(discountMatch[1]) : 0;
+      const promoPriceValue = Number(normalizedPromotion.promoPrice || 0);
+      const categoryMap: Record<string, Product["category"]> = {
+        Pielęgnacja: "Skincare",
+        Perfumy: "Fragrance",
+        Makijaż: "Makeup",
+        Włosy: "Haircare",
+      };
+
+      setProductsList((current) =>
+        current.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                name: normalizedPromotion.name,
+                brand: normalizedPromotion.brands || item.brand,
+                category:
+                  categoryMap[normalizedPromotion.category] ||
+                  (normalizedPromotion.category as Product["category"]),
+                price: promoPriceValue > 0 ? promoPriceValue : item.price,
+                currency: normalizedPromotion.market === "CZ" ? "CZK" : "PLN",
+                market: normalizedPromotion.market,
+                retailer: normalizedPromotion.retailer || item.retailer,
+                competitorDiscount:
+                  normalizedPromotion.promotionType === "Buy one get one free"
+                    ? 100
+                    : Math.max(discount, item.competitorDiscount || 0),
+                fromDate: normalizedPromotion.from,
+                toDate: normalizedPromotion.to,
+                promotionName: normalizedPromotion.name,
+                description: normalizedPromotion.notes,
+                promotionDescription: normalizedPromotion.notes,
+                terms: normalizedPromotion.notes,
+                priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : item.priceAfterDiscount,
+                promoPrice: promoPriceValue > 0 ? promoPriceValue : item.promoPrice,
+                promotionType: normalizedPromotion.promotionType,
+              }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
+
   const addPromotion = useCallback(
     (promotion: Omit<Promotion, "id" | "createdAt">) => {
       const normalizedPromotion = {
@@ -287,6 +355,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPromotions((current) => current.filter((item) => item.id !== id));
   }, []);
 
+  const deletePromotion = useCallback((id: string) => {
+    setPromotions((current) => current.filter((item) => item.id !== id));
+    setProductsList((current) => current.filter((item) => item.id !== id));
+  }, []);
+
   const value = useMemo(
     () => ({
       role,
@@ -298,9 +371,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       brandsByMarket,
       lastAddedProduct,
       addPromotion,
+      updatePromotion,
       addBrand,
       addProduct,
       deleteProduct,
+      deletePromotion,
       canEdit: role !== "Viewer",
       filters,
       setFilters,
@@ -313,9 +388,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       brandsByMarket,
       lastAddedProduct,
       addPromotion,
+      updatePromotion,
       addBrand,
       addProduct,
       deleteProduct,
+      deletePromotion,
       filters,
     ],
   );

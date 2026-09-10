@@ -1,22 +1,34 @@
 import {
   AddRounded,
+  DeleteOutlineRounded,
   DownloadRounded,
+  EditRounded,
   SearchRounded,
 } from "@mui/icons-material";
-import { Box, Button, Card, Chip, TextField, Typography } from "@mui/material";
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  IconButton,
+  TextField,
+  Typography,
+} from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
 
-const today = "2026-09-08";
+const today = new Date().toISOString().slice(0, 10);
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
 export default function Promotions() {
   const {
     addPromotion,
+    updatePromotion,
+    deletePromotion,
     canEdit,
     filters,
     lastAddedProduct,
@@ -24,6 +36,7 @@ export default function Promotions() {
     promotions,
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
+  const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [savedPage, setSavedPage] = useState(1);
@@ -31,40 +44,58 @@ export default function Promotions() {
   const savedPageSize = 10;
   const filteredProducts = useMemo(
     () =>
-      catalog.filter((product) => {
-        const minimumDiscount =
-          filters.discount === "All"
-            ? 0
-            : Number(filters.discount.replace("%+", ""));
-        return (
-          (product.name.toLowerCase().includes(search.toLowerCase()) ||
-            product.brand.toLowerCase().includes(search.toLowerCase()) ||
-            product.category.toLowerCase().includes(search.toLowerCase())) &&
-          (!filters.search ||
-            product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            product.brand
-              .toLowerCase()
-              .includes(filters.search.toLowerCase())) &&
-          (filters.category === "All" ||
-            product.category === filters.category) &&
-          (filters.market === "All" || product.market === filters.market) &&
-          (filters.retailer === "All" ||
-            product.retailer === filters.retailer) &&
-          product.competitorDiscount >= minimumDiscount &&
-          (!filters.fromDate || product.toDate >= filters.fromDate) &&
-          (!filters.toDate || product.fromDate <= filters.toDate)
-        );
-      }),
+      catalog
+        .filter((product) => {
+          const minimumDiscount =
+            filters.discount === "All"
+              ? 0
+              : Number(filters.discount.replace("%+", ""));
+          return (
+            (product.name.toLowerCase().includes(search.toLowerCase()) ||
+              product.brand.toLowerCase().includes(search.toLowerCase()) ||
+              product.category.toLowerCase().includes(search.toLowerCase())) &&
+            (!filters.search ||
+              product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+              product.brand
+                .toLowerCase()
+                .includes(filters.search.toLowerCase())) &&
+            (filters.category === "All" ||
+              product.category === filters.category) &&
+            (filters.market === "All" || product.market === filters.market) &&
+            (filters.retailer === "All" ||
+              product.retailer === filters.retailer) &&
+            product.competitorDiscount >= minimumDiscount &&
+            (!filters.fromDate || product.toDate >= filters.fromDate) &&
+            (!filters.toDate || product.fromDate <= filters.toDate)
+          );
+        })
+        .sort((a, b) => {
+          const aActive = a.toDate >= today;
+          const bActive = b.toDate >= today;
+          if (aActive !== bActive) {
+            return aActive ? -1 : 1;
+          }
+          return b.toDate.localeCompare(a.toDate);
+        }),
     [catalog, filters, search],
   );
   const visibleProducts = filteredProducts.slice(
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const savedPromotions = promotions.filter(
-    (promotion) =>
-      filters.market === "All" || promotion.market === filters.market,
-  );
+  const savedPromotions = promotions
+    .filter(
+      (promotion) =>
+        filters.market === "All" || promotion.market === filters.market,
+    )
+    .sort((a, b) => {
+      const aActive = a.to >= today;
+      const bActive = b.to >= today;
+      if (aActive !== bActive) {
+        return aActive ? -1 : 1;
+      }
+      return b.to.localeCompare(a.to);
+    });
   const visibleSavedPromotions = savedPromotions.slice(
     (savedPage - 1) * savedPageSize,
     savedPage * savedPageSize,
@@ -169,7 +200,7 @@ export default function Promotions() {
               >
                 <Box className="relative h-36 bg-[#f7f7f8]">
                   <img
-                    src={product.image}
+                    src={product.image || fallbackImage}
                     alt={product.name}
                     className="h-full w-full object-cover"
                     onError={(event) => {
@@ -192,12 +223,77 @@ export default function Promotions() {
                       }}
                     />
                   </Box>
-                  <Box className="absolute right-2 top-2 rounded bg-[#e50043] px-2 py-0.5 shadow-sm">
-                    <Typography
-                      sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
-                    >
-                      -{product.competitorDiscount}%
-                    </Typography>
+                  <Box className="absolute right-2 top-2 flex items-center gap-1">
+                    {!expired && canEdit && (
+                      <IconButton
+                        size="small"
+                        title="Edit promotion"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          setEditingPromotion({
+                            ...product,
+                            id: product.id,
+                            market: product.market,
+                            name: product.promotionName || product.name,
+                            from: product.fromDate,
+                            to: product.toDate,
+                            scope: "Wielokanałowa",
+                            channel: "Sklep stacjonarny",
+                            category: product.category,
+                            brands: product.brand,
+                            retailer: product.retailer,
+                            discount: `-${product.competitorDiscount}%`,
+                            threshold: "",
+                            promoPrice: String(product.priceAfterDiscount ?? product.price ?? ""),
+                            promotionType: product.promotionType || "Fixed promotion",
+                            skuCount: 1,
+                            notes: product.terms || product.description || "",
+                            creativeName: product.name,
+                            creativeData: product.image || "",
+                            averageMarketDiscount: `${product.competitorDiscount}%`,
+                            createdAt: product.fromDate,
+                          });
+                          setFormOpen(true);
+                        }}
+                        sx={{
+                          backgroundColor: "rgba(255,255,255,0.95)",
+                          color: "#000000",
+                          padding: "4px",
+                          borderRadius: "6px",
+                          "&:hover": { backgroundColor: "#f5f5f5" },
+                        }}
+                      >
+                        <EditRounded sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    {expired && canEdit && (
+                      <IconButton
+                        size="small"
+                        title="Delete expired promotion"
+                        onClick={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          deletePromotion(product.id);
+                        }}
+                        sx={{
+                          backgroundColor: "rgba(255,255,255,0.95)",
+                          color: "#e50043",
+                          padding: "4px",
+                          borderRadius: "6px",
+                          "&:hover": { backgroundColor: "#fff0f3" },
+                        }}
+                      >
+                        <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    )}
+                    <Box className="rounded bg-[#e50043] px-2 py-0.5 shadow-sm">
+                      <Typography
+                        sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
+                      >
+                        -{product.competitorDiscount}%
+                      </Typography>
+                    </Box>
                   </Box>
                 </Box>
                 <Box className="p-3">
@@ -322,28 +418,76 @@ export default function Promotions() {
             </Box>
           )}
           <Box className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-            {visibleSavedPromotions.map((promotion) => (
-              <Box
-                key={promotion.id}
-                className="rounded-xl border border-[#e5e5e5] p-4 bg-white hover:border-[#000000] transition-all"
-              >
-                <Box className="flex items-start justify-between gap-3">
-                  <Box>
-                    <Typography
-                      sx={{ color: "#000000", fontSize: 13.5, fontWeight: 800 }}
-                    >
-                      {promotion.name}
-                    </Typography>
-                    <Typography
-                      sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}
-                    >
-                      {promotion.brands} · {promotion.retailer}
-                    </Typography>
+            {visibleSavedPromotions.map((promotion) => {
+              const isExpired = promotion.to < today;
+              return (
+                <Box
+                  key={promotion.id}
+                  className="rounded-xl border border-[#e5e5e5] p-4 bg-white hover:border-[#000000] transition-all"
+                >
+                  <Box className="flex items-start justify-between gap-3">
+                    <Box>
+                      <Typography
+                        sx={{ color: "#000000", fontSize: 13.5, fontWeight: 800 }}
+                      >
+                        {promotion.name}
+                      </Typography>
+                      <Typography
+                        sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}
+                      >
+                        {promotion.brands} · {promotion.retailer}
+                      </Typography>
+                    </Box>
+                    <Box className="flex items-center gap-1">
+                      {!isExpired && canEdit && (
+                        <IconButton
+                          size="small"
+                          title="Edit promotion"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setEditingPromotion(promotion);
+                            setFormOpen(true);
+                          }}
+                          sx={{
+                            color: "#000000",
+                            backgroundColor: "#f5f5f5",
+                            borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#eeeeee" },
+                          }}
+                        >
+                          <EditRounded sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                      {isExpired && canEdit && (
+                        <IconButton
+                          size="small"
+                          title="Delete expired promotion"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            deletePromotion(promotion.id);
+                          }}
+                          sx={{
+                            color: "#e50043",
+                            backgroundColor: "#fff0f3",
+                            borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#ffe5ee" },
+                          }}
+                        >
+                          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                    </Box>
                   </Box>
+                  <Typography sx={{ color: "#757575", fontSize: 12, mt: 1 }}>
+                    {promotion.from} - {promotion.to} · {promotion.category}
+                  </Typography>
                   <Chip
                     label={promotion.discount}
                     size="small"
                     sx={{
+                      mt: 1.5,
                       backgroundColor: "#e50043",
                       color: "#ffffff",
                       fontWeight: 800,
@@ -351,11 +495,8 @@ export default function Promotions() {
                     }}
                   />
                 </Box>
-                <Typography sx={{ color: "#757575", fontSize: 12, mt: 1 }}>
-                  {promotion.from} - {promotion.to} · {promotion.category}
-                </Typography>
-              </Box>
-            ))}
+              );
+            })}
           </Box>
           <AppPagination
             count={Math.ceil(savedPromotions.length / savedPageSize)}
@@ -369,10 +510,19 @@ export default function Promotions() {
       )}
       <PromotionFormModal
         open={formOpen}
-        onClose={() => setFormOpen(false)}
-        onSave={(promotion) => {
-          addPromotion(promotion);
+        editingPromotion={editingPromotion}
+        onClose={() => {
           setFormOpen(false);
+          setEditingPromotion(null);
+        }}
+        onSave={(promotion) => {
+          if (editingPromotion) {
+            updatePromotion(editingPromotion.id, promotion);
+          } else {
+            addPromotion(promotion);
+          }
+          setFormOpen(false);
+          setEditingPromotion(null);
         }}
       />
     </Box>

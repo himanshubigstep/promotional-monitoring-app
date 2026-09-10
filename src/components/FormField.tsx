@@ -41,6 +41,7 @@ type CommonProps = {
   fullWidth?: boolean;
   className?: string;
   labelAction?: LabelAction;
+  disabled?: boolean;
 };
 
 type TextFieldProps = CommonProps & {
@@ -221,6 +222,7 @@ export default function FormField(props: FormFieldProps) {
             multiple={multiple}
             value={value}
             onChange={handleChange}
+            disabled={props.disabled}
             onOpen={() => setSearchText("")}
             onClose={() => setSearchText("")}
             input={multiple ? <OutlinedInput label={props.label} /> : undefined}
@@ -307,10 +309,11 @@ export default function FormField(props: FormFieldProps) {
                 {props.placeholder}
               </MenuItem>
             )}
-            <ListSubheader
-              component="div"
-              sx={{
-                position: "sticky",
+            {!props.disabled && (
+              <ListSubheader
+                component="div"
+                sx={{
+                  position: "sticky",
                 top: 0,
                 zIndex: 2,
                 backgroundColor: "#fff",
@@ -348,6 +351,7 @@ export default function FormField(props: FormFieldProps) {
                 }}
               />
             </ListSubheader>
+            )}
             {filteredOptions.map((option) => (
               <MenuItem
                 key={option.value}
@@ -406,6 +410,7 @@ export default function FormField(props: FormFieldProps) {
           <LocalizationProvider dateAdapter={AdapterDayjs}>
             <DatePicker
               value={dateValue}
+              disabled={props.disabled}
               onChange={(newValue) => {
                 props.onValueChange(
                   newValue ? newValue.format("YYYY-MM-DD") : "",
@@ -418,6 +423,7 @@ export default function FormField(props: FormFieldProps) {
                   error,
                   helperText,
                   size: "small",
+                  disabled: props.disabled,
                   sx: {
                     "& .MuiOutlinedInput-root": {
                       borderRadius: "8px !important",
@@ -671,6 +677,7 @@ export default function FormField(props: FormFieldProps) {
         multiline={props.multiline}
         minRows={props.minRows}
         size="small"
+        disabled={props.disabled}
         sx={{
           "& .MuiOutlinedInput-root": {
             borderRadius: "8px",

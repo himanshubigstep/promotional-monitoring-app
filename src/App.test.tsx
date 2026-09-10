@@ -2,6 +2,7 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import App from "./App";
 import FormField from "./components/FormField";
+import { getPromotionTypeFieldConfig } from "./components/PromotionFormModal";
 import { getMarketBrandOptions } from "./data/brands";
 import { getMarketRetailers } from "./data/retailers";
 
@@ -46,4 +47,49 @@ test("scopes retailer and brand options to the selected market", () => {
   expect(getMarketBrandOptions("PL")).not.toContain("CZ Demo Brand Prague");
   expect(getMarketBrandOptions("CZ")).toContain("CZ Demo Brand Prague");
   expect(getMarketBrandOptions("CZ")).not.toContain("Sephora Collection");
+});
+
+test("applies the correct field rules for each promotion type by market", () => {
+  expect(getPromotionTypeFieldConfig("PL", "Fixed promotion")).toMatchObject({
+    showDiscount: true,
+    showThreshold: true,
+    showPromoPrice: true,
+    requiredFields: {
+      discount: true,
+      threshold: true,
+      promoPrice: true,
+    },
+    currency: "PLN",
+  });
+
+  expect(getPromotionTypeFieldConfig("CZ", "Fixed promotion")).toMatchObject({
+    currency: "CZK",
+    requiredFields: {
+      discount: true,
+      threshold: true,
+      promoPrice: true,
+    },
+  });
+
+  expect(getPromotionTypeFieldConfig("PL", "Buy one get one free")).toMatchObject({
+    showDiscount: true,
+    showThreshold: false,
+    showPromoPrice: false,
+    requiredFields: {
+      discount: false,
+      threshold: false,
+      promoPrice: false,
+    },
+  });
+
+  expect(getPromotionTypeFieldConfig("PL", "Custom")).toMatchObject({
+    showDiscount: true,
+    showThreshold: true,
+    showPromoPrice: true,
+    requiredFields: {
+      discount: false,
+      threshold: false,
+      promoPrice: false,
+    },
+  });
 });

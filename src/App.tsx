@@ -325,8 +325,8 @@ function AppLayout() {
       </Box>
 
       <Box component="main" className="min-h-screen p-4 md:p-6 md:ml-[260px]">
-        <Box className="mx-auto max-w-7xl">
-          <Box className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <Box className="mx-auto max-w-['100%']">
+          <Box className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <Box>
               <Typography
                 sx={{

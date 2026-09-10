@@ -22,13 +22,13 @@ export const getMarketRetailers = (market: "PL" | "CZ" | "All") => {
 
 const legacyRetailerMap: Record<string, string> = {
   "Rossmann Polska": "Douglas",
-  Hebe: "hebe",
+  "Hebe": "hebe",
   "Douglas Polska": "Douglas",
   "Super-Pharm": "superpharm",
-  Natura: "drogerienatura",
-  Kontigo: "flaconi",
+  "Natura": "drogerienatura",
+  "Kontigo": "flaconi",
   "Fryzjerzy": "Notino",
-  Cocolita: "sephora",
+  "Cocolita": "sephora",
   "dm drogerie markt": "Notino",
   "Teta drogerie": "flaconi",
   "Notino CZ": "Notino",
