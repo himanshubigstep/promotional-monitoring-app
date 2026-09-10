@@ -105,6 +105,7 @@ type AppContextValue = {
   addPromotion: (promotion: Omit<Promotion, "id" | "createdAt">) => void;
   addBrand: (brand: string, market?: "PL" | "CZ") => void;
   addProduct: (product: Product) => void;
+  deleteProduct: (id: string) => void;
   canEdit: boolean;
   filters: PromotionFilters;
   setFilters: (filters: PromotionFilters) => void;
@@ -183,7 +184,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     setBrandsByMarket((current) => {
       const nextList = current[market] ?? [];
-      if (nextList.some((item) => item.toLowerCase() === normalizedBrand.toLowerCase())) {
+      if (
+        nextList.some(
+          (item) => item.toLowerCase() === normalizedBrand.toLowerCase(),
+        )
+      ) {
         return current;
       }
 
@@ -270,6 +275,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     [promotions],
   );
 
+  const deleteProduct = useCallback((id: string) => {
+    setProductsList((current) => current.filter((item) => item.id !== id));
+    setPromotions((current) => current.filter((item) => item.id !== id));
+  }, []);
+
   const value = useMemo(
     () => ({
       role,
@@ -283,11 +293,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addPromotion,
       addBrand,
       addProduct,
+      deleteProduct,
       canEdit: role !== "Viewer",
       filters,
       setFilters,
     }),
-    [role, promotions, productsList, brands, brandsByMarket, lastAddedProduct, addPromotion, addBrand, addProduct, filters],
+    [
+      role,
+      promotions,
+      productsList,
+      brands,
+      brandsByMarket,
+      lastAddedProduct,
+      addPromotion,
+      addBrand,
+      addProduct,
+      deleteProduct,
+      filters,
+    ],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
