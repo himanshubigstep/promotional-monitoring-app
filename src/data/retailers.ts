@@ -1,11 +1,11 @@
 export const plRetailers = [
-  "Douglas.pl",
-  "Notino.pl",
-  "superpharm.pl",
-  "hebe.pl",
-  "drogerienatura.pl",
-  "flaconi.pl",
-  "sephora.pl (Your brand)",
+  "Douglas",
+  "Notino",
+  "superpharm",
+  "hebe",
+  "drogerienatura",
+  "flaconi",
+  "sephora",
 ] as const;
 
 export const czDummyRetailers = [
@@ -21,17 +21,17 @@ export const getMarketRetailers = (market: "PL" | "CZ" | "All") => {
 };
 
 const legacyRetailerMap: Record<string, string> = {
-  "Rossmann Polska": "Douglas.pl",
-  Hebe: "hebe.pl",
-  "Douglas Polska": "Douglas.pl",
-  "Super-Pharm": "superpharm.pl",
-  Natura: "drogerienatura.pl",
-  Kontigo: "flaconi.pl",
-  "Fryzjerzy.pl": "Notino.pl",
-  Cocolita: "sephora.pl (Your brand)",
-  "dm drogerie markt": "Notino.pl",
-  "Teta drogerie": "flaconi.pl",
-  "Notino CZ": "Notino.pl",
+  "Rossmann Polska": "Douglas",
+  Hebe: "hebe",
+  "Douglas Polska": "Douglas",
+  "Super-Pharm": "superpharm",
+  Natura: "drogerienatura",
+  Kontigo: "flaconi",
+  "Fryzjerzy": "Notino",
+  Cocolita: "sephora",
+  "dm drogerie markt": "Notino",
+  "Teta drogerie": "flaconi",
+  "Notino CZ": "Notino",
 };
 
 export function normalizeRetailer(retailer: string) {

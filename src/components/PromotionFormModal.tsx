@@ -335,15 +335,31 @@ export default function PromotionFormModal({
     setForm((current) => ({ ...current, [field]: value }));
   };
 
+  const clearOcrDerivedFields = (current: FormState): FormState => ({
+    ...current,
+    discount: "",
+    threshold: "",
+    averageMarketDiscount: "",
+    brands: "",
+    retailer: "",
+    category: "",
+    name: "",
+    notes: "",
+  });
+
   const removeImage = () => {
     setPreviewUrl("");
     setImageFile(null);
-    update("creativeName", "");
-    update("creativeData", "");
+    setForm((current) => ({
+      ...clearOcrDerivedFields(current),
+      creativeName: "",
+      creativeData: "",
+    }));
   };
 
   const handleImageUpload = async (file: File) => {
     setImageFile(file);
+    setForm((current) => ({ ...clearOcrDerivedFields(current) }));
 
     // Save the ORIGINAL image for preview/storage
     const reader = new FileReader();
@@ -416,15 +432,15 @@ export default function PromotionFormModal({
     extracted: ExtractedFields,
   ): FormState => ({
     ...current,
-    discount: current.discount || extracted.discount || "",
-    threshold: current.threshold || extracted.threshold || "",
+    discount: extracted.discount || current.discount || "",
+    threshold: extracted.threshold || current.threshold || "",
     averageMarketDiscount:
-      current.averageMarketDiscount || extracted.averageMarketDiscount || "",
-    brands: current.brands.length ? current.brands : extracted.brands || "",
-    retailer: extracted.retailer || current.retailer,
-    category: extracted.category || current.category,
-    name: current.name || extracted.name || "",
-    notes: current.notes || extracted.notes || "",
+      extracted.averageMarketDiscount || current.averageMarketDiscount || "",
+    brands: extracted.brands || current.brands || "",
+    retailer: extracted.retailer || current.retailer || "",
+    category: extracted.category || current.category || "",
+    name: extracted.name || current.name || "",
+    notes: extracted.notes || current.notes || "",
   });
 
   // --- Tesseract path (local OCR) ----------------------------------------
@@ -468,6 +484,8 @@ export default function PromotionFormModal({
     Boolean(process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
 
   const handleCreativeUpload = async (file: File) => {
+    setForm((current) => ({ ...clearOcrDerivedFields(current) }));
+
     // 1) Save the ORIGINAL image for preview/storage — independent of OCR
     const reader = new FileReader();
     reader.onload = () => {
@@ -640,11 +658,32 @@ export default function PromotionFormModal({
         aria-labelledby="promotion-form-title"
       >
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative"
           sx={{
             p: 4,
           }}
         >
+          {ocrLoading && (
+            <Box className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-white/75 backdrop-blur-[1px]">
+              <Box className="flex items-center gap-3 rounded-xl bg-[#173c35] px-4 py-3 text-white shadow-lg">
+                <Box
+                  component="span"
+                  sx={{
+                    width: 18,
+                    height: 18,
+                    border: "2px solid rgba(255,255,255,0.35)",
+                    borderTopColor: "#ffffff",
+                    borderRadius: "50%",
+                    display: "inline-block",
+                    animation: "spin 0.8s linear infinite",
+                  }}
+                />
+                <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+                  {currentLanguage.loading}
+                </Typography>
+              </Box>
+            </Box>
+          )}
           <Box
             component="form"
             onSubmit={submit}
