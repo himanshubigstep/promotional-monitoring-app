@@ -89,10 +89,10 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="rounded-xl"
             sx={{
-              color: selected ? "#1f5d52" : "#65736f",
-              "&.Mui-selected": { backgroundColor: "#e1f2ed" },
-              "&.Mui-selected:hover": { backgroundColor: "#d5ebe5" },
-              "&:hover": { backgroundColor: "#f1f6f4" },
+              color: selected ? "#1d1d1d" : "#5f5958",
+              "&.Mui-selected": { backgroundColor: "#f3e4e1" },
+              "&.Mui-selected:hover": { backgroundColor: "#efd6d2" },
+              "&:hover": { backgroundColor: "#f8f1ee" },
             }}
           >
             <ListItemIcon sx={{ minWidth: 38, color: "inherit" }}>
@@ -136,7 +136,7 @@ function AppLayout() {
         <Box>
           <Typography
             className="!font-black !tracking-tight"
-            sx={{ color: "#173c35", fontSize: 22 }}
+            sx={{ color: "#1b1b1b", fontSize: 22 }}
           >
             PromoPulse
           </Typography>
@@ -273,8 +273,8 @@ function AppLayout() {
                 onClick={() => setFilterOpen(true)}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
-                  borderColor: "#dce6e2",
-                  color: "#4c625b",
+                  borderColor: "#e7d9d4",
+                  color: "#2d2d2d",
                   textTransform: "none",
                 }}
               >
@@ -286,7 +286,7 @@ function AppLayout() {
                 onChange={(event) => setRole(event.target.value as UserRole)}
                 sx={{
                   minWidth: 145,
-                  backgroundColor: "white",
+                  backgroundColor: "#fffdfb",
                   borderRadius: 2,
                   fontSize: 12,
                   fontWeight: 700,

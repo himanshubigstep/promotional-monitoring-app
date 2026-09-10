@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { catalog } from "../data/catalog";
 import { czDummyBrands, sephoraBrands } from "../data/brands";
-import type { Product } from "../data/productTypes";
+import type { Product, PromotionType } from "../data/productTypes";
 
 export type UserRole = "Admin" | "Data Analytics" | "Viewer";
 
@@ -85,6 +85,8 @@ export type Promotion = {
   retailer: string;
   discount: string;
   threshold: string;
+  promoPrice: string;
+  promotionType: PromotionType;
   skuCount: number;
   notes: string;
   creativeName: string;
@@ -128,6 +130,8 @@ function promotionsFromProducts(): Promotion[] {
       retailer: product.retailer,
       discount: `-${product.competitorDiscount}%`,
       threshold: "",
+      promoPrice: product.priceAfterDiscount ? String(product.priceAfterDiscount) : "",
+      promotionType: product.promotionType || "Fixed promotion",
       skuCount: 1,
       notes: product.terms,
       creativeName: "",
@@ -231,19 +235,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         Makijaż: "Makeup",
         Włosy: "Haircare",
       };
+      const promoPriceValue = Number(next.promoPrice || 0);
       const product: Product = {
         id: next.id,
         name: next.name,
         brand: next.brands || "",
         category:
           categoryMap[next.category] || (next.category as Product["category"]),
-        price: 0,
-        currency: "PLN",
+        price: promoPriceValue > 0 ? promoPriceValue : 0,
+        currency: next.market === "CZ" ? "CZK" : "PLN",
         market: next.market,
         retailer: next.retailer,
         rating: 0,
         stock: next.skuCount,
-        competitorDiscount: discount,
+        competitorDiscount: next.promotionType === "Buy one get one free" ? 100 : discount,
         image:
           promotion.creativeData ||
           "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
@@ -253,7 +258,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         description: next.notes,
         promotionDescription: next.notes,
         terms: next.notes,
-        priceAfterDiscount: 0,
+        priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : 0,
+        promoPrice: promoPriceValue > 0 ? promoPriceValue : undefined,
+        promotionType: next.promotionType,
       };
       setProductsList((current) => {
         const exists = current.some(

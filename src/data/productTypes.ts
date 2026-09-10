@@ -1,3 +1,8 @@
+export type PromotionType =
+  | "Fixed promotion"
+  | "Buy one get one free"
+  | "Custom";
+
 export type Product = {
   id: string;
   name: string;
@@ -18,4 +23,6 @@ export type Product = {
   promotionDescription: string;
   terms: string;
   priceAfterDiscount: number;
+  promoPrice?: number;
+  promotionType?: PromotionType;
 };

@@ -2,14 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --sephora-black: #1b1b1b;
+  --sephora-ink: #2d2d2d;
+  --sephora-rose: #d7a7a4;
+  --sephora-rose-deep: #bf7d79;
+  --sephora-beige: #f5efe9;
+  --sephora-ivory: #fffdfb;
+  --sephora-border: #e7ded8;
+  --sephora-muted: #706a68;
+}
+
 body {
   margin: 0;
-  background: #f5faf8;
-  color: #173c35;
+  background: linear-gradient(180deg, #f9f4f0 0%, #f4f8f7 100%);
+  color: var(--sephora-ink);
   font-family:
     "Trebuchet MS", "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
 }
 
 code {

@@ -13,6 +13,7 @@ import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
 import { czDummyBrands, getMarketBrandOptions, sephoraBrands } from "../data/brands";
 import type { Product } from "../data/productTypes";
+import { marketCatalog } from "../data/catalog";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
 import { readPromotionFieldsWithGemini } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
@@ -38,6 +39,19 @@ type FormState = Omit<Promotion, "id" | "createdAt"> & {
   product: string;
 };
 
+const promotionTypeOptions = {
+  PL: [
+    { label: "Promocja stała", value: "Fixed promotion" },
+    { label: "Kup 1, dostaniesz 1 gratis", value: "Buy one get one free" },
+    { label: "Niestandardowa", value: "Custom" },
+  ],
+  CZ: [
+    { label: "Fixní sleva", value: "Fixed promotion" },
+    { label: "Kup 1, dostanete 1 zdarma", value: "Buy one get one free" },
+    { label: "Vlastní", value: "Custom" },
+  ],
+} as const;
+
 const emptyForm: FormState = {
   market: "PL",
   name: "",
@@ -51,6 +65,8 @@ const emptyForm: FormState = {
   retailer: "",
   discount: "",
   threshold: "",
+  promoPrice: "",
+  promotionType: "Fixed promotion",
   skuCount: 1,
   notes: "",
   creativeName: "",
@@ -146,6 +162,8 @@ export default function PromotionFormModal({
         marketSubtitle: "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu.",
         market: "Trh *",
         marketLabel: "Trh",
+        promotionType: "Typ akce",
+        promotionTypeOptions: promotionTypeOptions.CZ,
         productCategory: "Kategorie produktu",
         promoName: "Název akce",
         promoNamePlaceholder: "Zadejte název akce",
@@ -184,6 +202,7 @@ export default function PromotionFormModal({
         productNamePlaceholder: "Název produktu",
         brandSelectLabel: "Značka",
         brandSelectPlaceholder: "Vyberte značku",
+        productBrandLabel: "Značka produktu",
         categorySelectLabel: "Kategorie",
         categorySelectPlaceholder: "Vyberte kategorii",
         priceLabel: "Cena",
@@ -210,6 +229,8 @@ export default function PromotionFormModal({
         marketSubtitle: "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim.",
         market: "Rynek *",
         marketLabel: "Rynek",
+        promotionType: "Typ promocji",
+        promotionTypeOptions: promotionTypeOptions.PL,
         productCategory: "Kategoria produktu",
         promoName: "Nazwa promocji",
         promoNamePlaceholder: "Wprowadź nazwę promocji",
@@ -248,6 +269,7 @@ export default function PromotionFormModal({
         productNamePlaceholder: "Nazwa produktu",
         brandSelectLabel: "Marka",
         brandSelectPlaceholder: "Wybierz markę",
+        productBrandLabel: "Marka produktu",
         categorySelectLabel: "Kategoria",
         categorySelectPlaceholder: "Wybierz kategorię",
         priceLabel: "Cena",
@@ -440,7 +462,11 @@ export default function PromotionFormModal({
       setError("Sprawdź wymagane pola formularza.");
       return;
     }
-    onSave(form);
+    onSave({
+      ...form,
+      promotionType: form.promotionType || "Fixed promotion",
+      promoPrice: form.promoPrice || "",
+    });
     setForm(emptyForm);
     setError("");
     setFieldErrors({});
@@ -453,9 +479,15 @@ export default function PromotionFormModal({
     form.market,
     brandsByMarket[form.market],
   );
-  const marketProductOptions = productsList.filter(
+  const marketProductOptions = marketCatalog.filter(
     (item) => item.market === form.market,
   );
+  const discountLabel =
+    form.promotionType === "Buy one get one free"
+      ? currentLanguage.discount === "Typ a výše slevy"
+        ? "Typ nabídky"
+        : "Typ oferty"
+      : currentLanguage.discount;
 
   const saveBrand = () => {
     const trimmed = newBrandName.trim();
@@ -498,7 +530,9 @@ export default function PromotionFormModal({
       description: newProduct.description || "User-created product",
       promotionDescription: newProduct.description || "User-created product",
       terms: "User-created product",
-      priceAfterDiscount: Number(newProduct.price || 0),
+      priceAfterDiscount: Number(form.promoPrice || newProduct.price || 0),
+      promoPrice: Number(form.promoPrice || newProduct.price || 0),
+      promotionType: form.promotionType || "Fixed promotion",
     };
 
     addProduct(createdProduct);
@@ -579,6 +613,7 @@ export default function PromotionFormModal({
                           brands: "",
                           product: "",
                           retailer: "",
+                          category: "",
                         }));
                       }}
                       variant={form.market === market ? "contained" : "text"}
@@ -699,6 +734,19 @@ export default function PromotionFormModal({
 
               <Box className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <FormField
+                  type="select"
+                  label={currentLanguage.promotionType}
+                  value={form.promotionType}
+                  onValueChange={(value) =>
+                    update("promotionType", value as FormState["promotionType"])
+                  }
+                  options={currentLanguage.promotionTypeOptions.map((item) => ({
+                    label: item.label,
+                    value: item.value,
+                  }))}
+                  placeholder={currentLanguage.promotionType}
+                />
+                <FormField
                   label={currentLanguage.promoName}
                   value={form.name}
                   onValueChange={(value) => update("name", value)}
@@ -753,6 +801,7 @@ export default function PromotionFormModal({
                   placeholder="Promotion channel"
                 />
                 <FormField
+                  key={`brand-${form.market}`}
                   type="select"
                   label={currentLanguage.brand}
                   value={form.brands}
@@ -764,6 +813,7 @@ export default function PromotionFormModal({
                   labelAction={{ label: `${currentLanguage.add} brand`, onClick: () => setBrandModalOpen(true) }}
                 />
                 <FormField
+                  key={`product-${form.market}`}
                   type="select"
                   label={currentLanguage.product}
                   value={form.product}
@@ -798,6 +848,7 @@ export default function PromotionFormModal({
                   labelAction={{ label: `${currentLanguage.add} product`, onClick: () => setProductModalOpen(true) }}
                 />
                 <FormField
+                  key={`retailer-${form.market}`}
                   type="select"
                   label={currentLanguage.retailer}
                   value={form.retailer}
@@ -809,12 +860,25 @@ export default function PromotionFormModal({
                   placeholder={currentLanguage.retailer}
                 />
                 <FormField
-                  label={currentLanguage.discount}
-                  placeholder="np. -25% powyżej 99 PLN"
+                  label={discountLabel}
+                  placeholder={
+                    form.promotionType === "Buy one get one free"
+                      ? "np. Kup 1, dostaniesz 1 gratis"
+                      : form.promotionType === "Custom"
+                        ? "np. 2 za 1 lub 299 PLN"
+                        : "np. -25% powyżej 99 PLN"
+                  }
                   value={form.discount}
                   onValueChange={(value) => update("discount", value)}
                   required
                   error={fieldErrors.discount}
+                />
+                <FormField
+                  type="number"
+                  label={form.market === "CZ" ? "Cena po slevě" : "Cena po promocji"}
+                  placeholder={form.market === "CZ" ? "např. 999 CZK" : "np. 299 PLN"}
+                  value={form.promoPrice}
+                  onValueChange={(value) => update("promoPrice", String(value))}
                 />
                 <FormField
                   label={currentLanguage.threshold}
@@ -914,7 +978,7 @@ export default function PromotionFormModal({
             />
             <FormField
               type="select"
-              label={currentLanguage.brandSelectLabel}
+              label={currentLanguage.productBrandLabel || currentLanguage.brandSelectLabel}
               value={newProduct.brand}
               onValueChange={(value) => setNewProduct((current) => ({ ...current, brand: String(value) }))}
               options={marketBrandOptions.map((item) => ({ label: item, value: item }))}
