@@ -7,19 +7,39 @@ import {
   SaveRounded,
   EditRounded,
 } from "@mui/icons-material";
-import { Box, Button, Modal, TextField, Typography, IconButton, Avatar } from "@mui/material";
+import {
+  Box,
+  Button,
+  Modal,
+  TextField,
+  Typography,
+  IconButton,
+  Avatar,
+} from "@mui/material";
 import { createWorker } from "tesseract.js";
 import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
-import { czDummyBrands, getMarketBrandOptions, sephoraBrands } from "../data/brands";
+import {
+  czDummyBrands,
+  getMarketBrandOptions,
+  sephoraBrands,
+} from "../data/brands";
 import type { Product } from "../data/productTypes";
 import { marketCatalog } from "../data/catalog";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
-import { readPromotionFieldsWithGemini } from "../utils/geminiOcr";
+import {
+  readPromotionFieldsWithGemini,
+  translateToEnglishWithGemini,
+} from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
-const productCategories = ["Skincare", "Fragrance", "Makeup", "Haircare"] as const;
+const productCategories = [
+  "Skincare",
+  "Fragrance",
+  "Makeup",
+  "Haircare",
+] as const;
 const brandCatalog = [...sephoraBrands];
 const retailers = [...plRetailers];
 const czRetailers = [...czDummyRetailers];
@@ -138,12 +158,8 @@ export default function PromotionFormModal({
   onClose: () => void;
   onSave: (promotion: FormState) => void;
 }) {
-  const {
-    brandsByMarket,
-    productsList,
-    addBrand,
-    addProduct,
-  } = useAppContext();
+  const { brandsByMarket, productsList, addBrand, addProduct } =
+    useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const [error, setError] = useState("");
@@ -158,72 +174,73 @@ export default function PromotionFormModal({
   const currentLanguage =
     form.market === "CZ"
       ? {
-        addPromotion: "Přidat akci",
-        marketSubtitle: "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu.",
-        market: "Trh *",
-        marketLabel: "Trh",
+          addPromotion: "Přidat akci",
+          marketSubtitle:
+            "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu.",
+          market: "Trh *",
+          marketLabel: "Trh",
         promotionType: "Typ akce",
         promotionTypeOptions: promotionTypeOptions.CZ,
-        productCategory: "Kategorie produktu",
-        promoName: "Název akce",
-        promoNamePlaceholder: "Zadejte název akce",
-        startDate: "Datum začátku",
-        endDate: "Datum ukončení",
-        scope: "Rozsah akce",
-        scopePlaceholder: "Vyberte rozsah akce",
-        channel: "Propagační kanál",
-        channelPlaceholder: "Vyberte propagační kanál",
-        brand: "Značka",
-        product: "Produkt",
-        retailer: "Prodejce",
-        discount: "Typ a výše slevy",
-        discountPlaceholder: "např. -25% nad 999 CZK",
-        threshold: "Minimální nákup",
-        thresholdPlaceholder: "např. 999 CZK",
-        sku: "Počet SKU",
-        skuPlaceholder: "Zadejte počet SKU",
-        avgDiscount: "Průměrná tržní sleva",
-        avgDiscountPlaceholder: "např. 18%",
-        notes: "Poznámky a podmínky",
-        notesPlaceholder: "Podmínky, výjimky, pravidla...",
-        upload: "Nahrajte screenshot nebo kreativ",
-        changeImage: "Změnit obrázek",
-        loading: "Načítání textu...",
-        cancel: "Zrušit",
-        save: "Uložit akci",
-        add: "Přidat",
-        addBrand: "Přidat značku",
-        addProduct: "Přidat produkt",
-        addBrandTitle: "Přidat novou značku",
-        addProductTitle: "Přidat nový produkt",
-        brandNameLabel: "Název značky",
-        brandNamePlaceholder: "Zadejte název značky",
-        productNameLabel: "Název produktu",
-        productNamePlaceholder: "Název produktu",
-        brandSelectLabel: "Značka",
-        brandSelectPlaceholder: "Vyberte značku",
+          productCategory: "Kategorie produktu",
+          promoName: "Název akce",
+          promoNamePlaceholder: "Zadejte název akce",
+          startDate: "Datum začátku",
+          endDate: "Datum ukončení",
+          scope: "Rozsah akce",
+          scopePlaceholder: "Vyberte rozsah akce",
+          channel: "Propagační kanál",
+          channelPlaceholder: "Vyberte propagační kanál",
+          brand: "Značka",
+          product: "Produkt",
+          retailer: "Prodejce",
+          discount: "Typ a výše slevy",
+          discountPlaceholder: "např. -25% nad 999 CZK",
+          threshold: "Minimální nákup",
+          thresholdPlaceholder: "např. 999 CZK",
+          sku: "Počet SKU",
+          skuPlaceholder: "Zadejte počet SKU",
+          avgDiscount: "Průměrná tržní sleva",
+          avgDiscountPlaceholder: "např. 18%",
+          notes: "Poznámky a podmínky",
+          notesPlaceholder: "Podmínky, výjimky, pravidla...",
+          upload: "Nahrajte screenshot nebo kreativ",
+          changeImage: "Změnit obrázek",
+          loading: "Načítání textu...",
+          cancel: "Zrušit",
+          save: "Uložit akci",
+          add: "Přidat",
+          addBrand: "Přidat značku",
+          addProduct: "Přidat produkt",
+          addBrandTitle: "Přidat novou značku",
+          addProductTitle: "Přidat nový produkt",
+          brandNameLabel: "Název značky",
+          brandNamePlaceholder: "Zadejte název značky",
+          productNameLabel: "Název produktu",
+          productNamePlaceholder: "Název produktu",
+          brandSelectLabel: "Značka",
+          brandSelectPlaceholder: "Vyberte značku",
         productBrandLabel: "Značka produktu",
-        categorySelectLabel: "Kategorie",
-        categorySelectPlaceholder: "Vyberte kategorii",
-        priceLabel: "Cena",
-        pricePlaceholder: "Cena",
-        descriptionLabel: "Popis",
-        descriptionPlaceholder: "Popis",
-        retailerLabel: "Prodejce",
-        retailerPlaceholder: "Prodejce",
-        saveBrand: "Uložit značku",
-        saveProduct: "Uložit produkt",
-        validationError: "Zkontrolujte povinná pole formuláře.",
-        errors: {
-          name: "Zadejte název akce.",
-          from: "Vyberte datum začátku.",
-          to: "Vyberte datum ukončení.",
-          invalidDates: "Datum ukončení musí být po datu začátku.",
-          discount: "Zadejte výši slevy.",
-          brand: "Vyberte značku.",
-          product: "Vyberte produkt.",
-        },
-      }
+          categorySelectLabel: "Kategorie",
+          categorySelectPlaceholder: "Vyberte kategorii",
+          priceLabel: "Cena",
+          pricePlaceholder: "Cena",
+          descriptionLabel: "Popis",
+          descriptionPlaceholder: "Popis",
+          retailerLabel: "Prodejce",
+          retailerPlaceholder: "Prodejce",
+          saveBrand: "Uložit značku",
+          saveProduct: "Uložit produkt",
+          validationError: "Zkontrolujte povinná pole formuláře.",
+          errors: {
+            name: "Zadejte název akce.",
+            from: "Vyberte datum začátku.",
+            to: "Vyberte datum ukončení.",
+            invalidDates: "Datum ukončení musí být po datu začátku.",
+            discount: "Zadejte výši slevy.",
+            brand: "Vyberte značku.",
+            product: "Vyberte produkt.",
+          },
+        }
       : {
         addPromotion: "Dodaj promocję",
         marketSubtitle: "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim.",
@@ -309,6 +326,7 @@ export default function PromotionFormModal({
     retailer: "",
     image: "",
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const update = (
     field: keyof FormState,
@@ -390,6 +408,7 @@ export default function PromotionFormModal({
     retailer?: string;
     category?: string;
     name?: string;
+    notes?: string;
   };
 
   const mergeExtractedIntoForm = (
@@ -405,6 +424,7 @@ export default function PromotionFormModal({
     retailer: extracted.retailer || current.retailer,
     category: extracted.category || current.category,
     name: current.name || extracted.name || "",
+    notes: current.notes || extracted.notes || "",
   });
 
   // --- Tesseract path (local OCR) ----------------------------------------
@@ -438,6 +458,7 @@ export default function PromotionFormModal({
       brands: findKnownMatches(raw.brands || "", brandCatalog) as string,
       retailer: findKnownMatches(raw.retailer || "", retailers) as string,
       category: findKnownMatches(raw.category || "", categories) as string,
+      notes: raw.notes || "",
     };
   };
 
@@ -446,7 +467,46 @@ export default function PromotionFormModal({
   const isGeminiConfigured = () =>
     Boolean(process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
 
-  const submit = (event: React.FormEvent) => {
+  const handleCreativeUpload = async (file: File) => {
+    // 1) Save the ORIGINAL image for preview/storage — independent of OCR
+    const reader = new FileReader();
+    reader.onload = () => {
+      update("creativeName", file.name);
+      update(
+        "creativeData",
+        typeof reader.result === "string" ? reader.result : "",
+      );
+    };
+    reader.readAsDataURL(file);
+
+    // 2) Extract fields: prefer Gemini, fall back to Tesseract on any failure
+    setOcrLoading(true);
+    try {
+      let extracted: ExtractedFields;
+
+      if (isGeminiConfigured()) {
+        try {
+          extracted = await extractWithGemini(file);
+        } catch (err) {
+          console.warn(
+            "Gemini extraction failed, falling back to Tesseract:",
+            err,
+          );
+          extracted = await extractWithTesseract(file);
+        }
+      } else {
+        extracted = await extractWithTesseract(file);
+      }
+
+      setForm((current) => mergeExtractedIntoForm(current, extracted));
+    } catch (err) {
+      console.error("OCR extraction failed:", err);
+    } finally {
+      setOcrLoading(false);
+    }
+  };
+
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     const errors: Record<string, string> = {};
     if (!form.name) errors.name = currentLanguage.errors.name;
@@ -462,11 +522,27 @@ export default function PromotionFormModal({
       setError("Sprawdź wymagane pola formularza.");
       return;
     }
-    onSave({
+
+    let finalNotes = form.notes || "";
+    if (finalNotes.trim() && isGeminiConfigured()) {
+      setSubmitting(true);
+      try {
+        const translated = await translateToEnglishWithGemini(finalNotes);
+        if (translated) {
+          finalNotes = translated;
+        }
+      } catch (err) {
+        console.warn("Failed to translate notes on submit with Gemini:", err);
+      } finally {
+        setSubmitting(false);
+      }
+    }
+
+    onSave({ ...{
       ...form,
       promotionType: form.promotionType || "Fixed promotion",
       promoPrice: form.promoPrice || "",
-    });
+    }, notes: finalNotes });
     setForm(emptyForm);
     setError("");
     setFieldErrors({});
@@ -558,7 +634,11 @@ export default function PromotionFormModal({
 
   return (
     <>
-      <Modal open={open} onClose={onClose} aria-labelledby="promotion-form-title">
+      <Modal
+        open={open}
+        onClose={onClose}
+        aria-labelledby="promotion-form-title"
+      >
         <Box
           className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl"
           sx={{
@@ -646,17 +726,18 @@ export default function PromotionFormModal({
                         <IconButton
                           size="small"
                           sx={{
-                            bgcolor: 'white',
-                            '&:hover': { bgcolor: '#f5f5f5' },
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                            bgcolor: "white",
+                            "&:hover": { bgcolor: "#f5f5f5" },
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                           }}
                           onClick={() => {
                             // Trigger file input for editing
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
+                            const input = document.createElement("input");
+                            input.type = "file";
+                            input.accept = "image/*";
                             input.onchange = (e) => {
-                              const file = (e.target as HTMLInputElement).files?.[0];
+                              const file = (e.target as HTMLInputElement)
+                                .files?.[0];
                               if (file) handleImageUpload(file);
                             };
                             input.click();
@@ -668,9 +749,9 @@ export default function PromotionFormModal({
                         <IconButton
                           size="small"
                           sx={{
-                            bgcolor: 'white',
-                            '&:hover': { bgcolor: '#f5f5f5' },
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+                            bgcolor: "white",
+                            "&:hover": { bgcolor: "#f5f5f5" },
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                           }}
                           onClick={removeImage}
                           disabled={ocrLoading}
@@ -705,26 +786,41 @@ export default function PromotionFormModal({
                         {form.creativeName}
                       </Typography>
                       <Typography sx={{ fontSize: 11, color: "#82908b" }}>
-                        {imageFile ? `${(imageFile.size / 1024).toFixed(0)} KB` : ''}
+                        {imageFile
+                          ? `${(imageFile.size / 1024).toFixed(0)} KB`
+                          : ""}
                       </Typography>
                     </Box>
                   </Box>
                 ) : (
                   <Box
                     {...getRootProps()}
-                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${isDragActive ? 'border-[#286e5e] bg-[#f0f7f5]' : 'border-[#dce6e2] hover:border-[#286e5e]'
-                      } ${ocrLoading ? 'pointer-events-none opacity-60' : ''}`}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      isDragActive
+                        ? "border-[#286e5e] bg-[#f0f7f5]"
+                        : "border-[#dce6e2] hover:border-[#286e5e]"
+                    } ${ocrLoading ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <input {...getInputProps()} disabled={ocrLoading} />
-                    <AddPhotoAlternateRounded sx={{ fontSize: 40, color: "#82908b", mb: 1 }} />
-                    <Typography sx={{ color: "#48665d", fontSize: 14, fontWeight: 500 }}>
-                      {isDragActive ? 'Upuść obraz tutaj' : currentLanguage.upload}
+                    <AddPhotoAlternateRounded
+                      sx={{ fontSize: 40, color: "#82908b", mb: 1 }}
+                    />
+                    <Typography
+                      sx={{ color: "#48665d", fontSize: 14, fontWeight: 500 }}
+                    >
+                      {isDragActive
+                        ? "Upuść obraz tutaj"
+                        : currentLanguage.upload}
                     </Typography>
-                    <Typography sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}>
+                    <Typography
+                      sx={{ color: "#82908b", fontSize: 12, mt: 0.5 }}
+                    >
                       PNG, JPG, WEBP (max 5MB)
                     </Typography>
                     {ocrLoading && (
-                      <Typography sx={{ color: "#286e5e", fontSize: 12, mt: 1 }}>
+                      <Typography
+                        sx={{ color: "#286e5e", fontSize: 12, mt: 1 }}
+                      >
                         {currentLanguage.loading}
                       </Typography>
                     )}
@@ -797,7 +893,10 @@ export default function PromotionFormModal({
                   label={currentLanguage.channel}
                   value={form.channel}
                   onValueChange={(value) => update("channel", value)}
-                  options={channels.map((item) => ({ label: item, value: item }))}
+                  options={channels.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
                   placeholder="Promotion channel"
                 />
                 <FormField
@@ -806,11 +905,17 @@ export default function PromotionFormModal({
                   label={currentLanguage.brand}
                   value={form.brands}
                   onValueChange={(value) => update("brands", value)}
-                  options={marketBrandOptions.map((item) => ({ label: item, value: item }))}
+                  options={marketBrandOptions.map((item) => ({
+                    label: item,
+                    value: item,
+                  }))}
                   required
                   error={fieldErrors.brands}
                   placeholder={currentLanguage.brand}
-                  labelAction={{ label: `${currentLanguage.add} brand`, onClick: () => setBrandModalOpen(true) }}
+                  labelAction={{
+                    label: `${currentLanguage.add} brand`,
+                    onClick: () => setBrandModalOpen(true),
+                  }}
                 />
                 <FormField
                   key={`product-${form.market}`}
@@ -819,21 +924,25 @@ export default function PromotionFormModal({
                   value={form.product}
                   onValueChange={(value) => {
                     const nextProduct = String(value);
-                    const selected = marketProductOptions.find((item) => item.name === nextProduct);
+                    const selected = marketProductOptions.find(
+                      (item) => item.name === nextProduct,
+                    );
 
                     setForm((current) => ({
                       ...current,
                       product: nextProduct,
                       brands: selected?.brand || current.brands,
                       category: selected?.category
-                        ? categories.find((item) =>
-                          item ===
-                          {
-                            Skincare: "Pielęgnacja",
-                            Fragrance: "Perfumy",
-                            Makeup: "Makijaż",
-                            Haircare: "Włosy",
-                          }[selected.category]) || current.category
+                        ? categories.find(
+                            (item) =>
+                              item ===
+                              {
+                                Skincare: "Pielęgnacja",
+                                Fragrance: "Perfumy",
+                                Makeup: "Makijaż",
+                                Haircare: "Włosy",
+                              }[selected.category],
+                          ) || current.category
                         : current.category,
                       retailer: selected?.retailer || current.retailer,
                     }));
@@ -845,7 +954,10 @@ export default function PromotionFormModal({
                   required
                   error={fieldErrors.product}
                   placeholder={currentLanguage.product}
-                  labelAction={{ label: `${currentLanguage.add} product`, onClick: () => setProductModalOpen(true) }}
+                  labelAction={{
+                    label: `${currentLanguage.add} product`,
+                    onClick: () => setProductModalOpen(true),
+                  }}
                 />
                 <FormField
                   key={`retailer-${form.market}`}
@@ -943,7 +1055,9 @@ export default function PromotionFormModal({
 
       <Modal open={brandModalOpen} onClose={() => setBrandModalOpen(false)}>
         <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
-          <Typography sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}>
+          <Typography
+            sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}
+          >
             {currentLanguage.addBrandTitle}
           </Typography>
           <FormField
@@ -954,10 +1068,17 @@ export default function PromotionFormModal({
             className="mb-2"
           />
           <Box className="flex justify-end gap-2">
-            <Button onClick={() => setBrandModalOpen(false)} sx={{ color: "#65736f", textTransform: "none" }}>
+            <Button
+              onClick={() => setBrandModalOpen(false)}
+              sx={{ color: "#65736f", textTransform: "none" }}
+            >
               {currentLanguage.cancel}
             </Button>
-            <Button variant="contained" onClick={saveBrand} sx={{ backgroundColor: "#286e5e", textTransform: "none" }}>
+            <Button
+              variant="contained"
+              onClick={saveBrand}
+              sx={{ backgroundColor: "#286e5e", textTransform: "none" }}
+            >
               {currentLanguage.saveBrand}
             </Button>
           </Box>
@@ -966,22 +1087,37 @@ export default function PromotionFormModal({
 
       <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)}>
         <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl">
-          <Typography sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}>
+          <Typography
+            sx={{ color: "#173c35", fontSize: 20, fontWeight: 800, mb: 2 }}
+          >
             {currentLanguage.addProductTitle}
           </Typography>
           <Box className="grid gap-3">
             <FormField
               label={currentLanguage.productNameLabel}
               value={newProduct.name}
-              onValueChange={(value) => setNewProduct((current) => ({ ...current, name: String(value) }))}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  name: String(value),
+                }))
+              }
               placeholder={currentLanguage.productNamePlaceholder}
             />
             <FormField
               type="select"
               label={currentLanguage.productBrandLabel || currentLanguage.brandSelectLabel}
               value={newProduct.brand}
-              onValueChange={(value) => setNewProduct((current) => ({ ...current, brand: String(value) }))}
-              options={marketBrandOptions.map((item) => ({ label: item, value: item }))}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  brand: String(value),
+                }))
+              }
+              options={marketBrandOptions.map((item) => ({
+                label: item,
+                value: item,
+              }))}
               placeholder={currentLanguage.brandSelectPlaceholder}
             />
             <FormField
@@ -994,34 +1130,59 @@ export default function PromotionFormModal({
                   category: value as Product["category"],
                 }))
               }
-              options={productCategories.map((item) => ({ label: item, value: item }))}
+              options={productCategories.map((item) => ({
+                label: item,
+                value: item,
+              }))}
               placeholder={currentLanguage.categorySelectPlaceholder}
             />
             <FormField
               type="number"
               label={currentLanguage.priceLabel}
               value={newProduct.price}
-              onValueChange={(value) => setNewProduct((current) => ({ ...current, price: String(value) }))}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  price: String(value),
+                }))
+              }
               placeholder={currentLanguage.pricePlaceholder}
             />
             <FormField
               label={currentLanguage.descriptionLabel}
               value={newProduct.description}
-              onValueChange={(value) => setNewProduct((current) => ({ ...current, description: String(value) }))}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  description: String(value),
+                }))
+              }
               placeholder={currentLanguage.descriptionPlaceholder}
             />
             <FormField
               label={currentLanguage.retailerLabel}
               value={newProduct.retailer}
-              onValueChange={(value) => setNewProduct((current) => ({ ...current, retailer: String(value) }))}
+              onValueChange={(value) =>
+                setNewProduct((current) => ({
+                  ...current,
+                  retailer: String(value),
+                }))
+              }
               placeholder={currentLanguage.retailerPlaceholder}
             />
           </Box>
           <Box className="mt-4 flex justify-end gap-2">
-            <Button onClick={() => setProductModalOpen(false)} sx={{ color: "#65736f", textTransform: "none" }}>
+            <Button
+              onClick={() => setProductModalOpen(false)}
+              sx={{ color: "#65736f", textTransform: "none" }}
+            >
               {currentLanguage.cancel}
             </Button>
-            <Button variant="contained" onClick={saveProduct} sx={{ backgroundColor: "#286e5e", textTransform: "none" }}>
+            <Button
+              variant="contained"
+              onClick={saveProduct}
+              sx={{ backgroundColor: "#286e5e", textTransform: "none" }}
+            >
               {currentLanguage.saveProduct}
             </Button>
           </Box>
