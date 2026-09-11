@@ -79,10 +79,10 @@ const Dashboard = () => {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [bulkTab, setBulkTab] = useState<"brands" | "products">("brands");
   const [brandRows, setBrandRows] = useState([
-    { storeName: "", brand: "" },
+    { brand: "" },
   ]);
   const [productRows, setProductRows] = useState([
-    { storeName: "", brandName: "", title: "" },
+    { brandName: "", title: "" },
   ]);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
   const [bulkMarket, setBulkMarket] = useState<"PL" | "CZ">(
@@ -117,7 +117,6 @@ const Dashboard = () => {
         cancel: "Anuluj",
         brand: "Marka",
         title: "Tytuł",
-        storeName: "Nazwa sklepu",
         brandName: "Nazwa marki",
         delete: "Usuń",
         fileLabel: "Importuj z CSV/XLSX",
@@ -142,7 +141,6 @@ const Dashboard = () => {
         cancel: "Zrušit",
         brand: "Značka",
         title: "Název",
-        storeName: "Název obchodu",
         brandName: "Název značky",
         delete: "Smazat",
         fileLabel: "Importovat z CSV/XLSX",
@@ -184,20 +182,20 @@ const Dashboard = () => {
   );
 
   const resetBulkRows = () => {
-    setBrandRows([{ storeName: "", brand: "" }]);
-    setProductRows([{ storeName: "", brandName: "", title: "" }]);
+    setBrandRows([{ brand: "" }]);
+    setProductRows([{ brandName: "", title: "" }]);
   };
 
   const downloadBulkTemplate = (format: "csv" | "xlsx") => {
     const brandTemplate = [
-      [bulkText.storeName, bulkText.brand],
-      ["Rossmann", bulkMarket === "PL" ? "Nazwa marki" : "Název značky"],
-      ["DM", bulkMarket === "PL" ? "L'oreal" : "L'Oréal"],
+      [bulkText.brand],
+      [bulkMarket === "PL" ? "Nazwa marki" : "Název značky"],
+      [bulkMarket === "PL" ? "L'Oréal" : "L'Oréal"],
     ];
     const productTemplate = [
-      [bulkText.storeName, bulkText.brandName, bulkText.title],
-      ["Rossmann", bulkMarket === "PL" ? "L'oreal" : "L'Oréal", bulkMarket === "PL" ? "Hydratační krem" : "Krem nawilżający"],
-      ["DM", bulkMarket === "PL" ? "Nivea" : "Nivea", bulkMarket === "PL" ? "Serum do twarzy" : "Sérum pro obličej"],
+      [bulkText.brandName, bulkText.title],
+      [bulkMarket === "PL" ? "L'Oréal" : "L'Oréal", bulkMarket === "PL" ? "Krem nawilżający" : "Hydratační krém"],
+      [bulkMarket === "PL" ? "Nivea" : "Nivea", bulkMarket === "PL" ? "Serum do twarzy" : "Sérum pro obličej"],
     ];
     const rows = bulkTab === "brands" ? brandTemplate : productTemplate;
     const fileName = `bulk-${bulkTab}-${bulkMarket.toLowerCase()}.${format}`;
@@ -230,7 +228,7 @@ const Dashboard = () => {
 
   const updateBrandRow = (
     index: number,
-    field: "storeName" | "brand",
+    field: "brand",
     value: string,
   ) => {
     setBrandRows((current) =>
@@ -242,7 +240,7 @@ const Dashboard = () => {
 
   const updateProductRow = (
     index: number,
-    field: "storeName" | "brandName" | "title",
+    field: "brandName" | "title",
     value: string,
   ) => {
     setProductRows((current) =>
@@ -255,18 +253,18 @@ const Dashboard = () => {
   const addBrandRow = () =>
     setBrandRows((current) => [
       ...current,
-      { storeName: "", brand: "" },
+      { brand: "" },
     ]);
   const addProductRow = () =>
     setProductRows((current) => [
       ...current,
-      { storeName: "", brandName: "", title: "" },
+      { brandName: "", title: "" },
     ]);
 
   const removeBrandRow = (index: number) => {
     setBrandRows((current) => {
       if (current.length === 1) {
-        return [{ storeName: "", brand: "" }];
+        return [{ brand: "" }];
       }
       return current.filter((_, rowIndex) => rowIndex !== index);
     });
@@ -275,7 +273,7 @@ const Dashboard = () => {
   const removeProductRow = (index: number) => {
     setProductRows((current) => {
       if (current.length === 1) {
-        return [{ storeName: "", brandName: "", title: "" }];
+        return [{ brandName: "", title: "" }];
       }
       return current.filter((_, rowIndex) => rowIndex !== index);
     });
@@ -300,35 +298,29 @@ const Dashboard = () => {
     if (bulkTab === "brands") {
       const items = rows
         .map((row) => {
-          const storeName = normalize(
-            row["Store Name"] ?? row["Store name"] ?? row["Sklep"] ?? row.Store,
-          );
           const brand = normalize(
             row.Brand ?? row.Marka ?? row["Brand Name"] ?? row["Nazwa marki"],
           );
-          return { storeName, brand };
+          return { brand };
         })
-        .filter((row) => row.storeName || row.brand);
+        .filter((row) => row.brand);
 
-      setBrandRows(items.length > 0 ? items : [{ storeName: "", brand: "" }]);
+      setBrandRows(items.length > 0 ? items : [{ brand: "" }]);
     } else {
       const items = rows
         .map((row) => {
-          const storeName = normalize(
-            row["Store Name"] ?? row["Store name"] ?? row["Sklep"] ?? row.Store,
-          );
           const brandName = normalize(
             row["Brand Name"] ?? row["Nazwa marki"] ?? row.Brand ?? row.Marka,
           );
           const title = normalize(
             row.Title ?? row.Tytuł ?? row["Product Name"] ?? row["Nazwa produktu"],
           );
-          return { storeName, brandName, title };
+          return { brandName, title };
         })
-        .filter((row) => row.storeName || row.brandName || row.title);
+        .filter((row) => row.brandName || row.title);
 
       setProductRows(
-        items.length > 0 ? items : [{ storeName: "", brandName: "", title: "" }],
+        items.length > 0 ? items : [{ brandName: "", title: "" }],
       );
     }
 
@@ -338,17 +330,17 @@ const Dashboard = () => {
   const handleBulkSave = () => {
     if (bulkTab === "brands") {
       brandRows.forEach((row) => {
-        const storeName = row.storeName.trim();
         const brandName = row.brand.trim();
-        if (!storeName || !brandName) return;
+        if (!brandName) return;
         addBrand(brandName, bulkMarket);
       });
     } else {
+      const defaultRetailer = bulkMarket === "PL" ? "Douglas" : "CZ Demo Store Prague";
+
       productRows.forEach((row, index) => {
-        const storeName = row.storeName.trim();
         const brandName = row.brandName.trim();
         const title = row.title.trim();
-        if (!storeName || !brandName || !title) return;
+        if (!brandName || !title) return;
 
         const productId = `BULK-${bulkMarket}-${Date.now()}-${index}`;
         addProduct({
@@ -359,7 +351,7 @@ const Dashboard = () => {
           price: 0,
           currency: bulkMarket === "CZ" ? "CZK" : "PLN",
           market: bulkMarket,
-          retailer: storeName,
+          retailer: defaultRetailer,
           rating: 0,
           stock: 1,
           competitorDiscount: 0,
@@ -370,12 +362,12 @@ const Dashboard = () => {
           promotionName: title,
           description:
             bulkMarket === "PL"
-              ? `Masowy import produktu dla ${brandName} w ${storeName}`
-              : `Hromadně nahraný produkt pro ${brandName} v ${storeName}`,
+              ? `Masowy import produktu dla ${brandName}`
+              : `Hromadně nahraný produkt pro ${brandName}`,
           promotionDescription:
             bulkMarket === "PL"
-              ? `Masowy import produktu dla ${brandName} w ${storeName}`
-              : `Hromadně nahraný produkt pro ${brandName} v ${storeName}`,
+              ? `Masowy import produktu dla ${brandName}`
+              : `Hromadně nahraný produkt pro ${brandName}`,
           terms: bulkMarket === "PL" ? "Import masowy" : "Hromadný import",
           priceAfterDiscount: 0,
           promotionType: "Fixed promotion",
@@ -1195,8 +1187,8 @@ const Dashboard = () => {
                 </Typography>
                 <Typography sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}>
                   {bulkTab === "brands"
-                    ? "Store Name | Brand Name"
-                    : "Store Name | Brand Name | Title"}
+                    ? bulkText.brand
+                    : `${bulkText.brandName} | ${bulkText.title}`}
                 </Typography>
                 <Box className="mt-2 flex flex-col gap-2">
                   <Box className="flex items-center justify-between gap-2">
@@ -1260,15 +1252,7 @@ const Dashboard = () => {
               {bulkTab === "brands" ? (
                 <Box className="flex flex-col gap-2">
                   {brandRows.map((row, index) => (
-                    <Box key={`brand-row-${index}`} className="grid grid-cols-[1fr_1fr_50px] gap-2 items-center">
-                      <FormField
-                        type="select"
-                        label={bulkText.storeName}
-                        value={row.storeName}
-                        onValueChange={(value) => updateBrandRow(index, "storeName", String(value))}
-                        options={storeOptions.map((option) => ({ label: option, value: option }))}
-                        fullWidth
-                      />
+                    <Box key={`brand-row-${index}`} className="grid grid-cols-[1fr_50px] gap-2 items-center">
                       <FormField
                         type="text"
                         label={bulkText.brand}
@@ -1280,7 +1264,7 @@ const Dashboard = () => {
                         variant="text"
                         color="error"
                         onClick={() => removeBrandRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 700 }}
+                        sx={{ minWidth: 0, px: 0, fontWeight: 700, mt: 2 }}
                       >
                         <DeleteIcon fontSize="small" color="error" />
                       </Button>
@@ -1289,7 +1273,7 @@ const Dashboard = () => {
                   <Button
                     variant="text"
                     onClick={addBrandRow}
-                    sx={{ textTransform: "none", fontWeight: 700, color: "#000000", selfAlign: "flex-start" }}
+                    sx={{ textTransform: "none", fontWeight: 700, color: "#f1f1f1", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#000000", "&:hover": { backgroundColor: "#222222" } }}
                   >
                     {bulkText.addBrandRow}
                   </Button>
@@ -1297,15 +1281,7 @@ const Dashboard = () => {
               ) : (
                 <Box className="flex flex-col gap-2">
                   {productRows.map((row, index) => (
-                    <Box key={`product-row-${index}`} className="grid grid-cols-[1fr_1fr_1fr_50px] gap-2 items-center">
-                      <FormField
-                        type="select"
-                        label={bulkText.storeName}
-                        value={row.storeName}
-                        onValueChange={(value) => updateProductRow(index, "storeName", String(value))}
-                        options={storeOptions.map((option) => ({ label: option, value: option }))}
-                        fullWidth
-                      />
+                    <Box key={`product-row-${index}`} className="grid grid-cols-[1fr_1fr_50px] gap-2 items-center">
                       <FormField
                         type="select"
                         label={bulkText.brandName}
@@ -1325,7 +1301,7 @@ const Dashboard = () => {
                         variant="text"
                         color="error"
                         onClick={() => removeProductRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 700 }}
+                        sx={{ minWidth: 0, px: 0, fontWeight: 700, mt: 2 }}
                       >
                         <DeleteIcon fontSize="small" color="error" />
                       </Button>
@@ -1334,7 +1310,7 @@ const Dashboard = () => {
                   <Button
                     variant="text"
                     onClick={addProductRow}
-                    sx={{ textTransform: "none", fontWeight: 700, color: "#000000", selfAlign: "flex-start" }}
+                    sx={{ textTransform: "none", fontWeight: 700, color: "#f1f1f1", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#000000", "&:hover": { backgroundColor: "#222222" } }}
                   >
                     {bulkText.addProductRow}
                   </Button>

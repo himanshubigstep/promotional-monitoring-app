@@ -7,6 +7,11 @@ import React, {
 } from "react";
 import { catalog } from "../data/catalog";
 import { czDummyBrands, sephoraBrands } from "../data/brands";
+import {
+  czProducts as initialCzProducts,
+  plProducts as initialPlProducts,
+  upsertProductInMarket,
+} from "../data/marketProducts";
 import type { Product, PromotionType } from "../data/productTypes";
 
 export type UserRole = "Admin" | "Data Analytics" | "Viewer";
@@ -176,7 +181,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     CZ: [...czDummyBrands],
   });
   const brands = brandsByMarket.PL;
-  const [productsList, setProductsList] = useState<Product[]>(catalog);
+  const [marketProducts, setMarketProducts] = useState<
+    Record<"PL" | "CZ", Product[]>
+  >({
+    PL: [...initialPlProducts],
+    CZ: [...initialCzProducts],
+  });
+  const productsList = useMemo(
+    () => [...marketProducts.PL, ...marketProducts.CZ],
+    [marketProducts],
+  );
   const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(
     null,
   );
@@ -206,16 +220,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addProduct = useCallback((product: Product) => {
-    setProductsList((current) => {
-      const isDuplicate = current.some(
-        (item) =>
-          item.id === product.id ||
-          (item.name.toLowerCase() === product.name.toLowerCase() &&
-            item.brand.toLowerCase() === product.brand.toLowerCase()),
-      );
+    const marketKey = product.market === "PL" ? "PL" : "CZ";
 
-      return isDuplicate ? current : [product, ...current];
-    });
+    setMarketProducts((current) => ({
+      ...current,
+      [marketKey]: upsertProductInMarket(marketKey, product, current[marketKey] ?? []),
+    }));
+
+    setLastAddedProduct(product);
   }, []);
 
   const updatePromotion = useCallback(
@@ -249,8 +261,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         Włosy: "Haircare",
       };
 
-      setProductsList((current) =>
-        current.map((item) =>
+      setMarketProducts((current) => ({
+        PL: current.PL.map((item) =>
           item.id === id
             ? {
                 ...item,
@@ -279,7 +291,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               }
             : item,
         ),
-      );
+        CZ: current.CZ.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                name: normalizedPromotion.name,
+                brand: normalizedPromotion.brands || item.brand,
+                category:
+                  categoryMap[normalizedPromotion.category] ||
+                  (normalizedPromotion.category as Product["category"]),
+                price: promoPriceValue > 0 ? promoPriceValue : item.price,
+                currency: normalizedPromotion.market === "CZ" ? "CZK" : "PLN",
+                market: normalizedPromotion.market,
+                retailer: normalizedPromotion.retailer || item.retailer,
+                competitorDiscount:
+                  normalizedPromotion.promotionType === "Buy one get one free"
+                    ? 100
+                    : Math.max(discount, item.competitorDiscount || 0),
+                fromDate: normalizedPromotion.from,
+                toDate: normalizedPromotion.to,
+                promotionName: normalizedPromotion.name,
+                description: normalizedPromotion.notes,
+                promotionDescription: normalizedPromotion.notes,
+                terms: normalizedPromotion.notes,
+                priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : item.priceAfterDiscount,
+                promoPrice: promoPriceValue > 0 ? promoPriceValue : item.promoPrice,
+                promotionType: normalizedPromotion.promotionType,
+              }
+            : item,
+        ),
+      }));
     },
     [],
   );
@@ -335,29 +376,33 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         promoPrice: promoPriceValue > 0 ? promoPriceValue : undefined,
         promotionType: next.promotionType,
       };
-      setProductsList((current) => {
-        const exists = current.some(
-          (item) =>
-            item.id === product.id ||
-            (item.name.toLowerCase() === product.name.toLowerCase() &&
-              item.brand.toLowerCase() === product.brand.toLowerCase()),
-        );
-
-        return exists ? current : [product, ...current];
-      });
+      setMarketProducts((current) => ({
+        ...current,
+        [next.market]: upsertProductInMarket(
+          next.market,
+          product,
+          current[next.market] ?? [],
+        ),
+      }));
       setLastAddedProduct(product);
     },
     [promotions],
   );
 
   const deleteProduct = useCallback((id: string) => {
-    setProductsList((current) => current.filter((item) => item.id !== id));
+    setMarketProducts((current) => ({
+      PL: current.PL.filter((item) => item.id !== id),
+      CZ: current.CZ.filter((item) => item.id !== id),
+    }));
     setPromotions((current) => current.filter((item) => item.id !== id));
   }, []);
 
   const deletePromotion = useCallback((id: string) => {
     setPromotions((current) => current.filter((item) => item.id !== id));
-    setProductsList((current) => current.filter((item) => item.id !== id));
+    setMarketProducts((current) => ({
+      PL: current.PL.filter((item) => item.id !== id),
+      CZ: current.CZ.filter((item) => item.id !== id),
+    }));
   }, []);
 
   const value = useMemo(

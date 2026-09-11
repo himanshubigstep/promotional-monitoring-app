@@ -19,7 +19,6 @@ import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
 import { getMarketBrandOptions, sephoraBrands } from "../data/brands";
 import type { Product } from "../data/productTypes";
-import { marketCatalog } from "../data/catalog";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
 import {
   readPromotionFieldsWithGemini,
@@ -203,7 +202,7 @@ export default function PromotionFormModal({
   onSave: (promotion: FormState) => void;
   editingPromotion?: Promotion | null;
 }) {
-  const { brandsByMarket, addBrand, addProduct } = useAppContext();
+  const { brandsByMarket, addBrand, addProduct, products } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const promotionFieldConfig = getPromotionTypeFieldConfig(
@@ -213,9 +212,6 @@ export default function PromotionFormModal({
   const [error, setError] = useState("");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [ocrLoading, setOcrLoading] = useState(false);
-  const [brandModalOpen, setBrandModalOpen] = useState(false);
-  const [newBrandName, setNewBrandName] = useState("");
-  const [productModalOpen, setProductModalOpen] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const currentLanguage =
@@ -644,7 +640,7 @@ export default function PromotionFormModal({
     form.market,
     brandsByMarket[form.market],
   );
-  const marketProductOptions = marketCatalog.filter(
+  const marketProductOptions = products.filter(
     (item) => item.market === form.market,
   );
   const discountLabel =
@@ -653,73 +649,6 @@ export default function PromotionFormModal({
         ? "Typ nabídky"
         : "Typ oferty"
       : currentLanguage.discount;
-
-  const saveBrand = () => {
-    const trimmed = newBrandName.trim();
-    if (!trimmed) return;
-
-    addBrand(trimmed, form.market as "PL" | "CZ");
-    setForm((current) => ({ ...current, brands: trimmed }));
-    setNewBrandName("");
-    setBrandModalOpen(false);
-  };
-
-  const saveProduct = () => {
-    const productName = newProduct.name.trim();
-    const brandName = newProduct.brand.trim();
-
-    if (!productName || !brandName) return;
-
-    const createdProduct: Product = {
-      id: `USER-${Date.now()}`,
-      name: productName,
-      brand: brandName,
-      category: newProduct.category as Product["category"],
-      price: Number(newProduct.price || 0),
-      currency: form.market === "CZ" ? "CZK" : "PLN",
-      market: form.market,
-      retailer:
-        newProduct.retailer ||
-        form.retailer ||
-        marketRetailers[0] ||
-        retailers[0],
-      rating: 0,
-      stock: 1,
-      competitorDiscount: Number(form.discount.match(/\d+/)?.[0] || 0),
-      image:
-        newProduct.image ||
-        "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
-      fromDate: form.from || "2026-01-01",
-      toDate: form.to || "2026-12-31",
-      promotionName: productName,
-      description: newProduct.description || "User-created product",
-      promotionDescription: newProduct.description || "User-created product",
-      terms: "User-created product",
-      priceAfterDiscount: Number(form.promoPrice || newProduct.price || 0),
-      promoPrice: Number(form.promoPrice || newProduct.price || 0),
-      promotionType: form.promotionType || "Fixed promotion",
-    };
-
-    addProduct(createdProduct);
-    setForm((current) => ({
-      ...current,
-      product: productName,
-      brands: brandName,
-      category: categories.includes(current.category)
-        ? current.category
-        : current.category || "Pielęgnacja",
-    }));
-    setNewProduct({
-      name: "",
-      brand: "",
-      category: productCategories[0],
-      price: "",
-      description: "",
-      retailer: "",
-      image: "",
-    });
-    setProductModalOpen(false);
-  };
 
   const editableFields = new Set([
     "promotionType",
@@ -1251,142 +1180,6 @@ export default function PromotionFormModal({
                 {currentLanguage.save}
               </Button>
             </Box>
-          </Box>
-        </Box>
-      </Modal>
-
-      <Modal open={brandModalOpen} onClose={() => setBrandModalOpen(false)}>
-        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-2xl border border-[#e5e5e5]">
-          <Typography
-            sx={{ color: "#000000", fontSize: 18, fontWeight: 800, mb: 2 }}
-          >
-            {currentLanguage.addBrandTitle}
-          </Typography>
-          <FormField
-            label={currentLanguage.brandNameLabel}
-            value={newBrandName}
-            onValueChange={(value) => setNewBrandName(String(value))}
-            placeholder={currentLanguage.brandNamePlaceholder}
-            className="mb-4"
-          />
-          <Box className="flex justify-end gap-2">
-            <Button
-              onClick={() => setBrandModalOpen(false)}
-              sx={{ color: "#757575", textTransform: "none", fontWeight: 700 }}
-            >
-              {currentLanguage.cancel}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={saveBrand}
-              sx={{ backgroundColor: "#000000", color: "#ffffff", textTransform: "none", fontWeight: 800, "&:hover": { backgroundColor: "#222222" } }}
-            >
-              {currentLanguage.saveBrand}
-            </Button>
-          </Box>
-        </Box>
-      </Modal>
-
-      <Modal open={productModalOpen} onClose={() => setProductModalOpen(false)}>
-        <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white p-5 shadow-2xl border border-[#e5e5e5]">
-          <Typography
-            sx={{ color: "#000000", fontSize: 18, fontWeight: 800, mb: 2 }}
-          >
-            {currentLanguage.addProductTitle}
-          </Typography>
-          <Box className="grid gap-3">
-            <FormField
-              label={currentLanguage.productNameLabel}
-              value={newProduct.name}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  name: String(value),
-                }))
-              }
-              placeholder={currentLanguage.productNamePlaceholder}
-            />
-            <FormField
-              type="select"
-              label={currentLanguage.productBrandLabel || currentLanguage.brandSelectLabel}
-              value={newProduct.brand}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  brand: String(value),
-                }))
-              }
-              options={marketBrandOptions.map((item) => ({
-                label: item,
-                value: item,
-              }))}
-              placeholder={currentLanguage.brandSelectPlaceholder}
-            />
-            <FormField
-              type="select"
-              label={currentLanguage.categorySelectLabel}
-              value={newProduct.category}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  category: value as Product["category"],
-                }))
-              }
-              options={productCategories.map((item) => ({
-                label: item,
-                value: item,
-              }))}
-              placeholder={currentLanguage.categorySelectPlaceholder}
-            />
-            <FormField
-              type="number"
-              label={currentLanguage.priceLabel}
-              value={newProduct.price}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  price: String(value),
-                }))
-              }
-              placeholder={currentLanguage.pricePlaceholder}
-            />
-            <FormField
-              label={currentLanguage.descriptionLabel}
-              value={newProduct.description}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  description: String(value),
-                }))
-              }
-              placeholder={currentLanguage.descriptionPlaceholder}
-            />
-            <FormField
-              label={currentLanguage.retailerLabel}
-              value={newProduct.retailer}
-              onValueChange={(value) =>
-                setNewProduct((current) => ({
-                  ...current,
-                  retailer: String(value),
-                }))
-              }
-              placeholder={currentLanguage.retailerPlaceholder}
-            />
-          </Box>
-          <Box className="mt-4 flex justify-end gap-2">
-            <Button
-              onClick={() => setProductModalOpen(false)}
-              sx={{ color: "#757575", textTransform: "none", fontWeight: 700 }}
-            >
-              {currentLanguage.cancel}
-            </Button>
-            <Button
-              variant="contained"
-              onClick={saveProduct}
-              sx={{ backgroundColor: "#000000", color: "#ffffff", textTransform: "none", fontWeight: 800, "&:hover": { backgroundColor: "#222222" } }}
-            >
-              {currentLanguage.saveProduct}
-            </Button>
           </Box>
         </Box>
       </Modal>
