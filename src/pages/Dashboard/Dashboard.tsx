@@ -29,7 +29,6 @@ import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import YearFilter from "../../components/YearFilter";
 import { getMarketBrandOptions } from "../../data/brands";
-import { getMarketRetailers } from "../../data/retailers";
 import DeleteIcon from '@mui/icons-material/Delete';
 
 const fallbackImage =

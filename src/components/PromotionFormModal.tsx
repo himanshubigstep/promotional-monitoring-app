@@ -18,7 +18,6 @@ import { createWorker } from "tesseract.js";
 import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
 import { getMarketBrandOptions, sephoraBrands } from "../data/brands";
-import type { Product } from "../data/productTypes";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
 import {
   readPromotionFieldsWithGemini,
@@ -30,12 +29,6 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
 const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
-const productCategories = [
-  "Skincare",
-  "Fragrance",
-  "Makeup",
-  "Haircare",
-] as const;
 const brandCatalog = [...sephoraBrands];
 const retailers = [...plRetailers];
 const czRetailers = [...czDummyRetailers];
