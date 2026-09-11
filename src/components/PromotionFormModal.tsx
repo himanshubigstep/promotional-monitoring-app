@@ -202,7 +202,7 @@ export default function PromotionFormModal({
   onSave: (promotion: FormState) => void;
   editingPromotion?: Promotion | null;
 }) {
-  const { brandsByMarket, addBrand, addProduct, products } = useAppContext();
+  const { brandsByMarket, products } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const promotionFieldConfig = getPromotionTypeFieldConfig(
@@ -358,23 +358,6 @@ export default function PromotionFormModal({
         },
       };
 
-  const [newProduct, setNewProduct] = useState<{
-    name: string;
-    brand: string;
-    category: Product["category"];
-    price: string;
-    description: string;
-    retailer: string;
-    image: string;
-  }>({
-    name: "",
-    brand: "",
-    category: productCategories[0],
-    price: "",
-    description: "",
-    retailer: "",
-    image: "",
-  });
   const [submitting, setSubmitting] = useState(false);
 
   const update = useCallback(
@@ -1104,8 +1087,8 @@ export default function PromotionFormModal({
                   <Box
                     {...getRootProps()}
                     className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
-                        ? "border-[#000000] bg-[#f7f7f8]"
-                        : "border-[#d1d1d1] hover:border-[#000000] bg-[#fafafa]"
+                      ? "border-[#000000] bg-[#f7f7f8]"
+                      : "border-[#d1d1d1] hover:border-[#000000] bg-[#fafafa]"
                       } ${ocrLoading ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <input {...getInputProps()} disabled={ocrLoading} />

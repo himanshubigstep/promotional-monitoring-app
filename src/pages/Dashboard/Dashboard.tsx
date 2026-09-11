@@ -176,10 +176,6 @@ const Dashboard = () => {
       getMarketBrandOptions(bulkMarket, brandsByMarket[bulkMarket] || []),
     [brandsByMarket, bulkMarket],
   );
-  const storeOptions = useMemo(
-    () => getMarketRetailers(bulkMarket),
-    [bulkMarket],
-  );
 
   const resetBulkRows = () => {
     setBrandRows([{ brand: "" }]);
