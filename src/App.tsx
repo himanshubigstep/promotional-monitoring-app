@@ -50,6 +50,7 @@ import ProductDetail from "./pages/ProductDetail/ProductDetail";
 import Promotions from "./pages/Promotions/Promotions";
 import PromotionalCalendar from "./pages/PromotionalCalendar/PromotionalCalendar";
 import PromotionFilterModal from "./components/PromotionFilterModal";
+import AssistantWidget from "./components/Assistant/AssistantWidget";
 import { sephoraTheme } from "./theme/sephoraTheme";
 
 const drawerWidth = 260;
@@ -424,6 +425,7 @@ function AppLayout() {
           setFilterOpen(false);
         }}
       />
+      <AssistantWidget />
     </Box>
   );
 }
