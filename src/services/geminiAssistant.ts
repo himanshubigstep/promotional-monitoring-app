@@ -230,22 +230,34 @@ type FunctionCallPart = {
   thoughtSignature?: string;
 };
 
-async function callGemini(contents: GeminiContent[]): Promise<{
+async function callGemini(
+  contents: GeminiContent[],
+  options: { allowTools?: boolean } = {},
+): Promise<{
   text: string;
-  functionCallPart: FunctionCallPart | null;
+  functionCallParts: FunctionCallPart[];
 }> {
   if (!GEMINI_API_KEY) {
     throw new Error("Missing REACT_APP_GEMINI_API_KEY");
   }
+  const { allowTools = true } = options;
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // Passed as a header rather than a `?key=` query param so it doesn't
+        // end up in browser history, server access logs, or any proxy in
+        // between — the key is still shipped to the client either way (see
+        // module-level note on backend migration), but this avoids the most
+        // casual leak vector.
+        "x-goog-api-key": GEMINI_API_KEY,
+      },
       body: JSON.stringify({
         system_instruction: { parts: [{ text: SYSTEM_INSTRUCTION }] },
         contents,
-        tools: [{ function_declarations: functionDeclarations }],
+        ...(allowTools ? { tools: [{ function_declarations: functionDeclarations }] } : {}),
       }),
     },
   );
@@ -254,7 +266,11 @@ async function callGemini(contents: GeminiContent[]): Promise<{
     throw new Error(payload?.error?.message || "Gemini assistant request failed");
   }
   const parts: GeminiPart[] = payload?.candidates?.[0]?.content?.parts || [];
-  const functionCallPart = parts.find(
+  // Gemini can return several functionCall parts in one turn for a compound
+  // question — collect all of them so every call gets answered and every
+  // one gets a matching functionResponse (a dropped call with no response
+  // breaks the next round).
+  const functionCallParts = parts.filter(
     (part): part is FunctionCallPart => "functionCall" in part,
   );
   const text = parts
@@ -264,7 +280,7 @@ async function callGemini(contents: GeminiContent[]): Promise<{
     .trim();
   return {
     text,
-    functionCallPart: functionCallPart || null,
+    functionCallParts,
   };
 }
 
@@ -306,18 +322,60 @@ export function humanizeToolName(toolName: AssistantToolName): string {
   return TOOL_LABELS[toolName] || toolName.replace(/_/g, " ");
 }
 
+// A short, hidden-from-the-UI text summary of a previous structured result,
+// folded into that assistant turn's history text so a follow-up question
+// ("sort those by price", "what about the second one") has something to
+// reason over instead of forcing a fresh, possibly-different tool call.
+function serializeResultForContext(result: AssistantResult): string {
+  const cap = <T>(items: T[], n = 10): T[] => items.slice(0, n);
+  switch (result.type) {
+    case "table":
+    case "comparison_table":
+      return cap(result.rows)
+        .map((row) => row.join(" | "))
+        .join("\n");
+    case "product_cards":
+      return cap(result.items)
+        .map((item) => `${item.name} (${item.brand}, ${item.retailer}): ${item.price ?? "?"} ${item.currency}`)
+        .join("\n");
+    case "promotion_cards":
+      return cap(result.items)
+        .map((item) => `${item.name} — ${item.brand} @ ${item.retailer}: ${item.discount}`)
+        .join("\n");
+    case "summary":
+      return result.stats.map((stat) => `${stat.label}: ${stat.value}`).join("\n");
+    case "navigation":
+      return result.items.map((item) => `${item.name} (${item.route})`).join("\n");
+    default:
+      return "";
+  }
+}
+
 export async function askAssistant(
   question: string,
   history: ChatMessage[],
   ctx: AssistantDataContext,
 ): Promise<AssistantAnswer> {
-  const contents: GeminiContent[] = history
-    .filter((message) => !message.isError)
-    .slice(-8)
-    .map((message) => ({
+  const priorMessages = history.filter((message) => !message.isError);
+  // `history` may or may not already end with this turn's question,
+  // depending on the caller — guard against sending it twice rather than
+  // relying on that convention.
+  const trimmedHistory =
+    priorMessages[priorMessages.length - 1]?.role === "user" &&
+    priorMessages[priorMessages.length - 1]?.text === question
+      ? priorMessages.slice(0, -1)
+      : priorMessages;
+
+  const contents: GeminiContent[] = trimmedHistory.slice(-8).map((message) => {
+    const contextSuffix =
+      message.role === "assistant" && message.result
+        ? `\n\n[Data previously retrieved:\n${serializeResultForContext(message.result)}]`
+        : "";
+    return {
       role: message.role === "user" ? "user" : "model",
-      parts: [{ text: message.text }],
-    }));
+      parts: [{ text: message.text + contextSuffix }],
+    };
+  });
   contents.push({ role: "user", parts: [{ text: question }] });
 
   let lastResult: AssistantResult | undefined;
@@ -325,7 +383,7 @@ export async function askAssistant(
 
   for (let round = 0; round < MAX_TOOL_ROUNDTRIPS; round += 1) {
     const response = await callGemini(contents);
-    if (!response.functionCallPart) {
+    if (response.functionCallParts.length === 0) {
       return {
         text: humanizeText(response.text || "I don't have an answer for that."),
         result: lastResult,
@@ -333,23 +391,31 @@ export async function askAssistant(
       };
     }
 
-    const { name, args } = response.functionCallPart.functionCall;
-    const { result, summaryForModel } = runTool(name, args || {}, ctx);
-    lastResult = result;
-    lastToolName = name as AssistantToolName;
-
-    // Echo the model's function-call part back verbatim (including its
-    // thoughtSignature, when present) — Gemini's thinking models require this
-    // for the follow-up turn to be accepted.
-    contents.push({ role: "model", parts: [response.functionCallPart] });
-    contents.push({
-      role: "user",
-      parts: [{ functionResponse: { name, response: { result: summaryForModel } } }],
-    });
+    // Echo every function-call part back verbatim (including thoughtSignature,
+    // when present — Gemini's thinking models require this for the follow-up
+    // turn to be accepted), and answer every one of them: a compound question
+    // can produce more than one call in the same turn, and each needs a
+    // matching functionResponse or the next round is rejected/confused.
+    contents.push({ role: "model", parts: response.functionCallParts });
+    const functionResponseParts: GeminiPart[] = [];
+    for (const part of response.functionCallParts) {
+      const { name, args } = part.functionCall;
+      const { result, summaryForModel } = runTool(name, args || {}, ctx);
+      lastResult = result;
+      lastToolName = name as AssistantToolName;
+      functionResponseParts.push({ functionResponse: { name, response: { result: summaryForModel } } });
+    }
+    contents.push({ role: "user", parts: functionResponseParts });
   }
 
+  // Exhausted the round-trip budget while Gemini was still requesting tool
+  // calls. We already have a real result (lastResult) from the final round —
+  // make one more request with tools disabled so Gemini is forced to
+  // summarize it in text instead of silently discarding it behind a
+  // hardcoded placeholder.
+  const finalResponse = await callGemini(contents, { allowTools: false });
   return {
-    text: "Here's what I found.",
+    text: humanizeText(finalResponse.text || "Here's what I found."),
     result: lastResult,
     toolName: lastToolName,
   };

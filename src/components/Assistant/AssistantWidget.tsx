@@ -46,7 +46,13 @@ export default function AssistantWidget() {
     },
   ]);
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const { productsList, promotions, brands } = useAppContext();
+  // A request already in flight, tracked outside React state: `loading`
+  // (state) is only guaranteed current after the next render, so a second
+  // send() invoked before that commit (fast double-Enter, or Enter then a
+  // click) would still read the old `loading=false` from its own closure and
+  // fire a second concurrent request. This ref is set synchronously instead.
+  const sendingRef = useRef(false);
+  const { productsList, promotions, brandsByMarket } = useAppContext();
 
   const dataContext: AssistantDataContext = useMemo(
     () => ({
@@ -56,9 +62,11 @@ export default function AssistantWidget() {
       retailers: Array.from(
         new Set([...catalog.map((p) => p.retailer), ...productsList.map((p) => p.retailer)]),
       ),
-      brands,
+      // All markets, not just PL — `brandsByMarket.PL` alone would silently
+      // treat every CZ-only brand as unknown to anything reading ctx.brands.
+      brands: Array.from(new Set([...brandsByMarket.PL, ...brandsByMarket.CZ])),
     }),
-    [productsList, promotions, brands],
+    [productsList, promotions, brandsByMarket],
   );
 
   useEffect(() => {
@@ -69,7 +77,8 @@ export default function AssistantWidget() {
 
   const send = async (text: string) => {
     const question = text.trim();
-    if (!question || loading) return;
+    if (!question || sendingRef.current) return;
+    sendingRef.current = true;
     const userMessage: ChatMessage = { id: uid(), role: "user", text: question };
     const nextMessages = [...messages, userMessage];
     setMessages(nextMessages);
@@ -103,6 +112,7 @@ export default function AssistantWidget() {
         },
       ]);
     } finally {
+      sendingRef.current = false;
       setLoading(false);
     }
   };

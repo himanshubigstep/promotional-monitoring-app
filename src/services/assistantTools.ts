@@ -45,6 +45,17 @@ export type AssistantDataContext = {
   brands: string[];
 };
 
+// "(Your brand)" is the only real "this is our own product" signal anywhere
+// in the app's data model today (seeded in src/data/marketProducts.ts).
+// Known limitation: the existing Add Promotion form's retailer dropdown
+// (src/data/retailers.ts) never offers that value, so a promotion a user
+// adds through the app's own UI can currently only be classified as a
+// competitor here — there is no broader/existing "ours" signal to fall back
+// to (the pre-existing Store comparison page has the same gap: its "your
+// discount" column is a synthetic `discount - 2`, not derived from real
+// product data). Fixing this for real needs a model-level change (e.g. an
+// explicit `isOurs` field threaded through the existing Product type and
+// form), which is out of scope for this assistant-only change.
 const isOurs = (retailer: string) => /\(your brand\)/i.test(retailer);
 
 function fromProduct(product: Product): UnifiedProduct {
@@ -89,14 +100,36 @@ export function buildUnifiedCatalog(ctx: AssistantDataContext): UnifiedProduct[]
 // Diacritic-insensitive so "Estee Lauder"/"Estée Lauder" or "Lakme"/"Lakmé"
 // match regardless of which spelling the user or a given retailer's catalog
 // uses — a real inconsistency across this app's own datasets.
-const norm = (value: string) =>
-  value
+//
+// Args ultimately come from Gemini's function-call JSON, which is untrusted
+// input as far as shape goes — coerce defensively instead of assuming
+// `string` so a stray number/boolean/null from the model can't throw and
+// surface as a generic "Something went wrong" in the UI.
+const norm = (value: unknown) =>
+  (typeof value === "string" ? value : String(value ?? ""))
     .trim()
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "");
-const includesCI = (haystack: string, needle: string) =>
+const includesCI = (haystack: unknown, needle: unknown) =>
   norm(haystack).includes(norm(needle));
+
+// Same defensive idea for boolean-ish tool args: Gemini's function-calling
+// JSON has been observed to serialize booleans as strings in some SDKs/paths,
+// and `"false"` is truthy in JS — treat only true/"true" as true instead of
+// `if (args.flag)`.
+const toBool = (value: unknown): boolean => value === true || value === "true";
+
+// `Date#toISOString` always converts to UTC, but promotion dates are entered
+// and read by a person in their own local timezone — for anyone behind UTC,
+// "today" in UTC can already be tomorrow locally, silently shifting a
+// "last N days" cutoff by a day. Format using local calendar fields instead.
+const toLocalISODate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
 function toProductCard(product: UnifiedProduct): ProductCardItem {
   return {
@@ -401,7 +434,7 @@ export function toolCompareProducts(
     };
   });
 
-  const filteredRows = args.onlyCheaperCompetitor
+  const filteredRows = toBool(args.onlyCheaperCompetitor)
     ? rows.filter(
         (row) =>
           row.ourPrice !== null &&
@@ -530,10 +563,10 @@ export function toolGetRecentPromotions(
 ): ToolExecutionResult {
   const days = args.days ?? 10;
   const today = new Date();
-  const todayISO = today.toISOString().slice(0, 10);
+  const todayISO = toLocalISODate(today);
   const cutoff = new Date(today);
   cutoff.setDate(cutoff.getDate() - days);
-  const cutoffISO = cutoff.toISOString().slice(0, 10);
+  const cutoffISO = toLocalISODate(cutoff);
   // "Started or was added in the last N days" — bounded at today, so a
   // promotion campaigning months from now doesn't count just because it was
   // scheduled recently, unless it was actually added (createdAt) recently.
