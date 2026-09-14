@@ -1,4 +1,5 @@
 import type { Product } from "./productTypes";
+import { normalizeRetailer, plRetailers } from "./retailers";
 
 const imagePool = [
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
@@ -2146,3 +2147,53 @@ export let czProducts: Product[] = [
     priceAfterDiscount: 500,
   },
 ];
+
+const retailerOfferOffsets: Record<(typeof plRetailers)[number], number> = {
+  Douglas: 2,
+  Notino: -2,
+  superpharm: 1,
+  hebe: -1,
+  drogerienatura: 3,
+  flaconi: 0,
+  sephora: 0,
+};
+
+function addDays(date: string, days: number) {
+  const result = new Date(`${date}T00:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
+}
+
+function expandPolishRetailerOffers(products: Product[]) {
+  return products.flatMap((product) =>
+    plRetailers.map((retailer, retailerIndex) => {
+      const discount = Math.max(
+        5,
+        product.competitorDiscount + retailerOfferOffsets[retailer] + (retailerIndex % 2),
+      );
+      const priceAfterDiscount = Math.round(product.price * (1 - discount / 100));
+      const isSephora = retailer === "sephora";
+
+      return {
+        ...product,
+        id: `${product.id}-${retailer.toUpperCase()}`,
+        retailer,
+        competitorDiscount: discount,
+        fromDate: addDays(product.fromDate, retailerIndex - 3),
+        toDate: addDays(product.toDate, (retailerIndex % 3) - 1),
+        priceAfterDiscount,
+        description: `${product.description} Offer tracked at ${retailer}.`,
+        promotionDescription: `${product.promotionDescription} ${retailer} retailer offer.`,
+        terms: isSephora ? product.terms : `${product.terms} Retailer-specific offer.`,
+        stock: Math.max(1, product.stock + retailerIndex - 3),
+        isClient: isSephora,
+      };
+    }),
+  );
+}
+
+plProducts = expandPolishRetailerOffers(plProducts);
+czProducts = czProducts.map((product) => ({
+  ...product,
+  retailer: normalizeRetailer(product.retailer),
+}));

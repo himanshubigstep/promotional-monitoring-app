@@ -1,32 +1,43 @@
 import { createTheme } from "@mui/material/styles";
 
+// Soft, pastel icon-badge tints used for stat/feature cards (dashboard KPIs,
+// brand analytics summaries) — cycle through these instead of one flat color.
+export const accentTints = [
+  { bg: "#eaf1ff", fg: "#3b6fed" }, // blue
+  { bg: "#efeafd", fg: "#7c5cfa" }, // purple
+  { bg: "#fff1e6", fg: "#f3873a" }, // orange
+  { bg: "#e9f9f0", fg: "#22b573" }, // green
+];
+
+export const dangerColor = { main: "#e5484d", dark: "#c9302c", light: "#fdecec" };
+
 export const sephoraTheme = createTheme({
   palette: {
     primary: {
-      main: "#000000",
-      light: "#262626",
-      dark: "#000000",
+      main: "#22252b",
+      light: "#3a3f48",
+      dark: "#17191d",
       contrastText: "#ffffff",
     },
     secondary: {
-      main: "#e50043",
-      light: "#ff3366",
-      dark: "#c8003a",
+      main: "#4f82f7",
+      light: "#78a1ff",
+      dark: "#2e63d4",
       contrastText: "#ffffff",
     },
     text: {
-      primary: "#111111",
-      secondary: "#666666",
+      primary: "#20242b",
+      secondary: "#737b88",
     },
     background: {
-      default: "#f7f7f8",
+      default: "#f4f6f8",
       paper: "#ffffff",
     },
-    divider: "#e5e5e5",
+    divider: "#e7eaee",
   },
   typography: {
     fontFamily: [
-      "Montserrat",
+      "Open Sans",
       "-apple-system",
       "BlinkMacSystemFont",
       '"Segoe UI"',
@@ -76,14 +87,14 @@ export const sephoraTheme = createTheme({
     },
   },
   shape: {
-    borderRadius: 8,
+    borderRadius: 12,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
           borderRadius: 8,
-          fontWeight: 700,
+            fontWeight: 700,
           textTransform: "none",
           boxShadow: "none",
           "&:hover": {
@@ -91,18 +102,18 @@ export const sephoraTheme = createTheme({
           },
         },
         contained: {
-          backgroundColor: "#000000",
+            backgroundColor: "#22252b",
           color: "#ffffff",
           "&:hover": {
-            backgroundColor: "#262626",
+              backgroundColor: "#343942",
           },
         },
         outlined: {
-          borderColor: "#000000",
-          color: "#000000",
+            borderColor: "#dce1e8",
+            color: "#20242b",
           "&:hover": {
-            borderColor: "#000000",
-            backgroundColor: "rgba(0, 0, 0, 0.04)",
+              borderColor: "#4f82f7",
+              backgroundColor: "#f5f8ff",
           },
         },
       },
@@ -110,16 +121,16 @@ export const sephoraTheme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          borderRadius: 12,
-          border: "1px solid #e5e5e5",
-          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+            borderRadius: 16,
+            border: "1px solid #e7eaee",
+            boxShadow: "0 2px 10px rgba(31, 38, 48, 0.04)",
         },
       },
     },
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 6,
+          borderRadius: 8,
           fontWeight: 700,
           fontSize: "0.75rem",
         },
@@ -130,7 +141,7 @@ export const sephoraTheme = createTheme({
         root: {
           borderRadius: 8,
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#000000",
+              borderColor: "#4f82f7",
             borderWidth: "1.5px",
           },
         },
@@ -139,7 +150,6 @@ export const sephoraTheme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderColor: "#e5e5e5",
           padding: "12px 16px",
         },
         head: {

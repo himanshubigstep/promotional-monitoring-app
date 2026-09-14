@@ -16,7 +16,7 @@ import {
 } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAppContext } from "../../context/AppContext";
+import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
 
@@ -57,27 +57,11 @@ export default function Promotions() {
     () =>
       catalog
         .filter((product) => {
-          const minimumDiscount =
-            filters.discount === "All"
-              ? 0
-              : Number(filters.discount.replace("%+", ""));
           return (
             (product.name.toLowerCase().includes(search.toLowerCase()) ||
               product.brand.toLowerCase().includes(search.toLowerCase()) ||
               product.category.toLowerCase().includes(search.toLowerCase())) &&
-            (!filters.search ||
-              product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-              product.brand
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())) &&
-            (filters.category === "All" ||
-              product.category === filters.category) &&
-            (filters.market === "All" || product.market === filters.market) &&
-            (filters.retailer === "All" ||
-              product.retailer === filters.retailer) &&
-            product.competitorDiscount >= minimumDiscount &&
-            (!filters.fromDate || product.toDate >= filters.fromDate) &&
-            (!filters.toDate || product.fromDate <= filters.toDate)
+            matchesPromotionFilters(product, filters)
           );
         })
         .sort((a, b) => {
@@ -96,8 +80,25 @@ export default function Promotions() {
   );
   const savedPromotions = promotions
     .filter(
-      (promotion) =>
-        filters.market === "All" || promotion.market === filters.market,
+      (promotion) => {
+        const searchValue = filters.search.trim().toLowerCase();
+        const minimumDiscount =
+          filters.discount === "All"
+            ? 0
+            : Number(filters.discount.replace("%+", ""));
+        const discount = Number(promotion.discount.match(/\d+(?:\.\d+)?/)?.[0] || 0);
+        return (
+          (!searchValue ||
+            promotion.name.toLowerCase().includes(searchValue) ||
+            promotion.brands.toLowerCase().includes(searchValue)) &&
+          (filters.market === "All" || promotion.market === filters.market) &&
+          (filters.category === "All" || promotion.category === filters.category) &&
+          (filters.retailer === "All" || promotion.retailer === filters.retailer) &&
+          discount >= minimumDiscount &&
+          (!filters.fromDate || promotion.from >= filters.fromDate) &&
+          (!filters.toDate || promotion.to <= filters.toDate)
+        );
+      },
     )
     .sort((a, b) => {
       const aActive = a.to >= today;
@@ -138,15 +139,15 @@ export default function Promotions() {
         <Box>
           <Typography
             sx={{
-              color: "#000000",
-              fontSize: 18,
-              fontWeight: 800,
+              color: "#20242b",
+              fontSize: 16,
+              fontWeight: 500,
               letterSpacing: "-0.01em",
             }}
           >
             Promotion Workspace
           </Typography>
-          <Typography sx={{ color: "#757575", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
             Browse products, track discounts, and manage competitive beauty
             campaigns.
           </Typography>
@@ -158,7 +159,7 @@ export default function Promotions() {
               startIcon={<AddRounded />}
               onClick={() => setFormOpen(true)}
               sx={{
-                backgroundColor: "#000000",
+                backgroundColor: "#22252b",
                 color: "#ffffff",
                 textTransform: "none",
                 borderRadius: "8px",
@@ -166,7 +167,7 @@ export default function Promotions() {
                 fontSize: 13,
                 px: 2.5,
                 "&:hover": {
-                  backgroundColor: "#222222",
+                  backgroundColor: "#343942",
                 },
               }}
             >
@@ -176,13 +177,13 @@ export default function Promotions() {
         </Box>
       </Box>
       {actionError && (
-        <Box sx={{ color: "#c62828", fontSize: 13 }}>{actionError}</Box>
+        <Box sx={{ color: "#e5484d", fontSize: 13 }}>{actionError}</Box>
       )}
       <Card
         elevation={0}
-        className="rounded-xl border border-[#e5e5e5] bg-white"
+        className="rounded-2xl border border-[#e7eaee] bg-white"
       >
-        <Box className="border-b border-[#e5e5e5] p-4">
+        <Box className="border-b border-[#e7eaee] p-4">
           <TextField
             size="small"
             placeholder="Search products, brands, or categories"
@@ -194,7 +195,7 @@ export default function Promotions() {
             slotProps={{
               input: {
                 startAdornment: (
-                  <SearchRounded sx={{ color: "#9e9e9e", mr: 1 }} />
+                  <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} />
                 ),
               },
             }}
@@ -210,9 +211,9 @@ export default function Promotions() {
                 component={Link}
                 to={`/products/${product.id}`}
                 elevation={0}
-                className="overflow-hidden rounded-xl border border-[#e5e5e5] no-underline transition-all hover:border-[#000000] hover:shadow-md bg-white"
+                className="overflow-hidden rounded-2xl border border-[#e7eaee] no-underline transition-all hover:border-[#4f82f7] hover:shadow-md bg-white"
               >
-                <Box className="relative h-36 bg-[#f7f7f8]">
+                <Box className="relative h-36 bg-[#f4f6f8]">
                   <img
                     src={product.image || fallbackImage}
                     alt={product.name}
@@ -227,8 +228,8 @@ export default function Promotions() {
                       label={expired ? "Expired" : "Active"}
                       size="small"
                       sx={{
-                        backgroundColor: expired ? "#eeeeee" : "#000000",
-                        color: expired ? "#757575" : "#ffffff",
+                        backgroundColor: expired ? "#eef1f4" : "#22252b",
+                        color: expired ? "#737b88" : "#ffffff",
                         fontSize: 10,
                         fontWeight: 800,
                         letterSpacing: "0.04em",
@@ -272,10 +273,10 @@ export default function Promotions() {
                         }}
                         sx={{
                           backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#000000",
+                          color: "#20242b",
                           padding: "4px",
                           borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#f5f5f5" },
+                          "&:hover": { backgroundColor: "#f5f8ff", color: "#4f82f7" },
                         }}
                       >
                         <EditRounded sx={{ fontSize: 16 }} />
@@ -292,16 +293,16 @@ export default function Promotions() {
                         }}
                         sx={{
                           backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#e50043",
+                          color: "#e5484d",
                           padding: "4px",
                           borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#fff0f3" },
+                          "&:hover": { backgroundColor: "#fdecec" },
                         }}
                       >
                         <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                       </IconButton>
                     )}
-                    <Box className="rounded bg-[#e50043] px-2 py-0.5 shadow-sm">
+                    <Box className="rounded-md bg-[#f3873a] px-2 py-0.5 shadow-sm">
                       <Typography
                         sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
                       >
@@ -313,9 +314,9 @@ export default function Promotions() {
                 <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#757575",
+                      color: "#737b88",
                       fontSize: 10,
-                      fontWeight: 800,
+                      fontWeight: 500,
                       letterSpacing: "0.05em",
                       textTransform: "uppercase",
                     }}
@@ -324,21 +325,21 @@ export default function Promotions() {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#111111",
+                      color: "#20242b",
                       fontSize: 13,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       lineHeight: 1.3,
                       mt: 0.25,
                     }}
                   >
                     {product.name}
                   </Typography>
-                  <Typography sx={{ color: "#757575", fontSize: 11, mt: 0.5 }}>
+                  <Typography sx={{ color: "#737b88", fontSize: 11, mt: 0.5 }}>
                     {product.category} · {product.retailer}
                   </Typography>
                   <Typography
                     sx={{
-                      color: expired ? "#757575" : "#e50043",
+                      color: expired ? "#737b88" : "#4f82f7",
                       fontSize: 11,
                       fontWeight: 700,
                       mt: 1,
@@ -365,17 +366,17 @@ export default function Promotions() {
       {promotions.length > 0 && (
         <Card
           elevation={0}
-          className="rounded-xl border border-[#e5e5e5] bg-white"
+          className="rounded-2xl border border-[#e7eaee] bg-white"
         >
-          <Box className="p-4 border-b border-[#e5e5e5]">
+          <Box className="p-4 border-b border-[#e7eaee]">
             <Box className="flex flex-wrap items-start justify-between gap-3">
               <Box>
                 <Typography
-                  sx={{ color: "#000000", fontSize: 16, fontWeight: 800 }}
+                  sx={{ color: "#20242b", fontSize: 16, fontWeight: 500 }}
                 >
                   Saved Promotions
                 </Typography>
-                <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+                <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
                   Campaigns added via the form, saved in Polish.
                 </Typography>
               </Box>
@@ -385,14 +386,14 @@ export default function Promotions() {
                 startIcon={<DownloadRounded />}
                 onClick={downloadUpdatedProducts}
                 sx={{
-                  borderColor: "#d1d1d1",
-                  color: "#000000",
+                  borderColor: "#dce1e8",
+                  color: "#20242b",
                   fontWeight: 700,
                   fontSize: 12.5,
                   textTransform: "none",
                   "&:hover": {
-                    borderColor: "#000000",
-                    backgroundColor: "#f5f5f5",
+                    borderColor: "#4f82f7",
+                    backgroundColor: "#f5f8ff",
                   },
                 }}
               >
@@ -401,10 +402,10 @@ export default function Promotions() {
             </Box>
           </Box>
           {lastAddedProduct && (
-            <Box className="m-4 rounded-xl border border-[#e5e5e5] bg-[#fff0f3] p-4">
+            <Box className="m-4 rounded-xl border border-[#e7eaee] bg-[#eaf1ff] p-4">
               <Typography
                 sx={{
-                  color: "#e50043",
+                  color: "#3b6fed",
                   fontSize: 11,
                   fontWeight: 800,
                   textTransform: "uppercase",
@@ -415,7 +416,7 @@ export default function Promotions() {
               </Typography>
               <Typography
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   fontSize: 14,
                   fontWeight: 800,
                   mt: 0.5,
@@ -423,7 +424,7 @@ export default function Promotions() {
               >
                 {lastAddedProduct.id} · {lastAddedProduct.name}
               </Typography>
-              <Typography sx={{ color: "#444444", fontSize: 12, mt: 0.5 }}>
+              <Typography sx={{ color: "#737b88", fontSize: 12, mt: 0.5 }}>
                 {lastAddedProduct.market} · {lastAddedProduct.brand} ·{" "}
                 {lastAddedProduct.retailer} · {lastAddedProduct.fromDate} -{" "}
                 {lastAddedProduct.toDate} · -
@@ -437,17 +438,17 @@ export default function Promotions() {
               return (
                 <Box
                   key={promotion.id}
-                  className="rounded-xl border border-[#e5e5e5] p-4 bg-white hover:border-[#000000] transition-all"
+                  className="rounded-xl border border-[#e7eaee] p-4 bg-white hover:border-[#4f82f7] transition-all"
                 >
                   <Box className="flex items-start justify-between gap-3">
                     <Box>
                       <Typography
-                        sx={{ color: "#000000", fontSize: 13.5, fontWeight: 800 }}
+                        sx={{ color: "#20242b", fontSize: 13.5, fontWeight: 500 }}
                       >
                         {promotion.name}
                       </Typography>
                       <Typography
-                        sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}
+                        sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}
                       >
                         {promotion.brands} · {promotion.retailer}
                       </Typography>
@@ -464,10 +465,10 @@ export default function Promotions() {
                             setFormOpen(true);
                           }}
                           sx={{
-                            color: "#000000",
-                            backgroundColor: "#f5f5f5",
+                            color: "#20242b",
+                            backgroundColor: "#eef1f4",
                             borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#eeeeee" },
+                            "&:hover": { backgroundColor: "#e7eaee" },
                           }}
                         >
                           <EditRounded sx={{ fontSize: 16 }} />
@@ -483,10 +484,10 @@ export default function Promotions() {
                             handleDelete(promotion.id);
                           }}
                           sx={{
-                            color: "#e50043",
-                            backgroundColor: "#fff0f3",
+                            color: "#e5484d",
+                            backgroundColor: "#fdecec",
                             borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#ffe5ee" },
+                            "&:hover": { backgroundColor: "#fbdada" },
                           }}
                         >
                           <DeleteOutlineRounded sx={{ fontSize: 16 }} />
@@ -494,7 +495,7 @@ export default function Promotions() {
                       )}
                     </Box>
                   </Box>
-                  <Typography sx={{ color: "#757575", fontSize: 12, mt: 1 }}>
+                  <Typography sx={{ color: "#737b88", fontSize: 12, mt: 1 }}>
                     {promotion.from} - {promotion.to} · {promotion.category}
                   </Typography>
                   <Chip
@@ -502,10 +503,10 @@ export default function Promotions() {
                     size="small"
                     sx={{
                       mt: 1.5,
-                      backgroundColor: "#e50043",
+                      backgroundColor: "#f3873a",
                       color: "#ffffff",
                       fontWeight: 800,
-                      borderRadius: "4px",
+                      borderRadius: "6px",
                     }}
                   />
                 </Box>

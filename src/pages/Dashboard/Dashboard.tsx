@@ -23,12 +23,13 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { useAppContext } from "../../context/AppContext";
+import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import DeleteIcon from '@mui/icons-material/Delete';
 import BrandComparisonTable from "../../components/BrandComparisonTable";
+import { accentTints } from "../../theme/sephoraTheme";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
@@ -400,11 +401,6 @@ const Dashboard = () => {
     () =>
       catalog
         .filter((product) => {
-          const discountValue = product.competitorDiscount;
-          const minimumDiscount =
-            filters.discount === "All"
-              ? 0
-              : Number(filters.discount.replace("%+", ""));
           return (
             (product.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
               product.brand
@@ -413,21 +409,7 @@ const Dashboard = () => {
               product.category
                 .toLowerCase()
                 .includes(catalogSearch.toLowerCase())) &&
-            (!filters.search ||
-              product.name
-                .toLowerCase()
-                .includes(filters.search.toLowerCase()) ||
-              product.brand
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())) &&
-            (filters.category === "All" ||
-              product.category === filters.category) &&
-            (filters.market === "All" || product.market === filters.market) &&
-            (filters.retailer === "All" ||
-              product.retailer === filters.retailer) &&
-            discountValue >= minimumDiscount &&
-            (!filters.fromDate || product.toDate >= filters.fromDate) &&
-            (!filters.toDate || product.fromDate <= filters.toDate)
+            matchesPromotionFilters(product, filters)
           );
         })
         .sort((a, b) => {
@@ -518,15 +500,7 @@ const Dashboard = () => {
   const expiredProducts = useMemo(
     () =>
       catalog.filter(
-        (product) =>
-          (filters.market === "All" || product.market === filters.market) &&
-          product.toDate < today &&
-          (filters.category === "All" ||
-            product.category === filters.category) &&
-          (filters.retailer === "All" ||
-            product.retailer === filters.retailer) &&
-          (!filters.fromDate || product.toDate >= filters.fromDate) &&
-          (!filters.toDate || product.fromDate <= filters.toDate),
+        product => product.toDate < today && matchesPromotionFilters(product, filters),
       ),
     [catalog, filters],
   );
@@ -590,26 +564,26 @@ const Dashboard = () => {
     <Box className="flex flex-col gap-4">
       <Card
         elevation={0}
-        className="rounded-xl border border-[#e5e5e5] bg-[#000000] text-white relative overflow-hidden"
+        className="rounded-2xl border border-[#e7eaee] text-white relative overflow-hidden"
+        sx={{ backgroundColor: "#1a1d23 !important" }}
       >
-        <Box className="absolute top-0 left-0 right-0 h-1" />
-        <CardContent className="!p-4 pt-4">
-          <Box className="flex items-center justify-between mb-1">
+        <CardContent className="!p-5">
+          <Box className="flex items-center justify-between mb-1 flex-wrap gap-3">
             <Box className="flex items-center gap-4">
               <Typography
                 sx={{
-                  color: "#e50043",
+                  color: "#78a1ff",
                   fontSize: 11,
-                  fontWeight: 800,
+                  fontWeight: 500,
                   letterSpacing: "0.1em",
                   textTransform: "uppercase",
                 }}
               >
                 Sephora Intelligence Hub
               </Typography>
-              <Typography sx={{ color: "#757575", fontSize: 11 }}>•</Typography>
+              <Typography sx={{ color: "#4b5160", fontSize: 11 }}>•</Typography>
               <Typography
-                sx={{ color: "#9e9e9e", fontSize: 11, fontWeight: 600 }}
+                sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}
               >
                 {getGreeting()}, {role}
               </Typography>
@@ -623,12 +597,12 @@ const Dashboard = () => {
                     startIcon={<AddRounded />}
                     onClick={() => setFormOpen(true)}
                     sx={{
-                      backgroundColor: "#000000",
+                      backgroundColor: "#4f82f7",
                       color: "#ffffff",
                       textTransform: "none",
-                      fontWeight: 700,
+                      fontWeight: 500,
                       borderRadius: "8px",
-                      "&:hover": { backgroundColor: "#222222" },
+                      "&:hover": { backgroundColor: "#2e63d4" },
                     }}
                   >
                     Add promotion
@@ -642,14 +616,14 @@ const Dashboard = () => {
                       setBulkModalOpen(true);
                     }}
                     sx={{
-                      borderColor: "#d6d6d6",
-                      color: "#111111",
+                      borderColor: "#3a3f4a",
+                      color: "#ffffff",
                       textTransform: "none",
-                      fontWeight: 700,
+                      fontWeight: 500,
                       borderRadius: "8px",
                       "&:hover": {
-                        borderColor: "#111111",
-                        backgroundColor: "#f5f5f5",
+                        borderColor: "#4f82f7",
+                        backgroundColor: "#22252e",
                       },
                     }}
                   >
@@ -660,13 +634,13 @@ const Dashboard = () => {
             </Box>
           </Box>
           {actionError && (
-            <Box sx={{ color: "#c62828", fontSize: 13, mt: 1 }}>{actionError}</Box>
+            <Box sx={{ color: "#ff8a8a", fontSize: 13, mt: 1 }}>{actionError}</Box>
           )}
           <Typography
             sx={{
-              color: "#111111",
+              color: "#ffffff",
               fontSize: { xs: 22, md: 28 },
-              fontWeight: 800,
+              fontWeight: 500,
               letterSpacing: "-0.02em",
               mt: 0.5,
             }}
@@ -675,10 +649,10 @@ const Dashboard = () => {
           </Typography>
           <Typography
             sx={{
-              color: "#b3b3b3",
+              color: "#aeb5c0",
               fontSize: 13.5,
               mt: 0.8,
-              maxWidth: "700px",
+              maxWidth: "500px",
             }}
           >
             Track Poland & international retail promotions, analyze discount
@@ -689,63 +663,79 @@ const Dashboard = () => {
 
       <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
-          [
-            "Offers tracked",
-            filteredProducts.length,
-            "Active catalog",
-            <LocalOfferRounded sx={{ color: "#e50043" }} />,
-          ],
-          [
-            "Active today",
-            analytics.active,
-            "across monitored retailers",
-            <StorefrontRounded sx={{ color: "#000000" }} />,
-          ],
-          [
-            "Average discount",
-            `${analytics.average}%`,
-            "across active campaigns",
-            <TrendingUpRounded sx={{ color: "#c59a3f" }} />,
-          ],
-          [
-            "Peak month",
-            analytics.peakMonth || "No data",
-            `${analytics.peak}% max monthly avg`,
-            <TrendingDownRounded sx={{ color: "#e50043" }} />,
-          ],
-        ].map(([label, value, detail, icon]) => (
+          {
+            label: "Offers tracked",
+            value: filteredProducts.length,
+            detail: "Active catalog",
+            icon: <LocalOfferRounded sx={{ fontSize: 20 }} />,
+            tint: accentTints[0],
+          },
+          {
+            label: "Active today",
+            value: analytics.active,
+            detail: "across monitored retailers",
+            icon: <StorefrontRounded sx={{ fontSize: 20 }} />,
+            tint: accentTints[1],
+          },
+          {
+            label: "Average discount",
+            value: `${analytics.average}%`,
+            detail: "across active campaigns",
+            icon: <TrendingUpRounded sx={{ fontSize: 20 }} />,
+            tint: accentTints[2],
+          },
+          {
+            label: "Peak month",
+            value: analytics.peakMonth || "No data",
+            detail: `${analytics.peak}% max monthly avg`,
+            icon: <TrendingDownRounded sx={{ fontSize: 20 }} />,
+            tint: accentTints[3],
+          },
+        ].map(({ label, value, detail, icon, tint }) => (
           <Card
-            key={String(label)}
+            key={label}
             elevation={0}
-            className="rounded-xl border border-[#e5e5e5] bg-white transition-all hover:border-[#111111]"
+            className="rounded-2xl border border-[#e7eaee] bg-white transition-all hover:border-[#c8d0da]"
           >
             <CardContent className="!p-5">
               <Box className="flex items-center justify-between">
                 <Typography
                   sx={{
-                    color: "#757575",
+                    color: "#737b88",
                     fontSize: 11.5,
-                    fontWeight: 700,
-                    letterSpacing: "0.05em",
+                    fontWeight: 500,
+                    // letterSpacing: "0.05em",
                     textTransform: "uppercase",
                   }}
                 >
                   {label}
                 </Typography>
-                <Box>{icon}</Box>
+                <Box
+                  sx={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: tint.bg,
+                    color: tint.fg,
+                  }}
+                >
+                  {icon}
+                </Box>
               </Box>
               <Typography
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   fontSize: 26,
-                  fontWeight: 800,
-                  mt: 1,
+                  fontWeight: 500,
                   letterSpacing: "-0.02em",
                 }}
               >
                 {value}
               </Typography>
-              <Typography sx={{ color: "#757575", fontSize: 12, mt: 0.5 }}>
+              <Typography sx={{ color: "#737b88", fontSize: 12}}>
                 {detail}
               </Typography>
             </CardContent>
@@ -756,22 +746,22 @@ const Dashboard = () => {
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-xl border border-[#e5e5e5] bg-white"
+          className="rounded-2xl border border-[#e7eaee] bg-white"
         >
           <CardContent className="!p-6">
             <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
-                    color: "#000000",
+                    color: "#20242b",
                     fontSize: 16,
-                    fontWeight: 800,
+                    fontWeight: 500,
                     letterSpacing: "-0.01em",
                   }}
                 >
                   Poland Promotion Trend
                 </Typography>
-                <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+                <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
                   Monthly discount movement for the selected year.
                 </Typography>
               </Box>
@@ -779,15 +769,15 @@ const Dashboard = () => {
                 label={`${chartProducts.length} offers`}
                 size="small"
                 sx={{
-                  backgroundColor: "#000000",
-                  color: "#ffffff",
-                  fontWeight: 700,
+                  backgroundColor: "#eaf1ff",
+                  color: "#3b6fed",
+                  fontWeight: 500,
                   fontSize: 11,
-                  borderRadius: "4px",
+                  borderRadius: "6px",
                 }}
               />
             </Box>
-            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#e5e5e5] px-3 pb-2 sm:gap-4">
+            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#e7eaee] px-3 pb-2 sm:gap-4">
               {analytics.monthValues.map((value, index) => (
                 <Box
                   key={months[index]}
@@ -797,10 +787,10 @@ const Dashboard = () => {
                     sx={{
                       color:
                         value === analytics.peak
-                          ? "#e50043"
+                          ? "#4f82f7"
                           : value
-                            ? "#111111"
-                            : "#bdbdbd",
+                            ? "#20242b"
+                            : "#c8d0da",
                       fontSize: 10,
                       fontWeight: 800,
                     }}
@@ -813,14 +803,14 @@ const Dashboard = () => {
                       height: `${Math.max((value / Math.max(analytics.peak, 1)) * 125, value ? 10 : 2)}px`,
                       backgroundColor:
                         value === analytics.peak
-                          ? "#e50043"
+                          ? "#4f82f7"
                           : value
-                            ? "#111111"
-                            : "#eeeeee",
+                            ? "#20242b"
+                            : "#eef1f4",
                     }}
                   />
                   <Typography
-                    sx={{ color: "#757575", fontSize: 10, fontWeight: 600 }}
+                    sx={{ color: "#737b88", fontSize: 10, fontWeight: 500 }}
                   >
                     {months[index]}
                   </Typography>
@@ -832,28 +822,28 @@ const Dashboard = () => {
 
         <Card
           elevation={0}
-          className="rounded-xl border border-[#e5e5e5] bg-white"
+          className="rounded-2xl border border-[#e7eaee] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
               sx={{
-                color: "#000000",
+                color: "#20242b",
                 fontSize: 16,
-                fontWeight: 800,
+                fontWeight: 500,
                 letterSpacing: "-0.01em",
               }}
             >
               Promotion Pulse by Year
             </Typography>
-            <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+            <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
               All available years, with filtered offer volume.
             </Typography>
-            <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+            <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
               {dashboardText.pulseSubtitle}
             </Typography>
-            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#e5e5e5] px-3 pb-2">
-              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#e5e5e5]" />
-              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#e5e5e5]" />
+            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#e7eaee] px-3 pb-2">
+              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#e7eaee]" />
+              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#e7eaee]" />
               {yearlyTrend.map((item) => {
                 const chartMax = Math.max(
                   ...yearlyTrend.map((trend) => trend.high),
@@ -869,7 +859,7 @@ const Dashboard = () => {
                   >
                     <Typography
                       sx={{
-                        color: rising ? "#e50043" : "#757575",
+                        color: rising ? "#4f82f7" : "#737b88",
                         fontSize: 10,
                         fontWeight: 800,
                       }}
@@ -881,7 +871,7 @@ const Dashboard = () => {
                       title={`${item.year}: low ${item.low}%, open ${item.open}%, close ${item.close}%, high ${item.high}%`}
                     >
                       <Box
-                        className="absolute w-px bg-[#757575]"
+                        className="absolute w-px bg-[#c8d0da]"
                         sx={{ height: scale(item.high) }}
                       />
                       <Box
@@ -889,17 +879,17 @@ const Dashboard = () => {
                         sx={{
                           height: scale(Math.abs(item.close - item.open)),
                           minHeight: 8,
-                          backgroundColor: rising ? "#e50043" : "#222222",
-                          border: `1px solid ${rising ? "#c8003a" : "#000000"}`,
+                          backgroundColor: rising ? "#4f82f7" : "#3a3f48",
+                          border: `1px solid ${rising ? "#2e63d4" : "#20242b"}`,
                         }}
                       />
                     </Box>
                     <Typography
-                      sx={{ color: "#111111", fontSize: 11, fontWeight: 700 }}
+                      sx={{ color: "#20242b", fontSize: 11, fontWeight: 500 }}
                     >
                       {item.year}
                     </Typography>
-                    <Typography sx={{ color: "#757575", fontSize: 10 }}>
+                    <Typography sx={{ color: "#737b88", fontSize: 10 }}>
                       {item.offers} offers
                     </Typography>
                   </Box>
@@ -910,15 +900,15 @@ const Dashboard = () => {
               {yearlyTrend.map((item) => (
                 <Box
                   key={item.year}
-                  className="rounded-lg bg-[#f7f7f8] border border-[#eeeeee] px-2 py-1.5 text-center"
+                  className="rounded-lg bg-[#f4f6f8] border border-[#e7eaee] px-2 py-1.5 text-center"
                 >
                   <Typography
-                    sx={{ color: "#757575", fontSize: 10, fontWeight: 600 }}
+                    sx={{ color: "#737b88", fontSize: 10, fontWeight: 500 }}
                   >
                     {item.year}
                   </Typography>
                   <Typography
-                    sx={{ color: "#000000", fontSize: 12, fontWeight: 800 }}
+                    sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
                   >
                     {item.low}-{item.high}% range
                   </Typography>
@@ -931,22 +921,22 @@ const Dashboard = () => {
 
       <Card
         elevation={0}
-        className="rounded-xl border border-[#e5e5e5] bg-white"
+        className="rounded-2xl border border-[#e7eaee] bg-white"
       >
         <CardContent className="!p-6">
           <Box className="mb-5 flex items-center justify-between">
             <Box>
               <Typography
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   fontSize: 16,
-                  fontWeight: 800,
+                  fontWeight: 500,
                   letterSpacing: "-0.01em",
                 }}
               >
                 Product Promotion Catalog
               </Typography>
-              <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+              <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
                 Monitored products, competitor offers, and promotion end dates
               </Typography>
             </Box>
@@ -957,10 +947,10 @@ const Dashboard = () => {
                 size="small"
                 endIcon={<ChevronRightRounded />}
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   textTransform: "none",
-                  fontWeight: 700,
-                  "&:hover": { color: "#e50043" },
+                  fontWeight: 500,
+                  "&:hover": { color: "#4f82f7" },
                 }}
               >
                 Manage promotions
@@ -978,7 +968,7 @@ const Dashboard = () => {
             slotProps={{
               input: {
                 startAdornment: (
-                  <SearchRounded sx={{ color: "#9e9e9e", mr: 1 }} />
+                  <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} />
                 ),
               },
             }}
@@ -990,9 +980,9 @@ const Dashboard = () => {
                 component={Link}
                 to={`/products/${product.id}`}
                 key={product.id}
-                className="overflow-hidden rounded-xl border border-[#e5e5e5] no-underline bg-white transition-all hover:border-[#000000] hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-[#e7eaee] no-underline bg-white transition-all hover:border-[#4f82f7] hover:shadow-md"
               >
-                <Box className="relative h-36 bg-[#f7f7f8]">
+                <Box className="relative h-36 bg-[#f4f6f8]">
                   <img
                     src={product.image || fallbackImage}
                     alt={product.name}
@@ -1010,13 +1000,13 @@ const Dashboard = () => {
                       left: 8,
                       top: 8,
                       backgroundColor:
-                        product.toDate >= today ? "#000000" : "#eeeeee",
-                      color: product.toDate >= today ? "#ffffff" : "#757575",
+                        product.toDate >= today ? "#22252b" : "#eef1f4",
+                      color: product.toDate >= today ? "#ffffff" : "#737b88",
                       fontSize: 10,
-                      fontWeight: 800,
+                      fontWeight: 500,
                       letterSpacing: "0.04em",
                       textTransform: "uppercase",
-                      borderRadius: "4px",
+                      borderRadius: "6px",
                     }}
                   />
                   {canEdit && product.toDate >= today && (
@@ -1033,11 +1023,11 @@ const Dashboard = () => {
                         right: 6,
                         top: 6,
                         backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        color: "#000000",
+                        color: "#20242b",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#f5f5f5",
-                          color: "#000000",
+                          backgroundColor: "#f5f8ff",
+                          color: "#4f82f7",
                         },
                       }}
                     >
@@ -1058,18 +1048,18 @@ const Dashboard = () => {
                         right: 6,
                         top: 6,
                         backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        color: "#e50043",
+                        color: "#e5484d",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#fff0f3",
-                          color: "#c8003a",
+                          backgroundColor: "#fdecec",
+                          color: "#c9302c",
                         },
                       }}
                     >
                       <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                     </IconButton>
                   )}
-                  <Box className="absolute bottom-2 right-2 rounded bg-[#e50043] px-2 py-0.5 shadow-sm">
+                  <Box className="absolute bottom-2 right-2 rounded-md bg-[#f3873a] px-2 py-0.5 shadow-sm">
                     <Typography
                       sx={{
                         color: "#ffffff",
@@ -1085,10 +1075,10 @@ const Dashboard = () => {
                 <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#757575",
+                      color: "#737b88",
                       display: "block",
                       fontSize: 10,
-                      fontWeight: 800,
+                      fontWeight: 500,
                       letterSpacing: "0.05em",
                       textTransform: "uppercase",
                     }}
@@ -1097,10 +1087,10 @@ const Dashboard = () => {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#111111",
+                      color: "#20242b",
                       display: "block",
                       fontSize: 12.5,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       lineHeight: 1.3,
                       mt: 0.25,
                     }}
@@ -1109,10 +1099,10 @@ const Dashboard = () => {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#757575",
+                      color: "#737b88",
                       display: "block",
                       fontSize: 11,
-                      fontWeight: 600,
+                      fontWeight: 500,
                       mt: 0.75,
                     }}
                   >
@@ -1137,7 +1127,7 @@ const Dashboard = () => {
 
       <Modal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)}>
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white shadow-2xl relative border border-[#e5e5e5] overflow-hidden"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative border border-[#e7eaee] overflow-hidden"
           sx={{ p: 4 }}
         >
           {/* Form spans full modal height with flex layout */}
@@ -1169,12 +1159,12 @@ const Dashboard = () => {
                   onClick={() => setBulkTab("brands")}
                   sx={{
                     textTransform: "none",
-                    fontWeight: 700,
-                    backgroundColor: bulkTab === "brands" ? "#000000" : "transparent",
-                    color: bulkTab === "brands" ? "#ffffff" : "#111111",
-                    borderColor: "#d6d6d6",
+                    fontWeight: 500,
+                    backgroundColor: bulkTab === "brands" ? "#22252b" : "transparent",
+                    color: bulkTab === "brands" ? "#ffffff" : "#20242b",
+                    borderColor: "#dce1e8",
                     "&:hover": {
-                      backgroundColor: bulkTab === "brands" ? "#222222" : "#f5f5f5",
+                      backgroundColor: bulkTab === "brands" ? "#343942" : "#f5f8ff",
                     },
                   }}
                 >
@@ -1185,12 +1175,12 @@ const Dashboard = () => {
                   onClick={() => setBulkTab("products")}
                   sx={{
                     textTransform: "none",
-                    fontWeight: 700,
-                    backgroundColor: bulkTab === "products" ? "#000000" : "transparent",
-                    color: bulkTab === "products" ? "#ffffff" : "#111111",
-                    borderColor: "#d6d6d6",
+                    fontWeight: 500,
+                    backgroundColor: bulkTab === "products" ? "#22252b" : "transparent",
+                    color: bulkTab === "products" ? "#ffffff" : "#20242b",
+                    borderColor: "#dce1e8",
                     "&:hover": {
-                      backgroundColor: bulkTab === "products" ? "#222222" : "#f5f5f5",
+                      backgroundColor: bulkTab === "products" ? "#343942" : "#f5f8ff",
                     },
                   }}
                 >
@@ -1198,11 +1188,11 @@ const Dashboard = () => {
                 </Button>
               </Box>
 
-              <Box className="rounded-lg border border-[#e5e5e5] bg-[#f7f7f8] p-3">
-                <Typography sx={{ color: "#111111", fontSize: 12, fontWeight: 800 }}>
+              <Box className="rounded-lg border border-[#e7eaee] bg-[#f4f6f8] p-3">
+                <Typography sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}>
                   {bulkText.excelTemplate}
                 </Typography>
-                <Typography sx={{ color: "#757575", fontSize: 11.5, mt: 0.5 }}>
+                <Typography sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}>
                   {bulkTab === "brands"
                     ? bulkText.brand
                     : `${bulkText.brandName} | ${bulkText.title}`}
@@ -1214,10 +1204,10 @@ const Dashboard = () => {
                       component="label"
                       sx={{
                         textTransform: "none",
-                        borderColor: "#d6d6d6",
-                        color: "#111111",
-                        fontWeight: 700,
-                        "&:hover": { borderColor: "#111111", backgroundColor: "#f5f5f5" },
+                        borderColor: "#dce1e8",
+                        color: "#20242b",
+                        fontWeight: 500,
+                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
                       }}
                     >
                       {bulkText.fileLabel}
@@ -1229,7 +1219,7 @@ const Dashboard = () => {
                         onChange={parseBulkFile}
                       />
                     </Button>
-                    <Typography sx={{ color: "#757575", fontSize: 11.5 }}>
+                    <Typography sx={{ color: "#737b88", fontSize: 11.5 }}>
                       {bulkText.fileHint}
                     </Typography>
                   </Box>
@@ -1240,10 +1230,10 @@ const Dashboard = () => {
                       onClick={() => downloadBulkTemplate("xlsx")}
                       sx={{
                         textTransform: "none",
-                        borderColor: "#d6d6d6",
-                        color: "#111111",
-                        fontWeight: 700,
-                        "&:hover": { borderColor: "#111111", backgroundColor: "#f5f5f5" },
+                        borderColor: "#dce1e8",
+                        color: "#20242b",
+                        fontWeight: 500,
+                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
                       }}
                     >
                       {bulkText.downloadXlsx}
@@ -1254,10 +1244,10 @@ const Dashboard = () => {
                       onClick={() => downloadBulkTemplate("csv")}
                       sx={{
                         textTransform: "none",
-                        borderColor: "#d6d6d6",
-                        color: "#111111",
-                        fontWeight: 700,
-                        "&:hover": { borderColor: "#111111", backgroundColor: "#f5f5f5" },
+                        borderColor: "#dce1e8",
+                        color: "#20242b",
+                        fontWeight: 500,
+                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
                       }}
                     >
                       {bulkText.downloadCsv}
@@ -1281,7 +1271,7 @@ const Dashboard = () => {
                         variant="text"
                         color="error"
                         onClick={() => removeBrandRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 700, mt: 2 }}
+                        sx={{ minWidth: 0, px: 0, fontWeight: 500, mt: 2 }}
                       >
                         <DeleteIcon fontSize="small" color="error" />
                       </Button>
@@ -1290,7 +1280,7 @@ const Dashboard = () => {
                   <Button
                     variant="text"
                     onClick={addBrandRow}
-                    sx={{ textTransform: "none", fontWeight: 700, color: "#f1f1f1", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#000000", "&:hover": { backgroundColor: "#222222" } }}
+                    sx={{ textTransform: "none", fontWeight: 500, color: "#ffffff", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#22252b", "&:hover": { backgroundColor: "#343942" } }}
                   >
                     {bulkText.addBrandRow}
                   </Button>
@@ -1318,7 +1308,7 @@ const Dashboard = () => {
                         variant="text"
                         color="error"
                         onClick={() => removeProductRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 700, mt: 2 }}
+                        sx={{ minWidth: 0, px: 0, fontWeight: 500, mt: 2 }}
                       >
                         <DeleteIcon fontSize="small" color="error" />
                       </Button>
@@ -1327,7 +1317,7 @@ const Dashboard = () => {
                   <Button
                     variant="text"
                     onClick={addProductRow}
-                    sx={{ textTransform: "none", fontWeight: 700, color: "#f1f1f1", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#000000", "&:hover": { backgroundColor: "#222222" } }}
+                    sx={{ textTransform: "none", fontWeight: 500, color: "#ffffff", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#22252b", "&:hover": { backgroundColor: "#343942" } }}
                   >
                     {bulkText.addProductRow}
                   </Button>
@@ -1338,10 +1328,10 @@ const Dashboard = () => {
             {/* 3. Footer (Always pinned at bottom) */}
             <Box className="pt-4 flex flex-col gap-2 bg-white">
               {bulkError && (
-                <Box sx={{ color: "#c62828", fontSize: 13 }}>{bulkError}</Box>
+                <Box sx={{ color: "#e5484d", fontSize: 13 }}>{bulkError}</Box>
               )}
               <Box className="flex items-center justify-end gap-2">
-                <Button onClick={() => setBulkModalOpen(false)} sx={{ textTransform: "none", fontWeight: 700 }}>
+                <Button onClick={() => setBulkModalOpen(false)} sx={{ textTransform: "none", fontWeight: 500 }}>
                   {bulkText.cancel}
                 </Button>
                 <Button
@@ -1350,10 +1340,10 @@ const Dashboard = () => {
                   disabled={bulkSaving}
                   sx={{
                     textTransform: "none",
-                    fontWeight: 700,
-                    backgroundColor: "#000000",
+                    fontWeight: 500,
+                    backgroundColor: "#22252b",
                     color: "#ffffff",
-                    "&:hover": { backgroundColor: "#222222" },
+                    "&:hover": { backgroundColor: "#343942" },
                   }}
                 >
                   {bulkSaving ? "Saving…" : bulkText.saveRows}
@@ -1390,22 +1380,22 @@ const Dashboard = () => {
 
       <Card
         elevation={0}
-        className="rounded-xl border border-[#e5e5e5] bg-white"
+        className="rounded-2xl border border-[#e7eaee] bg-white"
       >
         <CardContent className="!p-6">
           <Box className="mb-4 flex items-center justify-between">
             <Box>
               <Typography
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   fontSize: 16,
-                  fontWeight: 800,
+                  fontWeight: 500,
                   letterSpacing: "-0.01em",
                 }}
               >
                 Expired Promotions
               </Typography>
-              <Typography sx={{ color: "#757575", fontSize: 12.5, mt: 0.5 }}>
+              <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
                 Historical discounts that are no longer active.
               </Typography>
             </Box>
@@ -1413,17 +1403,17 @@ const Dashboard = () => {
               label={`${expiredProducts.length} archived`}
               size="small"
               sx={{
-                backgroundColor: "#f5f5f5",
-                color: "#757575",
-                fontWeight: 700,
-                borderRadius: "4px",
+                backgroundColor: "#eef1f4",
+                color: "#737b88",
+                fontWeight: 500,
+                borderRadius: "6px",
               }}
             />
           </Box>
           {expiredProducts.length === 0 ? (
             <Typography
               sx={{
-                color: "#757575",
+                color: "#737b88",
                 fontSize: 13,
                 py: 4,
                 textAlign: "center",
@@ -1438,9 +1428,9 @@ const Dashboard = () => {
                   key={product.id}
                   component={Link}
                   to={`/products/${product.id}`}
-                  className="group relative overflow-hidden rounded-xl border border-[#e5e5e5] no-underline bg-white transition-all hover:border-[#000000]"
+                  className="group relative overflow-hidden rounded-2xl border border-[#e7eaee] no-underline bg-white transition-all hover:border-[#4f82f7]"
                 >
-                  <Box className="relative h-32 bg-[#f7f7f8]">
+                  <Box className="relative h-32 bg-[#f4f6f8]">
                     <img
                       src={product.image}
                       alt={product.name}
@@ -1457,11 +1447,11 @@ const Dashboard = () => {
                         position: "absolute",
                         left: 8,
                         top: 8,
-                        backgroundColor: "#eeeeee",
-                        color: "#757575",
+                        backgroundColor: "#eef1f4",
+                        color: "#737b88",
                         fontSize: 10,
                         fontWeight: 800,
-                        borderRadius: "4px",
+                        borderRadius: "6px",
                       }}
                     />
                     {canEdit && (
@@ -1478,11 +1468,11 @@ const Dashboard = () => {
                           right: 8,
                           top: 8,
                           backgroundColor: "rgba(255, 255, 255, 0.95)",
-                          color: "#e50043",
+                          color: "#e5484d",
                           padding: "4px",
                           "&:hover": {
-                            backgroundColor: "#fff0f3",
-                            color: "#c8003a",
+                            backgroundColor: "#fdecec",
+                            color: "#c9302c",
                           },
                         }}
                       >
@@ -1492,18 +1482,18 @@ const Dashboard = () => {
                   </Box>
                   <Box className="p-3">
                     <Typography
-                      sx={{ color: "#111111", fontSize: 12, fontWeight: 700 }}
+                      sx={{ color: "#20242b", fontSize: 12, fontWeight: 500 }}
                     >
                       {product.name}
                     </Typography>
                     <Typography
-                      sx={{ color: "#757575", fontSize: 11, mt: 0.5 }}
+                      sx={{ color: "#737b88", fontSize: 11, mt: 0.5 }}
                     >
                       {product.fromDate} - {product.toDate}
                     </Typography>
                     <Typography
                       sx={{
-                        color: "#e50043",
+                        color: "#f3873a",
                         fontSize: 11,
                         fontWeight: 800,
                         mt: 1,

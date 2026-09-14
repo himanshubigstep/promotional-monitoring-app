@@ -2,7 +2,7 @@ import { CalendarMonthRounded, DownloadRounded } from "@mui/icons-material";
 import { Box, Button, Card, Chip, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
 import type { Product } from "../../data/productTypes";
-import { useAppContext } from "../../context/AppContext";
+import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 
 const months = [
   "Jan",
@@ -28,31 +28,11 @@ const brandColors: Record<string, string> = {
 };
 
 export default function PromotionalCalendar() {
-  const { filters, products: catalog } = useAppContext();
+  const { filters, products } = useAppContext();
   const filteredCatalog = useMemo(
     () =>
-      catalog.filter((product) => {
-        const minimumDiscount =
-          filters.discount === "All"
-            ? 0
-            : Number(filters.discount.replace("%+", ""));
-        return (
-          (filters.market === "All" || product.market === filters.market) &&
-          (!filters.search ||
-            product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            product.brand
-              .toLowerCase()
-              .includes(filters.search.toLowerCase())) &&
-          (filters.category === "All" ||
-            product.category === filters.category) &&
-          (filters.retailer === "All" ||
-            product.retailer === filters.retailer) &&
-          product.competitorDiscount >= minimumDiscount &&
-          (!filters.fromDate || product.toDate >= filters.fromDate) &&
-          (!filters.toDate || product.fromDate <= filters.toDate)
-        );
-      }),
-    [catalog, filters],
+      products.filter((product) => matchesPromotionFilters(product, filters)),
+    [filters],
   );
 
   // Group campaigns for the Gantt view
@@ -80,15 +60,15 @@ export default function PromotionalCalendar() {
   }, [filteredCatalog]);
 
   const downloadUpdatedProducts = () => {
-    if (!catalog || !Array.isArray(catalog) || catalog.length === 0) return;
-    const headers = Object.keys(catalog[0]) as Array<keyof Product>;
+    if (!products.length) return;
+    const headers = Object.keys(products[0]) as Array<keyof Product>;
     const table = `
       <table border="1">
         <thead>
           <tr>${headers.map((h) => `<th>${String(h)}</th>`).join("")}</tr>
         </thead>
         <tbody>
-          ${catalog
+          ${filteredCatalog
             .map(
               (p) =>
                 `<tr>${headers.map((h) => `<td>${String(p[h] ?? "")}</td>`).join("")}</tr>`,
@@ -113,19 +93,19 @@ export default function PromotionalCalendar() {
       <Box className="flex flex-wrap items-center justify-between gap-3">
         <Box>
           <Box className="flex items-center gap-2">
-            <CalendarMonthRounded sx={{ color: "#e50043" }} />
+            <CalendarMonthRounded sx={{ color: "#4f82f7" }} />
             <Typography
               sx={{
-                color: "#000000",
-                fontSize: 20,
-                fontWeight: 800,
+                color: "#20242b",
+                fontSize: 16,
+                fontWeight: 500,
                 letterSpacing: "-0.01em",
               }}
             >
               Promotional Campaign Timeline
             </Typography>
           </Box>
-          <Typography sx={{ color: "#757575", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
             Gantt chart view of store campaigns, durations, and offer intensity.
           </Typography>
         </Box>
@@ -135,12 +115,12 @@ export default function PromotionalCalendar() {
           startIcon={<DownloadRounded />}
           onClick={downloadUpdatedProducts}
           sx={{
-            borderColor: "#d1d1d1",
-            color: "#000000",
+            borderColor: "#dce1e8",
+            color: "#20242b",
             fontWeight: 700,
             fontSize: 12.5,
             textTransform: "none",
-            "&:hover": { borderColor: "#000000", backgroundColor: "#f5f5f5" },
+            "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
           }}
         >
           Export Timeline
@@ -150,15 +130,15 @@ export default function PromotionalCalendar() {
       {/* Main Gantt Chart Card */}
       <Card
         elevation={0}
-        className="rounded-xl border border-[#e5e5e5] bg-white"
+        className="rounded-2xl border border-[#e7eaee] bg-white"
       >
         <Box className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
           <Box className="p-4" sx={{ minWidth: 1000 }}>
             {/* Timeline Header (Months) */}
-            <Box className="grid grid-cols-[220px_1fr] border-b border-[#e5e5e5] pb-3">
+            <Box className="grid grid-cols-[220px_1fr] border-b border-[#e7eaee] pb-3">
               <Typography
                 sx={{
-                  color: "#757575",
+                  color: "#737b88",
                   fontSize: 11,
                   fontWeight: 800,
                   letterSpacing: "0.05em",
@@ -171,7 +151,7 @@ export default function PromotionalCalendar() {
                 {months.map((month) => (
                   <Typography
                     key={month}
-                    sx={{ color: "#000000", fontSize: 12, fontWeight: 800 }}
+                    sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
                   >
                     {month}
                   </Typography>
@@ -180,10 +160,10 @@ export default function PromotionalCalendar() {
             </Box>
 
             {/* Gantt Rows */}
-            <Box className="divide-y divide-[#f0f0f0]">
+            <Box className="divide-y divide-[#e7eaee]">
               {ganttRows.length === 0 ? (
                 <Box className="py-8 text-center">
-                  <Typography sx={{ color: "#757575", fontSize: 13 }}>
+                  <Typography sx={{ color: "#737b88", fontSize: 13 }}>
                     No campaigns found for the selected year and filters.
                   </Typography>
                 </Box>
@@ -199,7 +179,7 @@ export default function PromotionalCalendar() {
                       <Box className="pr-3">
                         <Typography
                           sx={{
-                            color: "#000000",
+                            color: "#20242b",
                             fontSize: 13,
                             fontWeight: 700,
                             lineHeight: 1.2,
@@ -214,26 +194,26 @@ export default function PromotionalCalendar() {
                             sx={{
                               height: 18,
                               fontSize: 10,
-                              bgcolor: "#f5f5f5",
-                              color: "#333333",
+                              bgcolor: "#eef1f4",
+                              color: "#20242b",
                               fontWeight: 700,
                               borderRadius: "4px",
                             }}
                           />
-                          <Typography sx={{ color: "#757575", fontSize: 11 }}>
+                          <Typography sx={{ color: "#737b88", fontSize: 11 }}>
                             {item.brand}
                           </Typography>
                         </Box>
                       </Box>
 
                       {/* Right Timeline Grid Canvas */}
-                      <Box className="relative flex h-9 items-center rounded bg-[#f7f7f8] px-1">
+                      <Box className="relative flex h-9 items-center rounded-lg bg-[#f4f6f8] px-1">
                         {/* Month Grid Lines */}
                         <Box className="absolute inset-0 grid grid-cols-12 pointer-events-none">
                           {months.map((m, idx) => (
                             <Box
                               key={m}
-                              className={`h-full ${idx < 11 ? "border-r border-[#e5e5e5]" : ""}`}
+                              className={`h-full ${idx < 11 ? "border-r border-[#e7eaee]" : ""}`}
                             />
                           ))}
                         </Box>

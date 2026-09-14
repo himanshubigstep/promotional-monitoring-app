@@ -5,6 +5,7 @@ import FormField from "./components/FormField";
 import { getPromotionTypeFieldConfig } from "./components/PromotionFormModal";
 import { getMarketBrandOptions } from "./data/brands";
 import { getMarketRetailers } from "./data/retailers";
+import { getMarketProducts } from "./data/marketProducts";
 import { upsertProductInMarket } from "./data/marketProducts";
 
 test("renders the Sephora Promotional Monitoring dashboard", () => {
@@ -99,6 +100,22 @@ test("scopes retailer and brand options to the selected market", () => {
   expect(getMarketBrandOptions("PL")).not.toContain("CZ Demo Brand Prague");
   expect(getMarketBrandOptions("CZ")).toContain("CZ Demo Brand Prague");
   expect(getMarketBrandOptions("CZ")).not.toContain("Sephora Collection");
+});
+
+test("creates one offer for every Polish retailer per product", () => {
+  const productsByName = new Map<string, ReturnType<typeof getMarketProducts>>();
+
+  getMarketProducts("PL").forEach((product) => {
+    const key = `${product.brand}::${product.name}`;
+    productsByName.set(key, [...(productsByName.get(key) ?? []), product]);
+  });
+
+  productsByName.forEach((offers) => {
+    expect(new Set(offers.map((product) => product.retailer))).toEqual(
+      new Set(getMarketRetailers("PL")),
+    );
+    expect(offers).toHaveLength(getMarketRetailers("PL").length);
+  });
 });
 
 test("applies the correct field rules for each promotion type by market", () => {

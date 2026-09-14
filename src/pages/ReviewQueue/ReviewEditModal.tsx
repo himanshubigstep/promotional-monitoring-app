@@ -123,7 +123,7 @@ export default function ReviewEditModal({
             fullWidth
           />
           {error && (
-            <div style={{ color: "#c62828", fontSize: 13 }}>{error}</div>
+            <div style={{ color: "#e5484d", fontSize: 13 }}>{error}</div>
           )}
         </Stack>
       </DialogContent>

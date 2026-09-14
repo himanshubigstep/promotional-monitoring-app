@@ -53,7 +53,7 @@ import AssistantWidget from "./components/Assistant/AssistantWidget";
 import ReviewQueue from "./pages/ReviewQueue/ReviewQueue";
 import { sephoraTheme } from "./theme/sephoraTheme";
 
-const drawerWidth = 260;
+const drawerWidth = 244;
 const navigation = [
   { label: "Dashboard", path: "/", icon: <DashboardRounded /> },
   {
@@ -93,26 +93,25 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="rounded-lg transition-all"
             sx={{
-              color: selected ? "#ffffff" : "#444444",
-              backgroundColor: selected ? "#000000 !important" : "transparent",
+              color: selected ? "#ffffff" : "#9199a6",
+              backgroundColor: selected ? "#2b2f39 !important" : "transparent",
               "&.Mui-selected": {
-                backgroundColor: "#000000",
+                backgroundColor: "#2b2f39",
                 color: "#ffffff",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.12)",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
               },
               "&.Mui-selected:hover": {
-                backgroundColor: "#1a1a1a",
+                backgroundColor: "#323744",
               },
               "&:hover": {
-                backgroundColor: "#f5f5f5",
-                //color: "#000000",
+                backgroundColor: "#22252c",
               },
             }}
           >
             <ListItemIcon
               sx={{
                 minWidth: 36,
-                color: selected ? "#e50043" : "inherit",
+                color: selected ? "#78a1ff" : "inherit",
               }}
             >
               {item.icon}
@@ -122,7 +121,7 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
               sx={{
                 "& .MuiListItemText-primary": {
                   fontSize: 13.5,
-                  fontWeight: selected ? 700 : 500,
+                  fontWeight: selected ? 500 : 500,
                   letterSpacing: "0.01em",
                 },
               }}
@@ -144,22 +143,17 @@ function AppLayout() {
   const currentPage =
     navigation.find((item) => item.path === location.pathname) ?? navigation[0];
   const drawer = (
-    <Box className="flex h-full flex-col bg-white">
-      {/* Sephora Iconic Stripe Top Accent */}
-      <Box
-        className="h-1.5 w-full"
-        sx={{ borderBottom: "1px solid #e5e5e5" }}
-      />
-      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#f0f0f0]">
+    <Box className="flex h-full flex-col bg-[#1a1d23]">
+      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#2b2f38]">
         <Box>
           <Box className="flex items-center gap-2">
             <Typography
-              className="!font-black !tracking-widest"
+              className="!tracking-widest"
               sx={{
-                color: "#000000",
+                color: "#ffffff",
                 fontSize: 20,
                 letterSpacing: "0.18em",
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "Open Sans, sans-serif",
                 textTransform: "uppercase",
               }}
             >
@@ -167,10 +161,10 @@ function AppLayout() {
             </Typography>
             <Box
               sx={{
-                backgroundColor: "#e50043",
+                backgroundColor: "#4f82f7",
                 color: "white",
                 fontSize: 9,
-                fontWeight: 800,
+                fontWeight: 600,
                 px: 0.8,
                 py: 0.2,
                 borderRadius: 0.5,
@@ -183,7 +177,7 @@ function AppLayout() {
           </Box>
           <Typography
             sx={{
-              color: "#757575",
+                color: "#aeb5c0",
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: 1.5,
@@ -204,12 +198,12 @@ function AppLayout() {
         )}
       </Box>
 
-      <Box className="mx-3.5 my-3 rounded-lg bg-[#000000] p-3 text-white">
+        <Box className="mx-3.5 my-3 rounded-xl bg-[#23262e] p-3 text-white">
         <Typography
           sx={{
-            color: "#e50043",
+            color: "#78a1ff",
             fontSize: 10,
-            fontWeight: 800,
+            fontWeight: 500,
             letterSpacing: 1.2,
             textTransform: "uppercase",
           }}
@@ -220,18 +214,18 @@ function AppLayout() {
           sx={{
             color: "#ffffff",
             fontSize: 13,
-            fontWeight: 700,
+            fontWeight: 600,
             mt: 0.25,
             letterSpacing: "0.02em",
           }}
         >
-          Sephora Poland (sephora.pl)
+          Sephora Poland
         </Typography>
       </Box>
 
       <Navigation onNavigate={() => setMobileOpen(false)} />
 
-      <Box className="mt-auto border-t border-[#f0f0f0] p-4 bg-[#fafafa]">
+      <Box className="mt-auto border-t border-[#2b2f38] p-4 bg-[#14161b]">
         <Box className="flex items-center gap-2">
           <Box
             sx={{
@@ -241,7 +235,7 @@ function AppLayout() {
               backgroundColor: "#10b981",
             }}
           />
-          <Typography sx={{ color: "#757575", fontSize: 11, fontWeight: 500 }}>
+            <Typography sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}>
             Catalog synced live • 2026
           </Typography>
         </Box>
@@ -250,15 +244,15 @@ function AppLayout() {
   );
 
   return (
-    <Box className="min-h-screen bg-[#f7f7f8]">
+    <Box className="min-h-screen bg-[#f4f6f8]">
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           display: { md: "none" },
-          backgroundColor: "#000000",
+          backgroundColor: "#1a1d23",
           color: "#ffffff",
-          borderBottom: "1px solid #222222",
+          borderBottom: "1px solid #2b2f38",
         }}
       >
         <Toolbar className="justify-between">
@@ -275,7 +269,7 @@ function AppLayout() {
               sx={{
                 fontSize: 18,
                 letterSpacing: "0.15em",
-                fontFamily: "Montserrat, sans-serif",
+                fontFamily: "Open Sans, sans-serif",
               }}
             >
               SEPHORA
@@ -283,7 +277,7 @@ function AppLayout() {
           </Box>
           <Box
             sx={{
-              backgroundColor: "#e50043",
+              backgroundColor: "#4f82f7",
               color: "white",
               fontSize: 10,
               fontWeight: 800,
@@ -311,7 +305,7 @@ function AppLayout() {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
-              borderRight: "1px solid #e5e5e5",
+              borderRight: "1px solid #e7eaee",
             },
           }}
         >
@@ -319,22 +313,22 @@ function AppLayout() {
         </Drawer>
       </Box>
 
-      <Box component="main" className="min-h-screen p-4 md:p-6 md:ml-[260px]">
+        <Box component="main" className="min-h-screen p-4 md:p-7 md:ml-[244px]">
         <Box className="mx-auto max-w-['100%']">
           <Box className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <Box>
               <Typography
                 sx={{
-                  color: "#000000",
+                  color: "#20242b",
                   fontSize: { xs: 24, md: 30 },
-                  fontWeight: 800,
+                  fontWeight: 500,
                   letterSpacing: "-0.02em",
-                  fontFamily: "Montserrat, sans-serif",
+                  fontFamily: "Open Sans, sans-serif",
                 }}
               >
                 {currentPage.label}
               </Typography>
-              <Typography sx={{ color: "#757575", fontSize: 13, mt: 0.5 }}>
+              <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
                 {location.pathname === "/"
                   ? `${getTimeGreeting()}, ${role} • Sephora Promotional Monitor`
                   : "Track competitor promotions, pricing trends, and market campaign analytics."}
@@ -345,20 +339,20 @@ function AppLayout() {
               <Button
                 variant="outlined"
                 size="small"
-                startIcon={<FilterAltRounded sx={{ color: "#e50043" }} />}
+                startIcon={<FilterAltRounded sx={{ color: "#4f82f7" }} />}
                 onClick={() => setFilterOpen(true)}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
-                  borderColor: "#d1d1d1",
-                  color: "#000000",
+                  borderColor: "#dce1e8",
+                  color: "#20242b",
                   backgroundColor: "#ffffff",
                   fontSize: 13,
-                  fontWeight: 700,
+                  fontWeight: 500,
                   px: 2,
                   py: 0.8,
                   "&:hover": {
-                    borderColor: "#000000",
-                    backgroundColor: "#f5f5f5",
+                    borderColor: "#4f82f7",
+                    backgroundColor: "#f5f8ff",
                   },
                 }}
               >
@@ -373,8 +367,8 @@ function AppLayout() {
                   minWidth: 145,
                   backgroundColor: "#ffffff",
                   fontSize: 12.5,
-                  fontWeight: 700,
-                  borderColor: "#e5e5e5",
+                  fontWeight: 500,
+                  borderColor: "#e7eaee",
                 }}
               >
                 <MenuItem value="Admin">Admin</MenuItem>

@@ -6,7 +6,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { catalog } from "../data/catalog";
 import { czDummyBrands, sephoraBrands } from "../data/brands";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
 import {
@@ -45,6 +44,29 @@ export const emptyPromotionFilters: PromotionFilters = {
   retailer: "All",
   market: "All",
 };
+
+export function matchesPromotionFilters(
+  product: Product,
+  filters: PromotionFilters,
+) {
+  const minimumDiscount =
+    filters.discount === "All"
+      ? 0
+      : Number(filters.discount.replace("%+", ""));
+  const search = filters.search.trim().toLowerCase();
+
+  return (
+    (!search ||
+      product.name.toLowerCase().includes(search) ||
+      product.brand.toLowerCase().includes(search)) &&
+    (filters.category === "All" || product.category === filters.category) &&
+    (filters.market === "All" || product.market === filters.market) &&
+    (filters.retailer === "All" || product.retailer === filters.retailer) &&
+    product.competitorDiscount >= minimumDiscount &&
+    (!filters.fromDate || product.fromDate >= filters.fromDate) &&
+    (!filters.toDate || product.toDate <= filters.toDate)
+  );
+}
 
 export const filterMonths = [
   ["01", "January"],
@@ -129,9 +151,8 @@ const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 // Used only when Supabase is unreachable at load — see the useEffect below.
 // Static files are deliberately kept (not deleted) for exactly this path.
-function promotionsFromStaticCatalog(): Promotion[] {
-  return catalog
-    .filter((product) => product.market === "PL" || product.market === "CZ")
+function promotionsFromProducts(products: Product[]): Promotion[] {
+  return products
     .map((product) => ({
       id: product.id,
       market: product.market,
@@ -213,10 +234,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [retailers, setRetailers] = useState<RetailerOption[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const brands = brandsByMarket.PL;
-  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
+  const [lastAddedProductId, setLastAddedProductId] = useState<string | null>(null);
   const [filters, setFilters] = useState<PromotionFilters>(emptyPromotionFilters);
   const [loading, setLoading] = useState(true);
   const [usingFallbackData, setUsingFallbackData] = useState(false);
+  const lastAddedProduct = useMemo(
+    () => products.find((product) => product.id === lastAddedProductId) ?? null,
+    [products, lastAddedProductId],
+  );
 
   const refresh = useCallback(async () => {
     const data = await loadApprovedData();
@@ -244,8 +269,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (err) {
         console.warn("Falling back to static data — Supabase fetch failed:", err);
         if (cancelled) return;
-        setPromotions(promotionsFromStaticCatalog());
-        setProducts([...initialPlProducts, ...initialCzProducts]);
+        const fallbackProducts = [...initialPlProducts, ...initialCzProducts];
+        setPromotions(promotionsFromProducts(fallbackProducts));
+        setProducts(fallbackProducts);
         setBrandsByMarket({ PL: [...sephoraBrands], CZ: [...czDummyBrands] });
         setRetailers(staticRetailerOptions());
         setCategories(staticCategoryOptions());
@@ -289,7 +315,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       const newId = await insertPromotion(normalizedPromotion);
       const data = await refresh();
-      setLastAddedProduct(data.products.find((p) => p.id === newId) ?? null);
+      setLastAddedProductId(newId);
     },
     [refresh, assertWritable],
   );
@@ -338,7 +364,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       };
       const newId = await insertPromotion(promotionInput);
       const data = await refresh();
-      setLastAddedProduct(data.products.find((p) => p.id === newId) ?? null);
+      setLastAddedProductId(newId);
     },
     [refresh, assertWritable],
   );
