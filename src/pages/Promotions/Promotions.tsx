@@ -87,6 +87,10 @@ export default function Promotions() {
             ? 0
             : Number(filters.discount.replace("%+", ""));
         const discount = Number(promotion.discount.match(/\d+(?:\.\d+)?/)?.[0] || 0);
+        // filters.scope ("All"/"Competitors"/"Our store") — note this is
+        // distinct from promotion.scope (a per-row field describing the
+        // promotion itself, e.g. store-wide vs category-wide).
+        const viewScope = filters.scope ?? "All";
         return (
           (!searchValue ||
             promotion.name.toLowerCase().includes(searchValue) ||
@@ -94,6 +98,9 @@ export default function Promotions() {
           (filters.market === "All" || promotion.market === filters.market) &&
           (filters.category === "All" || promotion.category === filters.category) &&
           (filters.retailer === "All" || promotion.retailer === filters.retailer) &&
+          (viewScope === "All" ||
+            (viewScope === "Competitors" && !promotion.isClient) ||
+            (viewScope === "Our store" && !!promotion.isClient)) &&
           discount >= minimumDiscount &&
           (!filters.fromDate || promotion.from >= filters.fromDate) &&
           (!filters.toDate || promotion.to <= filters.toDate)

@@ -18,6 +18,7 @@ const getVisibleRetailerNames = (
   return ["All", ...names];
 };
 const discounts = ["All", "10%+", "20%+", "25%+", "30%+"];
+const scopes = ["All", "Competitors", "Our store"];
 const options = (values: string[]) =>
   values.map((value) => ({ label: value, value }));
 
@@ -78,6 +79,13 @@ export default function PromotionFilterModal({
             placeholder="Search product name or brand"
             value={draftFilters.search}
             onValueChange={(value) => update("search", value)}
+          />
+          <FormField
+            type="select"
+            label="Comparison scope"
+            value={draftFilters.scope}
+            onValueChange={(value) => update("scope", value)}
+            options={options(scopes)}
           />
           <FormField
             type="select"

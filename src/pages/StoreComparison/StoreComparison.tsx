@@ -21,10 +21,28 @@ export default function StoreComparison() {
   const categoryProducts = products.filter((product) =>
     matchesPromotionFilters(product, filters),
   );
+  // Real client-vs-competitor split (retailers.is_client via Product.isClient),
+  // replacing the previous placeholder that fabricated "your discount" as
+  // `discount - 2` off the competitor's own number.
+  const clientProducts = categoryProducts.filter((product) => product.isClient);
+  const competitorProducts = categoryProducts.filter(
+    (product) => !product.isClient,
+  );
+  const yourDiscount = clientProducts.length
+    ? Math.round(
+        clientProducts.reduce(
+          (sum, product) => sum + product.competitorDiscount,
+          0,
+        ) / clientProducts.length,
+      )
+    : null;
+  // Only competitor retailers become rows — comparing our own store against
+  // itself isn't a meaningful comparison, so it's excluded rather than shown
+  // as a nonsensical "Sephora vs Sephora" row.
   const retailers = Array.from(
-    new Set(categoryProducts.map((product) => product.retailer)),
+    new Set(competitorProducts.map((product) => product.retailer)),
   ).map((retailer) => {
-    const offers = categoryProducts.filter(
+    const offers = competitorProducts.filter(
       (product) => product.retailer === retailer,
     );
     const discount = Math.round(
@@ -43,17 +61,17 @@ export default function StoreComparison() {
     return [
       retailer,
       discount,
-      Math.max(0, discount - 2),
+      yourDiscount,
       latest.fromDate,
       latest.toDate,
       trend,
     ] as const;
   });
   const averageMarket = Math.round(
-    categoryProducts.reduce(
+    competitorProducts.reduce(
       (sum, product) => sum + product.competitorDiscount,
       0,
-    ) / Math.max(categoryProducts.length, 1),
+    ) / Math.max(competitorProducts.length, 1),
   );
   const activeCount = retailers.filter(
     (retailer) => retailer[4] >= "2026-09-08",
@@ -64,13 +82,17 @@ export default function StoreComparison() {
 
   return (
     <Box className="flex flex-col gap-5">
-      <Box className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <Box className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
           [
             "Best Current Offer",
             bestCurrentOffer === null ? "No data" : `${bestCurrentOffer}%`,
           ],
           ["Average Market Discount", `${averageMarket}%`],
+          [
+            "Your Average Discount",
+            yourDiscount === null ? "No data" : `${yourDiscount}%`,
+          ],
           ["Active Retailer Campaigns", String(activeCount)],
         ].map(([label, value]) => (
           <Card
@@ -158,7 +180,13 @@ export default function StoreComparison() {
             </TableHead>
             <TableBody>
               {retailers.map((retailer) => {
-                const gap = Number(retailer[2]) - Number(retailer[1]);
+                // retailer[2] (your real discount) can be null when no
+                // client (is_client) promotions match the current filters —
+                // don't fabricate a gap in that case, just say so.
+                const hasYourDiscount = retailer[2] !== null;
+                const gap = hasYourDiscount
+                  ? Number(retailer[2]) - Number(retailer[1])
+                  : null;
                 const active = retailer[4] >= "2026-09-08";
                 return (
                   <TableRow key={retailer[0]} hover>
@@ -175,26 +203,32 @@ export default function StoreComparison() {
                     <TableCell
                       sx={{ color: "#20242b", fontSize: 13.5, fontWeight: 500 }}
                     >
-                      -{retailer[2]}%
+                      {hasYourDiscount ? `-${retailer[2]}%` : "No data"}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={`${gap >= 0 ? "+" : ""}${gap}%`}
-                        icon={
-                          gap >= 0 ? (
-                            <ArrowUpwardRounded sx={{ fontSize: 14 }} />
-                          ) : (
-                            <ArrowDownwardRounded sx={{ fontSize: 14 }} />
-                          )
-                        }
-                        size="small"
-                        sx={{
-                          backgroundColor: gap >= 0 ? "#22252b" : "#fdecec",
-                          color: gap >= 0 ? "#ffffff" : "#e5484d",
-                          fontWeight: 500,
-                          borderRadius: "6px",
-                        }}
-                      />
+                      {gap === null ? (
+                        <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>
+                          —
+                        </Typography>
+                      ) : (
+                        <Chip
+                          label={`${gap >= 0 ? "+" : ""}${gap}%`}
+                          icon={
+                            gap >= 0 ? (
+                              <ArrowUpwardRounded sx={{ fontSize: 14 }} />
+                            ) : (
+                              <ArrowDownwardRounded sx={{ fontSize: 14 }} />
+                            )
+                          }
+                          size="small"
+                          sx={{
+                            backgroundColor: gap >= 0 ? "#22252b" : "#fdecec",
+                            color: gap >= 0 ? "#ffffff" : "#e5484d",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                          }}
+                        />
+                      )}
                     </TableCell>
                     <TableCell sx={{ color: "#737b88", fontSize: 12.5 }}>
                       {retailer[3]} - {retailer[4]}

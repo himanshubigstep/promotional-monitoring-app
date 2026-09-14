@@ -33,6 +33,14 @@ export type PromotionFilters = {
   discount: string;
   retailer: string;
   market: string;
+  // "Competitors" / "Our store" / "All" — filters by retailers.is_client
+  // (Product.isClient). Plain string (not a literal union) to match every
+  // other field here — PromotionFilterModal's generic `update()` helper
+  // coerces via String(value), same as category/discount/retailer/market.
+  // Defaults to "All" everywhere, so every existing consumer of
+  // matchesPromotionFilters is unaffected unless someone opts in via the
+  // Filters modal — see PromotionFilterModal.tsx.
+  scope: string;
 };
 
 export const emptyPromotionFilters: PromotionFilters = {
@@ -43,6 +51,7 @@ export const emptyPromotionFilters: PromotionFilters = {
   discount: "All",
   retailer: "All",
   market: "All",
+  scope: "All",
 };
 
 export function matchesPromotionFilters(
@@ -54,6 +63,7 @@ export function matchesPromotionFilters(
       ? 0
       : Number(filters.discount.replace("%+", ""));
   const search = filters.search.trim().toLowerCase();
+  const scope = filters.scope ?? "All";
 
   return (
     (!search ||
@@ -62,6 +72,9 @@ export function matchesPromotionFilters(
     (filters.category === "All" || product.category === filters.category) &&
     (filters.market === "All" || product.market === filters.market) &&
     (filters.retailer === "All" || product.retailer === filters.retailer) &&
+    (scope === "All" ||
+      (scope === "Competitors" && !product.isClient) ||
+      (scope === "Our store" && !!product.isClient)) &&
     product.competitorDiscount >= minimumDiscount &&
     (!filters.fromDate || product.fromDate >= filters.fromDate) &&
     (!filters.toDate || product.toDate <= filters.toDate)
