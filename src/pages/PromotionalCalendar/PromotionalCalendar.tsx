@@ -1,7 +1,6 @@
 import { CalendarMonthRounded, DownloadRounded } from "@mui/icons-material";
 import { Box, Button, Card, Chip, Tooltip, Typography } from "@mui/material";
 import { useMemo } from "react";
-import { catalog } from "../../data/catalog";
 import type { Product } from "../../data/productTypes";
 import { useAppContext } from "../../context/AppContext";
 
@@ -29,7 +28,7 @@ const brandColors: Record<string, string> = {
 };
 
 export default function PromotionalCalendar() {
-  const { filters } = useAppContext();
+  const { filters, products: catalog } = useAppContext();
   const filteredCatalog = useMemo(
     () =>
       catalog.filter((product) => {
@@ -53,7 +52,7 @@ export default function PromotionalCalendar() {
           (!filters.toDate || product.fromDate <= filters.toDate)
         );
       }),
-    [filters],
+    [catalog, filters],
   );
 
   // Group campaigns for the Gantt view

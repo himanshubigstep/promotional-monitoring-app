@@ -27,7 +27,6 @@ import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
-import { getMarketBrandOptions } from "../../data/brands";
 import DeleteIcon from '@mui/icons-material/Delete';
 import BrandComparisonTable from "../../components/BrandComparisonTable";
 
@@ -71,10 +70,13 @@ const Dashboard = () => {
     brandsByMarket,
   } = useAppContext();
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [actionError, setActionError] = useState<string | null>(null);
   const [catalogPage, setCatalogPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkTab, setBulkTab] = useState<"brands" | "products">("brands");
   const [brandRows, setBrandRows] = useState([
     { brand: "" },
@@ -170,8 +172,7 @@ const Dashboard = () => {
       };
 
   const brandOptions = useMemo(
-    () =>
-      getMarketBrandOptions(bulkMarket, brandsByMarket[bulkMarket] || []),
+    () => brandsByMarket[bulkMarket] || [],
     [brandsByMarket, bulkMarket],
   );
 
@@ -321,57 +322,80 @@ const Dashboard = () => {
     event.target.value = "";
   };
 
-  const handleBulkSave = () => {
-    if (bulkTab === "brands") {
-      brandRows.forEach((row) => {
-        const brandName = row.brand.trim();
-        if (!brandName) return;
-        addBrand(brandName, bulkMarket);
-      });
-    } else {
-      const defaultRetailer = bulkMarket === "PL" ? "Douglas" : "CZ Demo Store Prague";
+  const handleBulkSave = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    setBulkError(null);
+    setBulkSaving(true);
+    try {
+      if (bulkTab === "brands") {
+        // Sequential, not Promise.all: two rows with the same new brand
+        // name racing the same lookup-or-create step could otherwise both
+        // try to insert it.
+        for (const row of brandRows) {
+          const brandName = row.brand.trim();
+          if (!brandName) continue;
+          await addBrand(brandName, bulkMarket);
+        }
+      } else {
+        const defaultRetailer = bulkMarket === "PL" ? "Douglas" : "CZ Demo Store Prague";
 
-      productRows.forEach((row, index) => {
-        const brandName = row.brandName.trim();
-        const title = row.title.trim();
-        if (!brandName || !title) return;
+        for (let index = 0; index < productRows.length; index += 1) {
+          const row = productRows[index];
+          const brandName = row.brandName.trim();
+          const title = row.title.trim();
+          if (!brandName || !title) continue;
 
-        const productId = `BULK-${bulkMarket}-${Date.now()}-${index}`;
-        addProduct({
-          id: productId,
-          name: title,
-          brand: brandName,
-          category: "Skincare",
-          price: 0,
-          currency: bulkMarket === "CZ" ? "CZK" : "PLN",
-          market: bulkMarket,
-          retailer: defaultRetailer,
-          rating: 0,
-          stock: 1,
-          competitorDiscount: 0,
-          image:
-            "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
-          fromDate: today,
-          toDate: today,
-          promotionName: title,
-          description:
-            bulkMarket === "PL"
-              ? `Masowy import produktu dla ${brandName}`
-              : `Hromadně nahraný produkt pro ${brandName}`,
-          promotionDescription:
-            bulkMarket === "PL"
-              ? `Masowy import produktu dla ${brandName}`
-              : `Hromadně nahraný produkt pro ${brandName}`,
-          terms: bulkMarket === "PL" ? "Import masowy" : "Hromadný import",
-          priceAfterDiscount: 0,
-          promotionType: "Fixed promotion",
-        });
-      });
+          const productId = `BULK-${bulkMarket}-${Date.now()}-${index}`;
+          await addProduct({
+            id: productId,
+            name: title,
+            brand: brandName,
+            category: "Skincare",
+            price: 0,
+            currency: bulkMarket === "CZ" ? "CZK" : "PLN",
+            market: bulkMarket,
+            retailer: defaultRetailer,
+            rating: 0,
+            stock: 1,
+            competitorDiscount: 0,
+            image:
+              "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
+            fromDate: today,
+            toDate: today,
+            promotionName: title,
+            description:
+              bulkMarket === "PL"
+                ? `Masowy import produktu dla ${brandName}`
+                : `Hromadně nahraný produkt pro ${brandName}`,
+            promotionDescription:
+              bulkMarket === "PL"
+                ? `Masowy import produktu dla ${brandName}`
+                : `Hromadně nahraný produkt pro ${brandName}`,
+            terms: bulkMarket === "PL" ? "Import masowy" : "Hromadný import",
+            priceAfterDiscount: 0,
+            promotionType: "Fixed promotion",
+          });
+        }
+      }
+
+      setBulkModalOpen(false);
+      resetBulkRows();
+    } catch (err) {
+      setBulkError(err instanceof Error ? err.message : "Failed to save.");
+    } finally {
+      setBulkSaving(false);
     }
-
-    setBulkModalOpen(false);
-    resetBulkRows();
   };
+
+  async function handleDelete(id: string) {
+    setActionError(null);
+    try {
+      await deleteProduct(id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete.");
+    }
+  }
+
   const filteredProducts = useMemo(
     () =>
       catalog
@@ -635,6 +659,9 @@ const Dashboard = () => {
               )}
             </Box>
           </Box>
+          {actionError && (
+            <Box sx={{ color: "#c62828", fontSize: 13, mt: 1 }}>{actionError}</Box>
+          )}
           <Typography
             sx={{
               color: "#111111",
@@ -1024,7 +1051,7 @@ const Dashboard = () => {
                       onClick={(event) => {
                         event.preventDefault();
                         event.stopPropagation();
-                        deleteProduct(product.id);
+                        handleDelete(product.id);
                       }}
                       sx={{
                         position: "absolute",
@@ -1309,23 +1336,29 @@ const Dashboard = () => {
             </Box>
 
             {/* 3. Footer (Always pinned at bottom) */}
-            <Box className="pt-4 flex items-center justify-end gap-2 bg-white">
-              <Button onClick={() => setBulkModalOpen(false)} sx={{ textTransform: "none", fontWeight: 700 }}>
-                {bulkText.cancel}
-              </Button>
-              <Button
-                variant="contained"
-                type="submit"
-                sx={{
-                  textTransform: "none",
-                  fontWeight: 700,
-                  backgroundColor: "#000000",
-                  color: "#ffffff",
-                  "&:hover": { backgroundColor: "#222222" },
-                }}
-              >
-                {bulkText.saveRows}
-              </Button>
+            <Box className="pt-4 flex flex-col gap-2 bg-white">
+              {bulkError && (
+                <Box sx={{ color: "#c62828", fontSize: 13 }}>{bulkError}</Box>
+              )}
+              <Box className="flex items-center justify-end gap-2">
+                <Button onClick={() => setBulkModalOpen(false)} sx={{ textTransform: "none", fontWeight: 700 }}>
+                  {bulkText.cancel}
+                </Button>
+                <Button
+                  variant="contained"
+                  type="submit"
+                  disabled={bulkSaving}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 700,
+                    backgroundColor: "#000000",
+                    color: "#ffffff",
+                    "&:hover": { backgroundColor: "#222222" },
+                  }}
+                >
+                  {bulkSaving ? "Saving…" : bulkText.saveRows}
+                </Button>
+              </Box>
             </Box>
 
           </Box>
@@ -1339,14 +1372,19 @@ const Dashboard = () => {
           setFormOpen(false);
           setEditingPromotion(null);
         }}
-        onSave={(promotion) => {
-          if (editingPromotion) {
-            updatePromotion(editingPromotion.id, promotion);
-          } else {
-            addPromotion(promotion);
+        onSave={async (promotion) => {
+          setActionError(null);
+          try {
+            if (editingPromotion) {
+              await updatePromotion(editingPromotion.id, promotion);
+            } else {
+              await addPromotion(promotion);
+            }
+            setFormOpen(false);
+            setEditingPromotion(null);
+          } catch (err) {
+            setActionError(err instanceof Error ? err.message : "Failed to save.");
           }
-          setFormOpen(false);
-          setEditingPromotion(null);
         }}
       />
 
@@ -1433,7 +1471,7 @@ const Dashboard = () => {
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          deleteProduct(product.id);
+                          handleDelete(product.id);
                         }}
                         sx={{
                           position: "absolute",

@@ -17,8 +17,8 @@ import {
 import { createWorker } from "tesseract.js";
 import { useAppContext, type Promotion } from "../context/AppContext";
 import FormField from "./FormField";
-import { getMarketBrandOptions, sephoraBrands } from "../data/brands";
-import { czDummyRetailers, plRetailers } from "../data/retailers";
+import { sephoraBrands } from "../data/brands";
+import { plRetailers } from "../data/retailers";
 import {
   readPromotionFieldsWithGemini,
   translateToEnglishWithGemini,
@@ -28,10 +28,16 @@ import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
-const categories = ["Pielęgnacja", "Perfumy", "Makijaż", "Włosy"];
+const categories = [
+  "Pielęgnacja",
+  "Perfumy",
+  "Makijaż",
+  "Włosy",
+  "Pielęgnacja ciała",
+  "Akcesoria",
+];
 const brandCatalog = [...sephoraBrands];
 const retailers = [...plRetailers];
-const czRetailers = [...czDummyRetailers];
 const scopes = ["Wielokanałowa", "Tylko e-commerce", "Tylko aplikacja mobilna"];
 const channels = [
   "Media społecznościowe",
@@ -195,7 +201,7 @@ export default function PromotionFormModal({
   onSave: (promotion: FormState) => void;
   editingPromotion?: Promotion | null;
 }) {
-  const { brandsByMarket, products } = useAppContext();
+  const { brandsByMarket, products, retailers: retailerOptions } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const promotionFieldConfig = getPromotionTypeFieldConfig(
@@ -444,8 +450,15 @@ export default function PromotionFormModal({
       threshold: raw.threshold || "",
       averageMarketDiscount: raw.averageMarketDiscount || "",
       name: raw.name || "",
-      brands: findKnownMatches(raw.brands || "", brandCatalog) as string,
-      retailer: findKnownMatches(raw.retailer || "", retailers) as string,
+      // Real brand/retailer lists from Supabase (both markets — the OCR
+      // result doesn't know the selected market yet at this point).
+      brands: findKnownMatches(raw.brands || "", [...brandsByMarket.PL, ...brandsByMarket.CZ]) as string,
+      retailer: findKnownMatches(raw.retailer || "", retailerOptions.map((r) => r.name)) as string,
+      // Category matching stays against the Polish-labeled constant below —
+      // the form stores category in Polish internally (translated to
+      // English later via toEnglish()), but Supabase's categories are
+      // already English, so matching OCR'd Polish text against them here
+      // would never hit.
       category: findKnownMatches(raw.category || "", categories) as string,
       notes: raw.notes || "",
     };
@@ -611,11 +624,10 @@ export default function PromotionFormModal({
     });
   }, [editingPromotion]);
 
-  const marketRetailers = form.market === "CZ" ? czRetailers : retailers;
-  const marketBrandOptions = getMarketBrandOptions(
-    form.market,
-    brandsByMarket[form.market],
-  );
+  const marketRetailers = retailerOptions
+    .filter((r) => r.market === form.market)
+    .map((r) => r.name);
+  const marketBrandOptions = brandsByMarket[form.market];
   const marketProductOptions = products.filter(
     (item) => item.market === form.market,
   );
@@ -886,6 +898,8 @@ export default function PromotionFormModal({
                               Fragrance: "Perfumy",
                               Makeup: "Makijaż",
                               Haircare: "Włosy",
+                              "Body Care": "Pielęgnacja ciała",
+                              Tools: "Akcesoria",
                             }[selected.category],
                         ) || current.category
                         : current.category,

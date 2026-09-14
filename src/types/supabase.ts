@@ -157,6 +157,7 @@ export type Database = {
           channel: string | null
           created_at: string
           created_by: string | null
+          currency: string | null
           date_from: string
           date_to: string
           discount_text: string | null
@@ -166,8 +167,10 @@ export type Database = {
           name: string
           notes: string | null
           parent_promotion_id: string | null
+          price: number | null
           price_after_discount: number | null
           promotion_type: string | null
+          rating: number | null
           rejection_reason: string | null
           retailer_id: string
           reviewed_at: string | null
@@ -176,6 +179,7 @@ export type Database = {
           sku_count: number | null
           source: string
           status: string
+          stock: number | null
           threshold: string | null
           updated_at: string
         }
@@ -185,6 +189,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
           date_from: string
           date_to: string
           discount_text?: string | null
@@ -194,8 +199,10 @@ export type Database = {
           name: string
           notes?: string | null
           parent_promotion_id?: string | null
+          price?: number | null
           price_after_discount?: number | null
           promotion_type?: string | null
+          rating?: number | null
           rejection_reason?: string | null
           retailer_id: string
           reviewed_at?: string | null
@@ -204,6 +211,7 @@ export type Database = {
           sku_count?: number | null
           source?: string
           status?: string
+          stock?: number | null
           threshold?: string | null
           updated_at?: string
         }
@@ -213,6 +221,7 @@ export type Database = {
           channel?: string | null
           created_at?: string
           created_by?: string | null
+          currency?: string | null
           date_from?: string
           date_to?: string
           discount_text?: string | null
@@ -222,8 +231,10 @@ export type Database = {
           name?: string
           notes?: string | null
           parent_promotion_id?: string | null
+          price?: number | null
           price_after_discount?: number | null
           promotion_type?: string | null
+          rating?: number | null
           rejection_reason?: string | null
           retailer_id?: string
           reviewed_at?: string | null
@@ -232,6 +243,7 @@ export type Database = {
           sku_count?: number | null
           source?: string
           status?: string
+          stock?: number | null
           threshold?: string | null
           updated_at?: string
         }

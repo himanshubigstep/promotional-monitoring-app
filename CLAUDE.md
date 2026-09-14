@@ -21,11 +21,11 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 |---|---|
 | Backend (DB, auth, roles, persistence) | Done |
 | Scraper (4/7 retailer sites) | Done |
-| Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | Existing, not yet wired to real DB |
+| Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | **In PR #4, awaiting review.** Wired to real Supabase data, static files kept as a verified fallback |
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
 | Review queue (approve/edit/reject `pending_review` rows) | **In PR #3, awaiting Himanshu's review.** Verified end-to-end against local + cloud DB |
 | Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists |
-| AI chat assistant | **Merged.** Works well, live-tested (grounded Q&A + working navigation links) — but reads static `AppContext` data only, zero references to Supabase. Needs reconciling once real data lands (see below) |
+| AI chat assistant | **Merged, but now stale.** Reads static `AppContext` data — once PR #4 merges, `assistantTools.ts` will keep reading the *fallback* shape correctly (same `Promotion`/`Product` types), but the `catalog`/`productsList` split it was written against no longer exists as two things; needs a quick pass to confirm it still behaves post-merge |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
 ## Repository structure
@@ -57,14 +57,27 @@ scripts/generate-seed.js     Regenerates supabase/seed.sql from src/data/*
 ```
 src/
   App.tsx                    Routes + layout shell
-  context/AppContext.tsx     Currently all in-memory state — this is what gets replaced with real Supabase calls
+  context/AppContext.tsx     Real Supabase reads/writes (PR #4) — public shape for reads is unchanged from the
+                              original in-memory version, so most pages needed no changes at all
   pages/                     Dashboard, Promotions, PromotionalCalendar, BrandAnalytics, StoreComparison, ProductDetail
   components/                PromotionFormModal (manual entry + OCR upload), PromotionFilterModal, etc.
   data/                      Static seed arrays (retailers.ts, brands.ts, catalog.ts, products.json, productTypes.ts) —
-                              source of truth for supabase/seed.sql, but will stop being the app's live data source
-                              once AppContext is wired to Supabase
+                              source of truth for supabase/seed.sql AND the load-time fallback if Supabase is
+                              unreachable (see below) — never delete these
   utils/geminiOcr.ts          Manual-upload OCR — client-side Gemini call, key currently exposed (needs server-side move)
 ```
+
+### Supabase data wiring (Gajendra, PR #4, awaiting Himanshu's review — not yet merged)
+
+```
+src/lib/promotionsData.ts    Fetch (with fallback), the DB-row <-> Promotion/Product mapper, async write functions
+supabase/migrations/0004_product_display_fields.sql   Adds price/currency/rating/stock to promotions (nullable,
+                                                          manual-entry only — no scraper/OCR source for these)
+```
+
+**Two things worth knowing before touching this:**
+1. **The old "catalog" (static competitor dataset) vs "productsList" (managed products) split is gone** — both are now the same unified Supabase-backed list. `retailers.is_client` is the real signal for "is this ours", replacing the fragile `(Your brand)` text match.
+2. **Fallback is real, not aspirational.** If the Supabase fetch fails at load, `AppContext` falls back to the exact original static dataset (verified live) and exposes `usingFallbackData: boolean`. Writes are blocked with a clear error while in fallback mode — they don't silently apply to local state only. `addPromotion`/`updatePromotion`/`deletePromotion`/`addProduct`/`addBrand` are all `async` now for this reason; if you're calling any of them, `await` and handle the rejection.
 
 ### AI chat assistant (Divyanshu, merged)
 
@@ -84,7 +97,7 @@ App.tsx (+2 lines)                                    Mounts the widget
 
 **Verified before merge:** clean merge against main (no conflicts — the App.tsx overlap flagged earlier turned out to be a non-issue since it's only 2 additive lines), typecheck/build/existing tests all pass, and live-tested both a data query (correct, grounded answer + product cards) and navigation ("take me to brand analytics" → real clickable card → actually navigated).
 
-**Real follow-up, not yet started:** `assistantTools.ts` reads only the static frontend data. Once Himanshu wires `AppContext` to Supabase, this needs updating too, or the assistant will silently answer from stale/fake data instead of the real DB (including anything the scraper wrote).
+**Follow-up, now partially resolved by PR #4:** `assistantTools.ts` reads `AppContext`'s `productsList`/`promotions` (real Supabase data once #4 merges) plus a separate `catalog` import that #4 removes — `AssistantWidget.tsx` was updated to point `catalog` at the same unified `productsList` instead, so `assistantTools.ts` itself needs no changes. Worth a quick smoke-test after both PRs land, since this wasn't originally built against a single unified list.
 
 ### Review queue (Gajendra, PR #3, awaiting Himanshu's review — not yet merged)
 

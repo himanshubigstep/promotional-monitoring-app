@@ -2,17 +2,27 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import { catalog } from "../data/catalog";
 import { czDummyBrands, sephoraBrands } from "../data/brands";
+import { czDummyRetailers, plRetailers } from "../data/retailers";
 import {
   czProducts as initialCzProducts,
   plProducts as initialPlProducts,
-  upsertProductInMarket,
 } from "../data/marketProducts";
 import type { Product, PromotionType } from "../data/productTypes";
+import {
+  addBrandRow,
+  deletePromotionRow,
+  insertPromotion,
+  loadApprovedData,
+  updatePromotionRow,
+  type CategoryOption,
+  type RetailerOption,
+} from "../lib/promotionsData";
 
 export type UserRole = "Admin" | "Data Analytics" | "Viewer";
 
@@ -86,6 +96,9 @@ export type Promotion = {
   creativeData?: string;
   averageMarketDiscount: string;
   createdAt: string;
+  // True when the row's retailer is the client (retailers.is_client) —
+  // replaces the old "(Your brand)" text-matching heuristic.
+  isClient?: boolean;
 };
 
 type AppContextValue = {
@@ -96,21 +109,27 @@ type AppContextValue = {
   productsList: Product[];
   brands: string[];
   brandsByMarket: Record<"PL" | "CZ", string[]>;
+  retailers: RetailerOption[];
+  categories: CategoryOption[];
   lastAddedProduct: Product | null;
-  addPromotion: (promotion: Omit<Promotion, "id" | "createdAt">) => void;
-  updatePromotion: (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => void;
-  addBrand: (brand: string, market?: "PL" | "CZ") => void;
-  addProduct: (product: Product) => void;
-  deleteProduct: (id: string) => void;
-  deletePromotion: (id: string) => void;
+  addPromotion: (promotion: Omit<Promotion, "id" | "createdAt">) => Promise<void>;
+  updatePromotion: (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => Promise<void>;
+  addBrand: (brand: string, market?: "PL" | "CZ") => Promise<void>;
+  addProduct: (product: Product) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  deletePromotion: (id: string) => Promise<void>;
   canEdit: boolean;
   filters: PromotionFilters;
   setFilters: (filters: PromotionFilters) => void;
+  loading: boolean;
+  usingFallbackData: boolean;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
 
-function promotionsFromProducts(): Promotion[] {
+// Used only when Supabase is unreachable at load — see the useEffect below.
+// Static files are deliberately kept (not deleted) for exactly this path.
+function promotionsFromStaticCatalog(): Promotion[] {
   return catalog
     .filter((product) => product.market === "PL" || product.market === "CZ")
     .map((product) => ({
@@ -137,11 +156,37 @@ function promotionsFromProducts(): Promotion[] {
     }));
 }
 
+function staticRetailerOptions(): RetailerOption[] {
+  return [
+    ...plRetailers.map((name) => ({
+      id: name,
+      name,
+      market: "PL" as const,
+      isClient: name === "sephora",
+    })),
+    ...czDummyRetailers.map((name) => ({
+      id: name,
+      name,
+      market: "CZ" as const,
+      isClient: false,
+    })),
+  ];
+}
+
+function staticCategoryOptions(): CategoryOption[] {
+  return ["Skincare", "Fragrance", "Makeup", "Haircare", "Body Care", "Tools"].map((name) => ({
+    id: name,
+    name,
+  }));
+}
+
 const englishPromotionValues: Record<string, string> = {
   Pielęgnacja: "Skincare",
   Perfumy: "Fragrance",
   Makijaż: "Makeup",
   Włosy: "Haircare",
+  "Pielęgnacja ciała": "Body Care",
+  Akcesoria: "Tools",
   Wielokanałowa: "Omnichannel",
   "Tylko e-commerce": "E-commerce only",
   "Tylko aplikacja mobilna": "Mobile app only",
@@ -159,249 +204,169 @@ function toEnglish(value: string) {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>("Admin");
-  const [promotions, setPromotions] = useState<Promotion[]>(
-    promotionsFromProducts,
-  );
-  const [brandsByMarket, setBrandsByMarket] = useState<
-    Record<"PL" | "CZ", string[]>
-  >({
-    PL: [...sephoraBrands],
-    CZ: [...czDummyBrands],
+  const [promotions, setPromotions] = useState<Promotion[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [brandsByMarket, setBrandsByMarket] = useState<Record<"PL" | "CZ", string[]>>({
+    PL: [],
+    CZ: [],
   });
+  const [retailers, setRetailers] = useState<RetailerOption[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const brands = brandsByMarket.PL;
-  const [marketProducts, setMarketProducts] = useState<
-    Record<"PL" | "CZ", Product[]>
-  >({
-    PL: [...initialPlProducts],
-    CZ: [...initialCzProducts],
-  });
-  const productsList = useMemo(
-    () => [...marketProducts.PL, ...marketProducts.CZ],
-    [marketProducts],
-  );
-  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(
-    null,
-  );
-  const [filters, setFilters] = useState<PromotionFilters>(
-    emptyPromotionFilters,
-  );
+  const [lastAddedProduct, setLastAddedProduct] = useState<Product | null>(null);
+  const [filters, setFilters] = useState<PromotionFilters>(emptyPromotionFilters);
+  const [loading, setLoading] = useState(true);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
 
-  const addBrand = useCallback((brand: string, market: "PL" | "CZ" = "PL") => {
-    const normalizedBrand = brand.trim();
-    if (!normalizedBrand) return;
+  const refresh = useCallback(async () => {
+    const data = await loadApprovedData();
+    setPromotions(data.promotions);
+    setProducts(data.products);
+    setBrandsByMarket(data.brandsByMarket);
+    setRetailers(data.retailers);
+    setCategories(data.categories);
+    return data;
+  }, []);
 
-    setBrandsByMarket((current) => {
-      const nextList = current[market] ?? [];
-      if (
-        nextList.some(
-          (item) => item.toLowerCase() === normalizedBrand.toLowerCase(),
-        )
-      ) {
-        return current;
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        const data = await loadApprovedData();
+        if (cancelled) return;
+        setPromotions(data.promotions);
+        setProducts(data.products);
+        setBrandsByMarket(data.brandsByMarket);
+        setRetailers(data.retailers);
+        setCategories(data.categories);
+        setUsingFallbackData(false);
+      } catch (err) {
+        console.warn("Falling back to static data — Supabase fetch failed:", err);
+        if (cancelled) return;
+        setPromotions(promotionsFromStaticCatalog());
+        setProducts([...initialPlProducts, ...initialCzProducts]);
+        setBrandsByMarket({ PL: [...sephoraBrands], CZ: [...czDummyBrands] });
+        setRetailers(staticRetailerOptions());
+        setCategories(staticCategoryOptions());
+        setUsingFallbackData(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
+    }
 
-      return {
-        ...current,
-        [market]: [...nextList, normalizedBrand],
-      };
-    });
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const addProduct = useCallback((product: Product) => {
-    const marketKey = product.market === "PL" ? "PL" : "CZ";
-
-    setMarketProducts((current) => ({
-      ...current,
-      [marketKey]: upsertProductInMarket(marketKey, product, current[marketKey] ?? []),
-    }));
-
-    setLastAddedProduct(product);
-  }, []);
-
-  const updatePromotion = useCallback(
-    (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => {
-      const normalizedPromotion = {
-        ...promotion,
-        category: toEnglish(promotion.category),
-        scope: toEnglish(promotion.scope),
-        channel: toEnglish(promotion.channel),
-      };
-
-      setPromotions((current) =>
-        current.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                ...normalizedPromotion,
-                id,
-              }
-            : item,
-        ),
+  const assertWritable = useCallback(() => {
+    if (usingFallbackData) {
+      throw new Error(
+        "Can't save right now — the database is unreachable and the app is showing offline data.",
       );
+    }
+  }, [usingFallbackData]);
 
-      const discountMatch = normalizedPromotion.discount.match(/(\d+(?:\.\d+)?)/);
-      const discount = discountMatch ? Number(discountMatch[1]) : 0;
-      const promoPriceValue = Number(normalizedPromotion.promoPrice || 0);
-      const categoryMap: Record<string, Product["category"]> = {
-        Pielęgnacja: "Skincare",
-        Perfumy: "Fragrance",
-        Makijaż: "Makeup",
-        Włosy: "Haircare",
-      };
-
-      setMarketProducts((current) => ({
-        PL: current.PL.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                name: normalizedPromotion.name,
-                brand: normalizedPromotion.brands || item.brand,
-                category:
-                  categoryMap[normalizedPromotion.category] ||
-                  (normalizedPromotion.category as Product["category"]),
-                price: promoPriceValue > 0 ? promoPriceValue : item.price,
-                currency: normalizedPromotion.market === "CZ" ? "CZK" : "PLN",
-                market: normalizedPromotion.market,
-                retailer: normalizedPromotion.retailer || item.retailer,
-                competitorDiscount:
-                  normalizedPromotion.promotionType === "Buy one get one free"
-                    ? 100
-                    : Math.max(discount, item.competitorDiscount || 0),
-                fromDate: normalizedPromotion.from,
-                toDate: normalizedPromotion.to,
-                promotionName: normalizedPromotion.name,
-                description: normalizedPromotion.notes,
-                promotionDescription: normalizedPromotion.notes,
-                terms: normalizedPromotion.notes,
-                priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : item.priceAfterDiscount,
-                promoPrice: promoPriceValue > 0 ? promoPriceValue : item.promoPrice,
-                promotionType: normalizedPromotion.promotionType,
-              }
-            : item,
-        ),
-        CZ: current.CZ.map((item) =>
-          item.id === id
-            ? {
-                ...item,
-                name: normalizedPromotion.name,
-                brand: normalizedPromotion.brands || item.brand,
-                category:
-                  categoryMap[normalizedPromotion.category] ||
-                  (normalizedPromotion.category as Product["category"]),
-                price: promoPriceValue > 0 ? promoPriceValue : item.price,
-                currency: normalizedPromotion.market === "CZ" ? "CZK" : "PLN",
-                market: normalizedPromotion.market,
-                retailer: normalizedPromotion.retailer || item.retailer,
-                competitorDiscount:
-                  normalizedPromotion.promotionType === "Buy one get one free"
-                    ? 100
-                    : Math.max(discount, item.competitorDiscount || 0),
-                fromDate: normalizedPromotion.from,
-                toDate: normalizedPromotion.to,
-                promotionName: normalizedPromotion.name,
-                description: normalizedPromotion.notes,
-                promotionDescription: normalizedPromotion.notes,
-                terms: normalizedPromotion.notes,
-                priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : item.priceAfterDiscount,
-                promoPrice: promoPriceValue > 0 ? promoPriceValue : item.promoPrice,
-                promotionType: normalizedPromotion.promotionType,
-              }
-            : item,
-        ),
-      }));
+  const addBrand = useCallback(
+    async (brand: string, market: "PL" | "CZ" = "PL") => {
+      assertWritable();
+      await addBrandRow(brand, market);
+      await refresh();
     },
-    [],
+    [refresh, assertWritable],
   );
 
   const addPromotion = useCallback(
-    (promotion: Omit<Promotion, "id" | "createdAt">) => {
+    async (promotion: Omit<Promotion, "id" | "createdAt">) => {
+      assertWritable();
       const normalizedPromotion = {
         ...promotion,
         category: toEnglish(promotion.category),
         scope: toEnglish(promotion.scope),
         channel: toEnglish(promotion.channel),
       };
-      const next = {
-        ...normalizedPromotion,
-        id: `PROMO-${String(promotions.length + 1).padStart(3, "0")}`,
-        createdAt: new Date().toISOString().slice(0, 10),
-      };
-      const updated = [next, ...promotions];
-      setPromotions(updated);
-      const discountMatch =
-        normalizedPromotion.discount.match(/(\d+(?:\.\d+)?)/);
-      const discount = discountMatch ? Number(discountMatch[1]) : 0;
-      const categoryMap: Record<string, Product["category"]> = {
-        Pielęgnacja: "Skincare",
-        Perfumy: "Fragrance",
-        Makijaż: "Makeup",
-        Włosy: "Haircare",
-      };
-      const promoPriceValue = Number(next.promoPrice || 0);
-      const product: Product = {
-        id: next.id,
-        name: next.name,
-        brand: next.brands || "",
-        category:
-          categoryMap[next.category] || (next.category as Product["category"]),
-        price: promoPriceValue > 0 ? promoPriceValue : 0,
-        currency: next.market === "CZ" ? "CZK" : "PLN",
-        market: next.market,
-        retailer: next.retailer,
-        rating: 0,
-        stock: next.skuCount,
-        competitorDiscount: next.promotionType === "Buy one get one free" ? 100 : discount,
-        image:
-          promotion.creativeData ||
-          "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
-        fromDate: next.from,
-        toDate: next.to,
-        promotionName: next.name,
-        description: next.notes,
-        promotionDescription: next.notes,
-        terms: next.notes,
-        priceAfterDiscount: promoPriceValue > 0 ? promoPriceValue : 0,
-        promoPrice: promoPriceValue > 0 ? promoPriceValue : undefined,
-        promotionType: next.promotionType,
-      };
-      setMarketProducts((current) => ({
-        ...current,
-        [next.market]: upsertProductInMarket(
-          next.market,
-          product,
-          current[next.market] ?? [],
-        ),
-      }));
-      setLastAddedProduct(product);
+      const newId = await insertPromotion(normalizedPromotion);
+      const data = await refresh();
+      setLastAddedProduct(data.products.find((p) => p.id === newId) ?? null);
     },
-    [promotions],
+    [refresh, assertWritable],
   );
 
-  const deleteProduct = useCallback((id: string) => {
-    setMarketProducts((current) => ({
-      PL: current.PL.filter((item) => item.id !== id),
-      CZ: current.CZ.filter((item) => item.id !== id),
-    }));
-    setPromotions((current) => current.filter((item) => item.id !== id));
-  }, []);
+  const updatePromotion = useCallback(
+    async (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => {
+      assertWritable();
+      const normalizedPromotion = {
+        ...promotion,
+        category: toEnglish(promotion.category),
+        scope: toEnglish(promotion.scope),
+        channel: toEnglish(promotion.channel),
+      };
+      await updatePromotionRow(id, normalizedPromotion);
+      await refresh();
+    },
+    [refresh, assertWritable],
+  );
 
-  const deletePromotion = useCallback((id: string) => {
-    setPromotions((current) => current.filter((item) => item.id !== id));
-    setMarketProducts((current) => ({
-      PL: current.PL.filter((item) => item.id !== id),
-      CZ: current.CZ.filter((item) => item.id !== id),
-    }));
-  }, []);
+  // Product and Promotion are the same underlying row (the earlier split
+  // between a static "catalog" and a separately-tracked "productsList" is
+  // gone — see Decisions.md). addProduct exists for the bulk-upload flow,
+  // which builds a Product directly rather than going through the form.
+  const addProduct = useCallback(
+    async (product: Product) => {
+      assertWritable();
+      const promotionInput: Omit<Promotion, "id" | "createdAt"> = {
+        market: product.market,
+        name: product.promotionName || product.name,
+        from: product.fromDate,
+        to: product.toDate,
+        scope: "Omnichannel",
+        channel: "In-store",
+        category: product.category,
+        brands: product.brand,
+        retailer: product.retailer,
+        discount: product.competitorDiscount ? `-${product.competitorDiscount}%` : "",
+        threshold: "",
+        promoPrice: product.priceAfterDiscount ? String(product.priceAfterDiscount) : "",
+        promotionType: product.promotionType || "Fixed promotion",
+        skuCount: product.stock || 1,
+        notes: product.terms || product.description || "",
+        creativeName: "",
+        creativeData: undefined,
+        averageMarketDiscount: "",
+      };
+      const newId = await insertPromotion(promotionInput);
+      const data = await refresh();
+      setLastAddedProduct(data.products.find((p) => p.id === newId) ?? null);
+    },
+    [refresh, assertWritable],
+  );
+
+  const deletePromotion = useCallback(
+    async (id: string) => {
+      assertWritable();
+      await deletePromotionRow(id);
+      await refresh();
+    },
+    [refresh, assertWritable],
+  );
+
+  // Same underlying row as deletePromotion now — kept as a separate name
+  // only because existing pages call both.
+  const deleteProduct = deletePromotion;
 
   const value = useMemo(
     () => ({
       role,
       setRole,
       promotions,
-      products: productsList,
-      productsList,
+      products,
+      productsList: products,
       brands,
       brandsByMarket,
+      retailers,
+      categories,
       lastAddedProduct,
       addPromotion,
       updatePromotion,
@@ -412,13 +377,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       canEdit: role !== "Viewer",
       filters,
       setFilters,
+      loading,
+      usingFallbackData,
     }),
     [
       role,
       promotions,
-      productsList,
+      products,
       brands,
       brandsByMarket,
+      retailers,
+      categories,
       lastAddedProduct,
       addPromotion,
       updatePromotion,
@@ -427,6 +396,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       deleteProduct,
       deletePromotion,
       filters,
+      loading,
+      usingFallbackData,
     ],
   );
 

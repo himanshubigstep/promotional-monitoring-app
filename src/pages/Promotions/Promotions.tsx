@@ -37,11 +37,22 @@ export default function Promotions() {
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [savedPage, setSavedPage] = useState(1);
   const pageSize = 10;
   const savedPageSize = 10;
+
+  async function handleDelete(id: string) {
+    setActionError(null);
+    try {
+      await deletePromotion(id);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Failed to delete.");
+    }
+  }
+
   const filteredProducts = useMemo(
     () =>
       catalog
@@ -164,6 +175,9 @@ export default function Promotions() {
           )}
         </Box>
       </Box>
+      {actionError && (
+        <Box sx={{ color: "#c62828", fontSize: 13 }}>{actionError}</Box>
+      )}
       <Card
         elevation={0}
         className="rounded-xl border border-[#e5e5e5] bg-white"
@@ -274,7 +288,7 @@ export default function Promotions() {
                         onClick={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          deletePromotion(product.id);
+                          handleDelete(product.id);
                         }}
                         sx={{
                           backgroundColor: "rgba(255,255,255,0.95)",
@@ -466,7 +480,7 @@ export default function Promotions() {
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
-                            deletePromotion(promotion.id);
+                            handleDelete(promotion.id);
                           }}
                           sx={{
                             color: "#e50043",
@@ -515,14 +529,19 @@ export default function Promotions() {
           setFormOpen(false);
           setEditingPromotion(null);
         }}
-        onSave={(promotion) => {
-          if (editingPromotion) {
-            updatePromotion(editingPromotion.id, promotion);
-          } else {
-            addPromotion(promotion);
+        onSave={async (promotion) => {
+          setActionError(null);
+          try {
+            if (editingPromotion) {
+              await updatePromotion(editingPromotion.id, promotion);
+            } else {
+              await addPromotion(promotion);
+            }
+            setFormOpen(false);
+            setEditingPromotion(null);
+          } catch (err) {
+            setActionError(err instanceof Error ? err.message : "Failed to save.");
           }
-          setFormOpen(false);
-          setEditingPromotion(null);
         }}
       />
     </Box>

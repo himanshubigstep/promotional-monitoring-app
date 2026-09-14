@@ -3,16 +3,19 @@ import { Box, Button, Modal } from "@mui/material";
 import {
   emptyPromotionFilters,
   PromotionFilters,
+  useAppContext,
 } from "../context/AppContext";
 import FormField from "./FormField";
-import { czDummyRetailers, plRetailers } from "../data/retailers";
 import { useEffect, useState } from "react";
 
-const categories = ["All", "Skincare", "Fragrance", "Makeup", "Haircare"];
-const getVisibleRetailers = (market: string) => {
-  if (market === "CZ") return ["All", ...czDummyRetailers];
-  if (market === "PL") return ["All", ...plRetailers];
-  return ["All", ...plRetailers, ...czDummyRetailers];
+const getVisibleRetailerNames = (
+  retailers: { name: string; market: "PL" | "CZ" }[],
+  market: string,
+) => {
+  const names = retailers
+    .filter((r) => market === "All" || r.market === market)
+    .map((r) => r.name);
+  return ["All", ...names];
 };
 const discounts = ["All", "10%+", "20%+", "25%+", "30%+"];
 const options = (values: string[]) =>
@@ -29,6 +32,7 @@ export default function PromotionFilterModal({
   onClose: () => void;
   onApply: (filters: PromotionFilters) => void;
 }) {
+  const { retailers, categories } = useAppContext();
   const [draftFilters, setDraftFilters] = useState(filters);
 
   useEffect(() => {
@@ -80,14 +84,14 @@ export default function PromotionFilterModal({
             label="Product category"
             value={draftFilters.category}
             onValueChange={(value) => update("category", value)}
-            options={options(categories)}
+            options={options(["All", ...categories.map((c) => c.name)])}
           />
           <FormField
             type="select"
             label="Retailer / store"
             value={draftFilters.retailer}
             onValueChange={(value) => update("retailer", value)}
-            options={options(getVisibleRetailers(draftFilters.market))}
+            options={options(getVisibleRetailerNames(retailers, draftFilters.market))}
           />
           <FormField
             type="select"
