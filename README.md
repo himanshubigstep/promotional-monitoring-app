@@ -2,6 +2,23 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Backend setup (Supabase)
+
+The backend is Postgres + Auth + Storage via Supabase, run locally through Docker — no cloud account needed for local development.
+
+1. Install Docker Desktop and make sure it's running.
+2. Start the local stack: `npx supabase start` (first run pulls images, takes a few minutes).
+3. Apply the schema and seed data: `npx supabase db reset`.
+4. Get your local keys: `npx supabase status`.
+5. Copy `.env.local.example` to `.env.local` and fill in `REACT_APP_SUPABASE_URL` / `REACT_APP_SUPABASE_ANON_KEY` from that output.
+6. `npm start` as usual.
+
+Schema lives in `supabase/migrations/` (edit these, not the DB directly — run `npx supabase db reset` to reapply). Seed data in `supabase/seed.sql` is generated from `src/data/retailers.ts`, `src/data/brands.ts`, and `src/data/products.json` — regenerate it with `node scripts/generate-seed.js` if those files change, don't hand-edit it.
+
+Local Supabase Studio (DB browser/table editor) runs at the URL printed by `supabase status` (default `http://localhost:54323`).
+
+To point at a real hosted Supabase project later instead of local Docker: create the project at supabase.com, run `npx supabase link`, `npx supabase db push`, and swap the URL/keys in `.env.local` for the cloud project's values — no code changes needed.
+
 ## Available Scripts
 
 In the project directory, you can run:
