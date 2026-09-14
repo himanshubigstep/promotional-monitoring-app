@@ -314,7 +314,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         channel: toEnglish(promotion.channel),
       };
       const newId = await insertPromotion(normalizedPromotion);
-      const data = await refresh();
+      // const data = await refresh();
       setLastAddedProductId(newId);
     },
     [refresh, assertWritable],
@@ -363,7 +363,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         averageMarketDiscount: "",
       };
       const newId = await insertPromotion(promotionInput);
-      const data = await refresh();
+      // const data = await refresh();
       setLastAddedProductId(newId);
     },
     [refresh, assertWritable],

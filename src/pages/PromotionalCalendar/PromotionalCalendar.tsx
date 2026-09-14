@@ -32,7 +32,7 @@ export default function PromotionalCalendar() {
   const filteredCatalog = useMemo(
     () =>
       products.filter((product) => matchesPromotionFilters(product, filters)),
-    [filters],
+    [filters, products],
   );
 
   // Group campaigns for the Gantt view

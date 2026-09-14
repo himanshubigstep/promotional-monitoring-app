@@ -14,7 +14,6 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { catalog } from "../../data/catalog";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 
 export default function StoreComparison() {
