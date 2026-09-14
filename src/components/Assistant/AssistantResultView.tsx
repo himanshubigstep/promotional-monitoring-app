@@ -1,5 +1,7 @@
+import { useState } from "react";
 import {
   Box,
+  Button,
   Card,
   Chip,
   Table,
@@ -9,12 +11,42 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { NorthEastRounded, StorefrontRounded } from "@mui/icons-material";
+import {
+  ExpandLessRounded,
+  ExpandMoreRounded,
+  NorthEastRounded,
+  StorefrontRounded,
+} from "@mui/icons-material";
 import { Link } from "react-router-dom";
-import type { AssistantResult } from "../../types/assistant";
+import type {
+  AssistantResult,
+  CellValue,
+  ProductCardItem,
+  PromotionCardItem,
+} from "../../types/assistant";
+import { renderInline } from "./FormattedText";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+
+// A large table/card list is now shown 5-at-a-time with a "View More"
+// expander (see ExpandableSection below) instead of dumping 30+ rows into
+// the chat at once — the full result is still there, just not all rendered
+// up front.
+const INITIAL_VISIBLE = 5;
+
+function useExpandable<T>(items: T[], initialCount = INITIAL_VISIBLE) {
+  const [expanded, setExpanded] = useState(false);
+  const hasMore = items.length > initialCount;
+  const visible = expanded ? items : items.slice(0, initialCount);
+  return {
+    visible,
+    expanded,
+    hasMore,
+    hiddenCount: items.length - visible.length,
+    toggle: () => setExpanded((current) => !current),
+  };
+}
 
 function ResultCard({ children }: { children: React.ReactNode }) {
   return (
@@ -39,6 +71,78 @@ function ResultHeader({ title, caption }: { title: string; caption?: string }) {
         </Typography>
       )}
     </Box>
+  );
+}
+
+// Deterministic, tool-computed findings (never LLM text) shown as a small
+// bullet block above the table/cards — the "Key findings" layer from the
+// task brief, grounded in the exact same data the table renders.
+function InsightsList({ items }: { items: string[] }) {
+  if (!items.length) return null;
+  return (
+    <Box className="flex flex-col gap-1 border-b border-[#e7eaee] bg-[#eaf1ff] px-3.5 py-2.5">
+      {items.map((item, index) => (
+        <Box key={index} className="flex items-start gap-1.5">
+          <Box
+            sx={{
+              width: 4,
+              height: 4,
+              borderRadius: "50%",
+              backgroundColor: "#3b6fed",
+              mt: "7px",
+              flexShrink: 0,
+            }}
+          />
+          <Typography sx={{ fontSize: 12, color: "#20242b", lineHeight: 1.4 }}>
+            {renderInline(item)}
+          </Typography>
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function ShowMoreButton({
+  hasMore,
+  hiddenCount,
+  expanded,
+  onToggle,
+}: {
+  hasMore: boolean;
+  hiddenCount: number;
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  if (!hasMore) return null;
+  return (
+    <Box className="flex justify-center border-t border-[#e7eaee] py-1.5">
+      <Button
+        size="small"
+        onClick={onToggle}
+        endIcon={expanded ? <ExpandLessRounded fontSize="small" /> : <ExpandMoreRounded fontSize="small" />}
+        sx={{
+          color: "#4f82f7",
+          fontWeight: 700,
+          fontSize: 12,
+          textTransform: "none",
+          "&:hover": { backgroundColor: "#eaf1ff" },
+        }}
+      >
+        {expanded ? "Show less" : `View more (${hiddenCount})`}
+      </Button>
+    </Box>
+  );
+}
+
+// Shown between the header/insights and the table/cards, only while
+// collapsed — self-evident once everything is visible, so it disappears on
+// expand instead of saying "showing 30 of 30".
+function ShowingCount({ visible, total, expanded }: { visible: number; total: number; expanded: boolean }) {
+  if (expanded || visible >= total) return null;
+  return (
+    <Typography sx={{ fontSize: 10.5, color: "#737b88", textAlign: "center", pt: 1 }}>
+      Showing {visible} of {total} results
+    </Typography>
   );
 }
 
@@ -102,6 +206,168 @@ function DataTable({
   );
 }
 
+function ExpandableTable({
+  title,
+  caption,
+  insights,
+  columns,
+  rows,
+}: {
+  title: string;
+  caption?: string;
+  insights?: string[];
+  columns: string[];
+  rows: CellValue[][];
+}) {
+  const { visible, expanded, hasMore, hiddenCount, toggle } = useExpandable(rows);
+  return (
+    <ResultCard>
+      <ResultHeader title={title} caption={caption} />
+      {insights && <InsightsList items={insights} />}
+      <DataTable columns={columns} rows={visible} />
+      <ShowingCount visible={visible.length} total={rows.length} expanded={expanded} />
+      <ShowMoreButton hasMore={hasMore} hiddenCount={hiddenCount} expanded={expanded} onToggle={toggle} />
+    </ResultCard>
+  );
+}
+
+function ProductCard({ item }: { item: ProductCardItem }) {
+  return (
+    <Box className="flex gap-2.5 rounded-lg border border-[#e7eaee] p-2">
+      <img
+        src={item.image || fallbackImage}
+        alt={item.name}
+        className="h-16 w-16 shrink-0 rounded-md object-cover"
+        onError={(event) => {
+          event.currentTarget.onerror = null;
+          event.currentTarget.src = fallbackImage;
+        }}
+      />
+      <Box className="min-w-0 flex-1">
+        <Typography noWrap sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}>
+          {item.name}
+        </Typography>
+        <Typography sx={{ color: "#737b88", fontSize: 11 }}>
+          {item.brand} • {item.retailer}
+        </Typography>
+        <Box className="mt-1 flex flex-wrap items-center gap-1.5">
+          {item.priceAfterDiscount !== null && item.priceAfterDiscount !== item.price ? (
+            <>
+              <Typography sx={{ color: "#f3873a", fontSize: 12.5, fontWeight: 800 }}>
+                {item.priceAfterDiscount} {item.currency}
+              </Typography>
+              <Typography sx={{ color: "#a0a8b3", fontSize: 11, textDecoration: "line-through" }}>
+                {item.price} {item.currency}
+              </Typography>
+            </>
+          ) : (
+            <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
+              {item.price !== null ? `${item.price} ${item.currency}` : "—"}
+            </Typography>
+          )}
+          {item.discount !== null && item.discount > 0 && (
+            <Chip
+              label={`-${item.discount}%`}
+              size="small"
+              sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#f3873a", color: "#fff" }}
+            />
+          )}
+          <Chip
+            label={item.source === "ours" ? "Ours" : "Competitor"}
+            size="small"
+            variant="outlined"
+            sx={{ height: 18, fontSize: 9.5, fontWeight: 700 }}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
+function ExpandableProductCards({
+  title,
+  caption,
+  insights,
+  items,
+}: {
+  title: string;
+  caption?: string;
+  insights?: string[];
+  items: ProductCardItem[];
+}) {
+  const { visible, expanded, hasMore, hiddenCount, toggle } = useExpandable(items);
+  return (
+    <ResultCard>
+      <ResultHeader title={title} caption={caption} />
+      {insights && <InsightsList items={insights} />}
+      <Box className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2">
+        {items.length === 0 && (
+          <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>No matching products found.</Typography>
+        )}
+        {visible.map((item) => (
+          <ProductCard key={item.id} item={item} />
+        ))}
+      </Box>
+      <ShowingCount visible={visible.length} total={items.length} expanded={expanded} />
+      <ShowMoreButton hasMore={hasMore} hiddenCount={hiddenCount} expanded={expanded} onToggle={toggle} />
+    </ResultCard>
+  );
+}
+
+function PromotionCard({ item }: { item: PromotionCardItem }) {
+  return (
+    <Box className="rounded-lg border border-[#e7eaee] p-2.5">
+      <Box className="flex items-center justify-between gap-2">
+        <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>{item.name}</Typography>
+        <Chip
+          label={item.discount || "—"}
+          size="small"
+          sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#fff1e6", color: "#f3873a" }}
+        />
+      </Box>
+      <Box className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#737b88]">
+        <StorefrontRounded sx={{ fontSize: 13 }} />
+        <Typography sx={{ fontSize: 11, color: "#737b88" }}>
+          {item.retailer} • {item.brand} • {item.category}
+        </Typography>
+      </Box>
+      <Typography sx={{ fontSize: 11, color: "#a0a8b3", mt: 0.5 }}>
+        {item.from} → {item.to}
+      </Typography>
+    </Box>
+  );
+}
+
+function ExpandablePromotionCards({
+  title,
+  caption,
+  insights,
+  items,
+}: {
+  title: string;
+  caption?: string;
+  insights?: string[];
+  items: PromotionCardItem[];
+}) {
+  const { visible, expanded, hasMore, hiddenCount, toggle } = useExpandable(items);
+  return (
+    <ResultCard>
+      <ResultHeader title={title} caption={caption} />
+      {insights && <InsightsList items={insights} />}
+      <Box className="flex flex-col gap-2 p-3">
+        {items.length === 0 && (
+          <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>No matching promotions found.</Typography>
+        )}
+        {visible.map((item) => (
+          <PromotionCard key={item.id} item={item} />
+        ))}
+      </Box>
+      <ShowingCount visible={visible.length} total={items.length} expanded={expanded} />
+      <ShowMoreButton hasMore={hasMore} hiddenCount={hiddenCount} expanded={expanded} onToggle={toggle} />
+    </ResultCard>
+  );
+}
+
 export default function AssistantResultView({ result }: { result: AssistantResult }) {
   switch (result.type) {
     case "text":
@@ -124,11 +390,7 @@ export default function AssistantResultView({ result }: { result: AssistantResul
           <ResultHeader title={result.title} />
           <Box className="flex flex-col gap-2 p-3">
             {result.items.map((item) => (
-              <Link
-                key={item.route}
-                to={item.route}
-                className="no-underline"
-              >
+              <Link key={item.route} to={item.route} className="no-underline">
                 <Box className="flex items-center justify-between rounded-md border border-[#e7eaee] px-3 py-2 transition-colors hover:border-[#4f82f7]">
                   <Box>
                     <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
@@ -149,17 +411,20 @@ export default function AssistantResultView({ result }: { result: AssistantResul
     case "table":
     case "comparison_table":
       return (
-        <ResultCard>
-          <ResultHeader title={result.title} caption={result.caption} />
-          <DataTable columns={result.columns} rows={result.rows} />
-        </ResultCard>
+        <ExpandableTable
+          title={result.title}
+          caption={result.caption}
+          insights={result.insights}
+          columns={result.columns}
+          rows={result.rows}
+        />
       );
 
     case "summary":
       return (
         <ResultCard>
           <ResultHeader title={result.title} caption={result.caption} />
-          <Box className="grid grid-cols-2 gap-2 p-3">
+          <Box className="flex flex-col gap-1.5 p-3">
             {result.stats.map((stat) => (
               <Box
                 key={stat.label}
@@ -179,115 +444,22 @@ export default function AssistantResultView({ result }: { result: AssistantResul
 
     case "product_cards":
       return (
-        <ResultCard>
-          <ResultHeader title={result.title} caption={result.caption} />
-          <Box className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2">
-            {result.items.length === 0 && (
-              <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>
-                No matching products found.
-              </Typography>
-            )}
-            {result.items.map((item) => (
-              <Box
-                key={item.id}
-                className="flex gap-2.5 rounded-lg border border-[#e7eaee] p-2"
-              >
-                <img
-                  src={item.image || fallbackImage}
-                  alt={item.name}
-                  className="h-16 w-16 shrink-0 rounded-md object-cover"
-                  onError={(event) => {
-                    event.currentTarget.onerror = null;
-                    event.currentTarget.src = fallbackImage;
-                  }}
-                />
-                <Box className="min-w-0 flex-1">
-                  <Typography
-                    noWrap
-                    sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
-                  >
-                    {item.name}
-                  </Typography>
-                  <Typography sx={{ color: "#737b88", fontSize: 11 }}>
-                    {item.brand} • {item.retailer}
-                  </Typography>
-                  <Box className="mt-1 flex flex-wrap items-center gap-1.5">
-                    {item.priceAfterDiscount !== null && item.priceAfterDiscount !== item.price ? (
-                      <>
-                        <Typography sx={{ color: "#f3873a", fontSize: 12.5, fontWeight: 800 }}>
-                          {item.priceAfterDiscount} {item.currency}
-                        </Typography>
-                        <Typography sx={{ color: "#a0a8b3", fontSize: 11, textDecoration: "line-through" }}>
-                          {item.price} {item.currency}
-                        </Typography>
-                      </>
-                    ) : (
-                      <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
-                        {item.price !== null ? `${item.price} ${item.currency}` : "—"}
-                      </Typography>
-                    )}
-                    {item.discount !== null && item.discount > 0 && (
-                      <Chip
-                        label={`-${item.discount}%`}
-                        size="small"
-                        sx={{
-                          height: 18,
-                          fontSize: 10,
-                          fontWeight: 800,
-                          backgroundColor: "#f3873a",
-                          color: "#fff",
-                        }}
-                      />
-                    )}
-                    <Chip
-                      label={item.source === "ours" ? "Ours" : "Competitor"}
-                      size="small"
-                      variant="outlined"
-                      sx={{ height: 18, fontSize: 9.5, fontWeight: 700 }}
-                    />
-                  </Box>
-                </Box>
-              </Box>
-            ))}
-          </Box>
-        </ResultCard>
+        <ExpandableProductCards
+          title={result.title}
+          caption={result.caption}
+          insights={result.insights}
+          items={result.items}
+        />
       );
 
     case "promotion_cards":
       return (
-        <ResultCard>
-          <ResultHeader title={result.title} caption={result.caption} />
-          <Box className="flex flex-col gap-2 p-3">
-            {result.items.length === 0 && (
-              <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>
-                No matching promotions found.
-              </Typography>
-            )}
-            {result.items.map((item) => (
-              <Box key={item.id} className="rounded-lg border border-[#e7eaee] p-2.5">
-                <Box className="flex items-center justify-between gap-2">
-                  <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
-                    {item.name}
-                  </Typography>
-                  <Chip
-                    label={item.discount || "—"}
-                    size="small"
-                    sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#fff1e6", color: "#f3873a" }}
-                  />
-                </Box>
-                <Box className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#737b88]">
-                  <StorefrontRounded sx={{ fontSize: 13 }} />
-                  <Typography sx={{ fontSize: 11, color: "#737b88" }}>
-                    {item.retailer} • {item.brand} • {item.category}
-                  </Typography>
-                </Box>
-                <Typography sx={{ fontSize: 11, color: "#a0a8b3", mt: 0.5 }}>
-                  {item.from} → {item.to}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </ResultCard>
+        <ExpandablePromotionCards
+          title={result.title}
+          caption={result.caption}
+          insights={result.insights}
+          items={result.items}
+        />
       );
 
     default:

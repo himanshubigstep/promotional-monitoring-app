@@ -39,6 +39,13 @@ export type PromotionCardItem = {
 // Discriminated union of everything a tool can hand back to the UI. The
 // assistant renders these directly instead of asking the model to format
 // tables/JSON as text, so numbers on screen always come from real data.
+// Short, deterministic, data-derived findings (e.g. "Highest discount: 52% —
+// Product X at Notino") a tool can attach alongside its row/card data. Never
+// written by the LLM — computed from the same arrays the table/cards render,
+// so they can't drift from what's on screen. Rendered as a compact bullet
+// list above the (progressively-disclosed) table/cards.
+export type ResultInsights = string[];
+
 export type AssistantResult =
   | { type: "text"; title?: string; text: string }
   | { type: "navigation"; title: string; items: AppNavigation[] }
@@ -48,6 +55,7 @@ export type AssistantResult =
       columns: string[];
       rows: CellValue[][];
       caption?: string;
+      insights?: ResultInsights;
     }
   | {
       type: "comparison_table";
@@ -55,9 +63,22 @@ export type AssistantResult =
       columns: string[];
       rows: CellValue[][];
       caption?: string;
+      insights?: ResultInsights;
     }
-  | { type: "product_cards"; title: string; items: ProductCardItem[]; caption?: string }
-  | { type: "promotion_cards"; title: string; items: PromotionCardItem[]; caption?: string }
+  | {
+      type: "product_cards";
+      title: string;
+      items: ProductCardItem[];
+      caption?: string;
+      insights?: ResultInsights;
+    }
+  | {
+      type: "promotion_cards";
+      title: string;
+      items: PromotionCardItem[];
+      caption?: string;
+      insights?: ResultInsights;
+    }
   | {
       type: "summary";
       title: string;
