@@ -35,5 +35,16 @@ const legacyRetailerMap: Record<string, string> = {
 };
 
 export function normalizeRetailer(retailer: string) {
+  if (retailer.startsWith("Sephora CZ Prague")) return "CZ Demo Store Prague";
+  if (retailer.startsWith("Sephora CZ Brno")) return "CZ Demo Store Brno";
+  if (
+    retailer.startsWith("Sephora CZ Ostrava") ||
+    retailer.startsWith("Sephora CZ Pilsen") ||
+    retailer.startsWith("Sephora CZ Liberec") ||
+    retailer.startsWith("Sephora CZ Olomouc") ||
+    retailer.startsWith("Sephora CZ Karlovy Vary")
+  ) {
+    return "CZ Demo Store Ostrava";
+  }
   return legacyRetailerMap[retailer] || retailer;
 }

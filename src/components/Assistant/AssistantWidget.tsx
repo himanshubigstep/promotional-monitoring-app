@@ -193,9 +193,9 @@ export default function AssistantWidget() {
             bottom: 24,
             right: 24,
             zIndex: 1300,
-            backgroundColor: "#000000",
+            backgroundColor: "#22252b",
             color: "#ffffff",
-            "&:hover": { backgroundColor: "#1a1a1a" },
+            "&:hover": { backgroundColor: "#343942" },
           }}
           aria-label="Open assistant"
         >
@@ -209,7 +209,7 @@ export default function AssistantWidget() {
         onClose={() => setOpen(false)}
         slotProps={{ paper: { sx: { width: { xs: "100%", sm: panelWidth } } } }}
       >
-        <Box className="relative flex h-full flex-col bg-[#fafafa]">
+        <Box className="relative flex h-full flex-col bg-[#f4f6f8]">
           {/* Drag handle: hidden on mobile, where the drawer is always
               full-width. Listens on mousedown only — the window-level
               listeners in the effect above handle the rest of the drag. */}
@@ -233,16 +233,16 @@ export default function AssistantWidget() {
             }}
             aria-hidden="true"
           />
-          <Box className="flex items-center justify-between border-b border-[#e5e5e5] bg-white px-4 py-3.5">
+          <Box className="flex items-center justify-between border-b border-[#e7eaee] bg-white px-4 py-3.5">
             <Box className="flex items-center gap-2">
-              <Box className="flex h-8 w-8 items-center justify-center rounded-lg bg-black">
-                <AutoAwesomeRounded sx={{ fontSize: 17, color: "#e50043" }} />
+              <Box className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a1d23]">
+                <AutoAwesomeRounded sx={{ fontSize: 17, color: "#78a1ff" }} />
               </Box>
               <Box>
-                <Typography sx={{ color: "#000", fontSize: 14, fontWeight: 800 }}>
+                <Typography sx={{ color: "#20242b", fontSize: 14, fontWeight: 800 }}>
                   Promo Assistant
                 </Typography>
-                <Typography sx={{ color: "#8a8a8a", fontSize: 10.5 }}>
+                <Typography sx={{ color: "#737b88", fontSize: 10.5 }}>
                   Grounded in your live app data
                 </Typography>
               </Box>
@@ -264,10 +264,10 @@ export default function AssistantWidget() {
                   <Box
                     className={`max-w-[92%] rounded-xl px-3 py-2 ${
                       message.role === "user"
-                        ? "bg-black text-white"
+                        ? "bg-[#22252b] text-white"
                         : message.isError
-                          ? "border border-[#f3c8d3] bg-[#fff0f3]"
-                          : "border border-[#e5e5e5] bg-white"
+                          ? "border border-[#f5c6c6] bg-[#fdecec]"
+                          : "border border-[#e7eaee] bg-white"
                     }`}
                   >
                     {message.role === "user" || message.isError ? (
@@ -277,14 +277,14 @@ export default function AssistantWidget() {
                       <Typography
                         sx={{
                           fontSize: 13,
-                          color: message.role === "user" ? "#fff" : "#e50043",
+                          color: message.role === "user" ? "#fff" : "#e5484d",
                           whiteSpace: "pre-wrap",
                         }}
                       >
                         {message.text}
                       </Typography>
                     ) : (
-                      <FormattedText text={message.text} color="#1a1a1a" />
+                      <FormattedText text={message.text} color="#20242b" />
                     )}
                   </Box>
                   {message.toolName && (
@@ -295,8 +295,8 @@ export default function AssistantWidget() {
                         height: 17,
                         fontSize: 9.5,
                         fontWeight: 700,
-                        backgroundColor: "#eee",
-                        color: "#666",
+                        backgroundColor: "#eef1f4",
+                        color: "#737b88",
                       }}
                     />
                   )}
@@ -308,16 +308,16 @@ export default function AssistantWidget() {
                 </Box>
               ))}
               {loading && (
-                <Box className="flex items-center gap-2 rounded-xl border border-[#e5e5e5] bg-white px-3 py-2">
-                  <CircularProgress size={14} sx={{ color: "#e50043" }} />
-                  <Typography sx={{ color: "#8a8a8a", fontSize: 12.5 }}>Thinking…</Typography>
+                <Box className="flex items-center gap-2 rounded-xl border border-[#e7eaee] bg-white px-3 py-2">
+                  <CircularProgress size={14} sx={{ color: "#4f82f7" }} />
+                  <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>Thinking…</Typography>
                 </Box>
               )}
             </Box>
           </Box>
 
           {messages.length <= 1 && (
-            <Box className="flex flex-wrap gap-1.5 border-t border-[#e5e5e5] bg-white px-3.5 py-2.5">
+            <Box className="flex flex-wrap gap-1.5 border-t border-[#e7eaee] bg-white px-3.5 py-2.5">
               {SUGGESTIONS.map((suggestion) => (
                 <Chip
                   key={suggestion}
@@ -330,7 +330,7 @@ export default function AssistantWidget() {
             </Box>
           )}
 
-          <Box className="flex items-center gap-2 border-t border-[#e5e5e5] bg-white px-3 py-2.5">
+          <Box className="flex items-center gap-2 border-t border-[#e7eaee] bg-white px-3 py-2.5">
             <TextField
               fullWidth
               size="small"
@@ -345,7 +345,7 @@ export default function AssistantWidget() {
             <IconButton
               onClick={() => send(input)}
               disabled={loading || !input.trim()}
-              sx={{ backgroundColor: "#000", color: "#fff", "&:hover": { backgroundColor: "#1a1a1a" } }}
+              sx={{ backgroundColor: "#22252b", color: "#fff", "&:hover": { backgroundColor: "#343942" } }}
             >
               <SendRounded fontSize="small" />
             </IconButton>

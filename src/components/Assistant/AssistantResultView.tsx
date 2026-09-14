@@ -52,7 +52,7 @@ function ResultCard({ children }: { children: React.ReactNode }) {
   return (
     <Card
       elevation={0}
-      className="rounded-lg border border-[#e5e5e5] bg-white"
+      className="rounded-lg border border-[#e7eaee] bg-white"
     >
       {children}
     </Card>
@@ -61,12 +61,12 @@ function ResultCard({ children }: { children: React.ReactNode }) {
 
 function ResultHeader({ title, caption }: { title: string; caption?: string }) {
   return (
-    <Box className="border-b border-[#f0f0f0] px-3.5 py-2.5">
-      <Typography sx={{ color: "#000000", fontSize: 13, fontWeight: 800 }}>
+    <Box className="border-b border-[#e7eaee] px-3.5 py-2.5">
+      <Typography sx={{ color: "#20242b", fontSize: 13, fontWeight: 800 }}>
         {title}
       </Typography>
       {caption && (
-        <Typography sx={{ color: "#8a8a8a", fontSize: 11, mt: 0.25 }}>
+        <Typography sx={{ color: "#737b88", fontSize: 11, mt: 0.25 }}>
           {caption}
         </Typography>
       )}
@@ -80,7 +80,7 @@ function ResultHeader({ title, caption }: { title: string; caption?: string }) {
 function InsightsList({ items }: { items: string[] }) {
   if (!items.length) return null;
   return (
-    <Box className="flex flex-col gap-1 border-b border-[#f0f0f0] bg-[#fff8f9] px-3.5 py-2.5">
+    <Box className="flex flex-col gap-1 border-b border-[#e7eaee] bg-[#eaf1ff] px-3.5 py-2.5">
       {items.map((item, index) => (
         <Box key={index} className="flex items-start gap-1.5">
           <Box
@@ -88,12 +88,12 @@ function InsightsList({ items }: { items: string[] }) {
               width: 4,
               height: 4,
               borderRadius: "50%",
-              backgroundColor: "#e50043",
+              backgroundColor: "#3b6fed",
               mt: "7px",
               flexShrink: 0,
             }}
           />
-          <Typography sx={{ fontSize: 12, color: "#1a1a1a", lineHeight: 1.4 }}>
+          <Typography sx={{ fontSize: 12, color: "#20242b", lineHeight: 1.4 }}>
             {renderInline(item)}
           </Typography>
         </Box>
@@ -115,17 +115,17 @@ function ShowMoreButton({
 }) {
   if (!hasMore) return null;
   return (
-    <Box className="flex justify-center border-t border-[#f0f0f0] py-1.5">
+    <Box className="flex justify-center border-t border-[#e7eaee] py-1.5">
       <Button
         size="small"
         onClick={onToggle}
         endIcon={expanded ? <ExpandLessRounded fontSize="small" /> : <ExpandMoreRounded fontSize="small" />}
         sx={{
-          color: "#e50043",
+          color: "#4f82f7",
           fontWeight: 700,
           fontSize: 12,
           textTransform: "none",
-          "&:hover": { backgroundColor: "#fff0f3" },
+          "&:hover": { backgroundColor: "#eaf1ff" },
         }}
       >
         {expanded ? "Show less" : `View more (${hiddenCount})`}
@@ -140,7 +140,7 @@ function ShowMoreButton({
 function ShowingCount({ visible, total, expanded }: { visible: number; total: number; expanded: boolean }) {
   if (expanded || visible >= total) return null;
   return (
-    <Typography sx={{ fontSize: 10.5, color: "#8a8a8a", textAlign: "center", pt: 1 }}>
+    <Typography sx={{ fontSize: 10.5, color: "#737b88", textAlign: "center", pt: 1 }}>
       Showing {visible} of {total} results
     </Typography>
   );
@@ -162,12 +162,12 @@ function DataTable({
               <TableCell
                 key={col}
                 sx={{
-                  color: "#757575",
+                  color: "#737b88",
                   fontSize: 10.5,
                   fontWeight: 800,
                   textTransform: "uppercase",
                   letterSpacing: "0.04em",
-                  backgroundColor: "#fafafa",
+                  backgroundColor: "#f4f6f8",
                   whiteSpace: "nowrap",
                 }}
               >
@@ -181,7 +181,7 @@ function DataTable({
             <TableRow>
               <TableCell
                 colSpan={columns.length}
-                sx={{ color: "#8a8a8a", fontSize: 12.5, textAlign: "center", py: 3 }}
+                sx={{ color: "#737b88", fontSize: 12.5, textAlign: "center", py: 3 }}
               >
                 No matching data found.
               </TableCell>
@@ -192,7 +192,7 @@ function DataTable({
                 {row.map((cell, cellIndex) => (
                   <TableCell
                     key={cellIndex}
-                    sx={{ color: "#1a1a1a", fontSize: 12.5, whiteSpace: "nowrap" }}
+                    sx={{ color: "#20242b", fontSize: 12.5, whiteSpace: "nowrap" }}
                   >
                     {cell === null || cell === "" ? "—" : cell}
                   </TableCell>
@@ -233,7 +233,7 @@ function ExpandableTable({
 
 function ProductCard({ item }: { item: ProductCardItem }) {
   return (
-    <Box className="flex gap-2.5 rounded-lg border border-[#eee] p-2">
+    <Box className="flex gap-2.5 rounded-lg border border-[#e7eaee] p-2">
       <img
         src={item.image || fallbackImage}
         alt={item.name}
@@ -244,24 +244,24 @@ function ProductCard({ item }: { item: ProductCardItem }) {
         }}
       />
       <Box className="min-w-0 flex-1">
-        <Typography noWrap sx={{ color: "#000", fontSize: 12, fontWeight: 800 }}>
+        <Typography noWrap sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}>
           {item.name}
         </Typography>
-        <Typography sx={{ color: "#8a8a8a", fontSize: 11 }}>
+        <Typography sx={{ color: "#737b88", fontSize: 11 }}>
           {item.brand} • {item.retailer}
         </Typography>
         <Box className="mt-1 flex flex-wrap items-center gap-1.5">
           {item.priceAfterDiscount !== null && item.priceAfterDiscount !== item.price ? (
             <>
-              <Typography sx={{ color: "#e50043", fontSize: 12.5, fontWeight: 800 }}>
+              <Typography sx={{ color: "#f3873a", fontSize: 12.5, fontWeight: 800 }}>
                 {item.priceAfterDiscount} {item.currency}
               </Typography>
-              <Typography sx={{ color: "#bbb", fontSize: 11, textDecoration: "line-through" }}>
+              <Typography sx={{ color: "#a0a8b3", fontSize: 11, textDecoration: "line-through" }}>
                 {item.price} {item.currency}
               </Typography>
             </>
           ) : (
-            <Typography sx={{ color: "#000", fontSize: 12.5, fontWeight: 800 }}>
+            <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
               {item.price !== null ? `${item.price} ${item.currency}` : "—"}
             </Typography>
           )}
@@ -269,7 +269,7 @@ function ProductCard({ item }: { item: ProductCardItem }) {
             <Chip
               label={`-${item.discount}%`}
               size="small"
-              sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#000", color: "#fff" }}
+              sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#f3873a", color: "#fff" }}
             />
           )}
           <Chip
@@ -302,7 +302,7 @@ function ExpandableProductCards({
       {insights && <InsightsList items={insights} />}
       <Box className="grid grid-cols-1 gap-2.5 p-3 sm:grid-cols-2">
         {items.length === 0 && (
-          <Typography sx={{ color: "#8a8a8a", fontSize: 12.5 }}>No matching products found.</Typography>
+          <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>No matching products found.</Typography>
         )}
         {visible.map((item) => (
           <ProductCard key={item.id} item={item} />
@@ -316,22 +316,22 @@ function ExpandableProductCards({
 
 function PromotionCard({ item }: { item: PromotionCardItem }) {
   return (
-    <Box className="rounded-lg border border-[#eee] p-2.5">
+    <Box className="rounded-lg border border-[#e7eaee] p-2.5">
       <Box className="flex items-center justify-between gap-2">
-        <Typography sx={{ color: "#000", fontSize: 12.5, fontWeight: 800 }}>{item.name}</Typography>
+        <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>{item.name}</Typography>
         <Chip
           label={item.discount || "—"}
           size="small"
-          sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#fff0f3", color: "#e50043" }}
+          sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#fff1e6", color: "#f3873a" }}
         />
       </Box>
-      <Box className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#8a8a8a]">
+      <Box className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-[#737b88]">
         <StorefrontRounded sx={{ fontSize: 13 }} />
-        <Typography sx={{ fontSize: 11, color: "#8a8a8a" }}>
+        <Typography sx={{ fontSize: 11, color: "#737b88" }}>
           {item.retailer} • {item.brand} • {item.category}
         </Typography>
       </Box>
-      <Typography sx={{ fontSize: 11, color: "#aaa", mt: 0.5 }}>
+      <Typography sx={{ fontSize: 11, color: "#a0a8b3", mt: 0.5 }}>
         {item.from} → {item.to}
       </Typography>
     </Box>
@@ -356,7 +356,7 @@ function ExpandablePromotionCards({
       {insights && <InsightsList items={insights} />}
       <Box className="flex flex-col gap-2 p-3">
         {items.length === 0 && (
-          <Typography sx={{ color: "#8a8a8a", fontSize: 12.5 }}>No matching promotions found.</Typography>
+          <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>No matching promotions found.</Typography>
         )}
         {visible.map((item) => (
           <PromotionCard key={item.id} item={item} />
@@ -372,13 +372,13 @@ export default function AssistantResultView({ result }: { result: AssistantResul
   switch (result.type) {
     case "text":
       return (
-        <Typography sx={{ color: "#1a1a1a", fontSize: 13 }}>{result.text}</Typography>
+        <Typography sx={{ color: "#20242b", fontSize: 13 }}>{result.text}</Typography>
       );
 
     case "error":
       return (
-        <Box className="rounded-lg border border-[#f3c8d3] bg-[#fff0f3] px-3 py-2">
-          <Typography sx={{ color: "#e50043", fontSize: 12.5, fontWeight: 700 }}>
+        <Box className="rounded-lg border border-[#f5c6c6] bg-[#fdecec] px-3 py-2">
+          <Typography sx={{ color: "#e5484d", fontSize: 12.5, fontWeight: 700 }}>
             {result.message}
           </Typography>
         </Box>
@@ -391,16 +391,16 @@ export default function AssistantResultView({ result }: { result: AssistantResul
           <Box className="flex flex-col gap-2 p-3">
             {result.items.map((item) => (
               <Link key={item.route} to={item.route} className="no-underline">
-                <Box className="flex items-center justify-between rounded-md border border-[#eee] px-3 py-2 transition-colors hover:border-[#000]">
+                <Box className="flex items-center justify-between rounded-md border border-[#e7eaee] px-3 py-2 transition-colors hover:border-[#4f82f7]">
                   <Box>
-                    <Typography sx={{ color: "#000", fontSize: 12.5, fontWeight: 800 }}>
+                    <Typography sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 800 }}>
                       {item.name}
                     </Typography>
-                    <Typography sx={{ color: "#8a8a8a", fontSize: 11.5 }}>
+                    <Typography sx={{ color: "#737b88", fontSize: 11.5 }}>
                       {item.description}
                     </Typography>
                   </Box>
-                  <NorthEastRounded sx={{ fontSize: 15, color: "#e50043" }} />
+                  <NorthEastRounded sx={{ fontSize: 15, color: "#4f82f7" }} />
                 </Box>
               </Link>
             ))}
@@ -426,9 +426,14 @@ export default function AssistantResultView({ result }: { result: AssistantResul
           <ResultHeader title={result.title} caption={result.caption} />
           <Box className="flex flex-col gap-1.5 p-3">
             {result.stats.map((stat) => (
-              <Box key={stat.label} className="flex items-baseline gap-1.5">
-                <Typography sx={{ color: "#1a1a1a", fontSize: 12.5 }}>
-                  <strong style={{ fontWeight: 800, color: "#000" }}>{stat.label}:</strong>{" "}
+              <Box
+                key={stat.label}
+                className="rounded-md border border-[#e7eaee] px-2.5 py-2"
+              >
+                <Typography sx={{ color: "#737b88", fontSize: 10.5, fontWeight: 700, textTransform: "uppercase" }}>
+                  {stat.label}
+                </Typography>
+                <Typography sx={{ color: "#20242b", fontSize: 15, fontWeight: 800 }}>
                   {stat.value}
                 </Typography>
               </Box>

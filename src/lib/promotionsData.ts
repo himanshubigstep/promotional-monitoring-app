@@ -149,6 +149,19 @@ export async function loadApprovedData(): Promise<LoadedData> {
   if (retailersResult.error) throw retailersResult.error;
   if (categoriesResult.error) throw categoriesResult.error;
 
+  const dataSets = [
+    ["promotions", promotionsResult.data],
+    ["brands", brandsResult.data],
+    ["retailers", retailersResult.data],
+    ["categories", categoriesResult.data],
+  ] as const;
+  const emptyDataSet = dataSets.find(
+    ([, data]) => !Array.isArray(data) || data.length === 0,
+  );
+  if (emptyDataSet) {
+    throw new Error(`Supabase returned no ${emptyDataSet[0]} data`);
+  }
+
   const rows = (promotionsResult.data ?? []) as unknown as PromotionRow[];
   const mapped = await Promise.all(rows.map(mapRow));
 
