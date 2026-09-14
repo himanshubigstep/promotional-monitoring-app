@@ -1,6 +1,10 @@
-# Getting Started with Create React App
+# PromoPulse — Sephora Promotional & Competitor Monitor
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Competitive intelligence tool for beauty retail: tracks competitor promotions (manual entry, OCR upload, and automated scraping), with a dashboard, calendar/Gantt view, brand analytics, and store comparison. Built as a POC to replace a client's manual Excel-based tracking process.
+
+- **New to this repo?** Read [CLAUDE.md](CLAUDE.md) first — project structure, ownership boundaries, and the required workflow before making changes.
+- **Curious why something is built a certain way?** Check [Decisions.md](Decisions.md).
+- Frontend is a Create React App (below); backend setup (Supabase) and the scraper are documented in this file too.
 
 ## Backend setup (Supabase)
 
