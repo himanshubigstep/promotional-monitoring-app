@@ -39,8 +39,6 @@ import Dashboard from "./pages/Dashboard/Dashboard";
 import StoreComparison from "./pages/StoreComparison/StoreComparison";
 import {
   AppProvider,
-  filterYears,
-  getYearFilterValue,
   PromotionFilters,
   UserRole,
   useAppContext,
@@ -142,13 +140,6 @@ function AppLayout() {
   const location = useLocation();
   const currentPage =
     navigation.find((item) => item.path === location.pathname) ?? navigation[0];
-  const selectedYear = getYearFilterValue(filters.fromDate);
-  const setYear = (year: string) =>
-    setFilters({
-      ...filters,
-      fromDate: year ? `${year}-01-01` : "",
-      toDate: year ? `${year}-12-31` : "",
-    });
   const drawer = (
     <Box className="flex h-full flex-col bg-white">
       {/* Sephora Iconic Stripe Top Accent */}
@@ -348,28 +339,6 @@ function AppLayout() {
             </Box>
 
             <Box className="flex items-center gap-2.5">
-              <Select
-                size="small"
-                displayEmpty
-                value={selectedYear}
-                onChange={(event) => setYear(event.target.value)}
-                sx={{
-                  display: { xs: "none", lg: "inline-flex" },
-                  minWidth: 130,
-                  backgroundColor: "white",
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  borderColor: "#e5e5e5",
-                }}
-              >
-                <MenuItem value="">Select Year</MenuItem>
-                {filterYears.map((year) => (
-                  <MenuItem key={year} value={year}>
-                    {year}
-                  </MenuItem>
-                ))}
-              </Select>
-
               <Button
                 variant="outlined"
                 size="small"

@@ -2,12 +2,11 @@ import { CloseRounded, FilterAltRounded } from "@mui/icons-material";
 import { Box, Button, Modal } from "@mui/material";
 import {
   emptyPromotionFilters,
-  filterYears,
-  getYearFilterValue,
   PromotionFilters,
 } from "../context/AppContext";
 import FormField from "./FormField";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
+import { useEffect, useState } from "react";
 
 const categories = ["All", "Skincare", "Fragrance", "Makeup", "Haircare"];
 const getVisibleRetailers = (market: string) => {
@@ -30,17 +29,16 @@ export default function PromotionFilterModal({
   onClose: () => void;
   onApply: (filters: PromotionFilters) => void;
 }) {
+  const [draftFilters, setDraftFilters] = useState(filters);
+
+  useEffect(() => {
+    if (open) setDraftFilters(filters);
+  }, [filters, open]);
+
   const update = (
     field: keyof PromotionFilters,
     value: string | number | string[],
-  ) => onApply({ ...filters, [field]: String(value) });
-  const selectedYear = getYearFilterValue(filters.fromDate);
-  const updateYear = (year: string) =>
-    onApply({
-      ...filters,
-      fromDate: year ? `${year}-01-01` : "",
-      toDate: year ? `${year}-12-31` : "",
-    });
+  ) => setDraftFilters((current) => ({ ...current, [field]: String(value) }));
 
   return (
     <Modal
@@ -74,52 +72,56 @@ export default function PromotionFilterModal({
             className="sm:col-span-2"
             label="Product or brand"
             placeholder="Search product name or brand"
-            value={filters.search}
+            value={draftFilters.search}
             onValueChange={(value) => update("search", value)}
           />
           <FormField
             type="select"
             label="Product category"
-            value={filters.category}
+            value={draftFilters.category}
             onValueChange={(value) => update("category", value)}
             options={options(categories)}
           />
           <FormField
             type="select"
             label="Retailer / store"
-            value={filters.retailer}
+            value={draftFilters.retailer}
             onValueChange={(value) => update("retailer", value)}
-            options={options(getVisibleRetailers(filters.market))}
+            options={options(getVisibleRetailers(draftFilters.market))}
           />
           <FormField
             type="select"
             label="Discount level"
-            value={filters.discount}
+            value={draftFilters.discount}
             onValueChange={(value) => update("discount", value)}
             options={options(discounts)}
           />
           <FormField
             type="select"
             label="Market"
-            value={filters.market}
+            value={draftFilters.market}
             onValueChange={(value) => update("market", value)}
             options={options(["All", "PL", "CZ"])}
           />
           <FormField
-            className="sm:col-span-2"
-            type="select"
-            label="Promotion year"
-            value={selectedYear}
-            onValueChange={(value) => updateYear(String(value))}
-            options={[
-              { label: "Select Year", value: "" },
-              ...options(filterYears),
-            ]}
+            type="date"
+            label="Start date"
+            value={draftFilters.fromDate}
+            onValueChange={(value) => update("fromDate", value)}
+          />
+          <FormField
+            type="date"
+            label="End date"
+            value={draftFilters.toDate}
+            onValueChange={(value) => update("toDate", value)}
           />
         </Box>
         <Box className="mt-5 flex justify-end gap-2 border-t border-[#f0f0f0] pt-4">
           <Button
-            onClick={() => onApply(emptyPromotionFilters)}
+            onClick={() => {
+              onApply(emptyPromotionFilters);
+              onClose();
+            }}
             sx={{
               color: "#666666",
               textTransform: "none",
@@ -131,7 +133,10 @@ export default function PromotionFilterModal({
             Clear filters
           </Button>
           <Button
-            onClick={onClose}
+            onClick={() => {
+              onApply(draftFilters);
+              onClose();
+            }}
             variant="contained"
             sx={{
               backgroundColor: "#000000",

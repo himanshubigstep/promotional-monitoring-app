@@ -27,9 +27,9 @@ import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
-import YearFilter from "../../components/YearFilter";
 import { getMarketBrandOptions } from "../../data/brands";
 import DeleteIcon from '@mui/icons-material/Delete';
+import BrandComparisonTable from "../../components/BrandComparisonTable";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
@@ -70,7 +70,6 @@ const Dashboard = () => {
     canEdit,
     brandsByMarket,
   } = useAppContext();
-  const [chartYear, setChartYear] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogPage, setCatalogPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
@@ -416,12 +415,7 @@ const Dashboard = () => {
         }),
     [catalog, catalogSearch, filters],
   );
-  const chartProducts = filteredProducts.filter(
-    (product) =>
-      !chartYear ||
-      chartYear === "All" ||
-      product.fromDate.startsWith(chartYear),
-  );
+  const chartProducts = filteredProducts;
   const analytics = useMemo(() => {
     const monthValues = months.map((_, monthIndex) => {
       const month = String(monthIndex + 1).padStart(2, "0");
@@ -806,7 +800,6 @@ const Dashboard = () => {
                 </Box>
               ))}
             </Box>
-            <YearFilter selectedYear={chartYear} onChange={setChartYear} />
           </CardContent>
         </Card>
 
@@ -1112,6 +1105,8 @@ const Dashboard = () => {
           />
         </CardContent>
       </Card>
+
+      <BrandComparisonTable />
 
       <Modal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)}>
         <Box

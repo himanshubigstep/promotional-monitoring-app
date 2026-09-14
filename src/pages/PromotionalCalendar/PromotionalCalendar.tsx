@@ -1,10 +1,9 @@
 import { CalendarMonthRounded, DownloadRounded } from "@mui/icons-material";
 import { Box, Button, Card, Chip, Tooltip, Typography } from "@mui/material";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { catalog } from "../../data/catalog";
 import type { Product } from "../../data/productTypes";
 import { useAppContext } from "../../context/AppContext";
-import YearFilter from "../../components/YearFilter";
 
 const months = [
   "Jan",
@@ -31,8 +30,6 @@ const brandColors: Record<string, string> = {
 
 export default function PromotionalCalendar() {
   const { filters } = useAppContext();
-  const [chartYear, setChartYear] = useState("");
-
   const filteredCatalog = useMemo(
     () =>
       catalog.filter((product) => {
@@ -52,12 +49,11 @@ export default function PromotionalCalendar() {
           (filters.retailer === "All" ||
             product.retailer === filters.retailer) &&
           product.competitorDiscount >= minimumDiscount &&
-          (!chartYear ||
-            chartYear === "All" ||
-            product.fromDate.startsWith(chartYear))
+          (!filters.fromDate || product.toDate >= filters.fromDate) &&
+          (!filters.toDate || product.fromDate <= filters.toDate)
         );
       }),
-    [filters, chartYear],
+    [filters],
   );
 
   // Group campaigns for the Gantt view
@@ -304,10 +300,6 @@ export default function PromotionalCalendar() {
           </Box>
         </Box>
 
-        {/* Footer Filter */}
-        <Box className="border-t border-[#e5e5e5] px-4 py-2">
-          <YearFilter selectedYear={chartYear} onChange={setChartYear} />
-        </Box>
       </Card>
     </Box>
   );

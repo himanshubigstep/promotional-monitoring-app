@@ -10,16 +10,11 @@ import React, { useState } from "react";
 import type { Product } from "../../data/productTypes";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
-import YearFilter from "../../components/YearFilter";
 
 const weeks = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"];
 export default function BrandAnalytics() {
   const { filters, products: catalog } = useAppContext();
   const typedCatalog: Product[] = catalog;
-  const [brandYear, setBrandYear] = useState("");
-  const [summaryYear, setSummaryYear] = useState("");
-  const [heatmapYear, setHeatmapYear] = useState("");
-  const [categoryYear, setCategoryYear] = useState("");
   const [brandPage, setBrandPage] = useState(1);
   const baseProducts = typedCatalog.filter(
     (product: Product) =>
@@ -28,32 +23,14 @@ export default function BrandAnalytics() {
         product.name.toLowerCase().includes(filters.search.toLowerCase()) ||
         product.brand.toLowerCase().includes(filters.search.toLowerCase())) &&
       (filters.category === "All" || product.category === filters.category) &&
-      (filters.retailer === "All" || product.retailer === filters.retailer),
+      (filters.retailer === "All" || product.retailer === filters.retailer) &&
+      (!filters.fromDate || product.toDate >= filters.fromDate) &&
+      (!filters.toDate || product.fromDate <= filters.toDate),
   );
-  const filteredProducts = baseProducts.filter(
-    (product: Product) =>
-      !brandYear ||
-      brandYear === "All" ||
-      product.fromDate.startsWith(brandYear),
-  );
-  const summaryProducts = baseProducts.filter(
-    (product: Product) =>
-      !summaryYear ||
-      summaryYear === "All" ||
-      product.fromDate.startsWith(summaryYear),
-  );
-  const categoryProducts = baseProducts.filter(
-    (product: Product) =>
-      !categoryYear ||
-      categoryYear === "All" ||
-      product.fromDate.startsWith(categoryYear),
-  );
-  const heatmapProducts = baseProducts.filter(
-    (product: Product) =>
-      !heatmapYear ||
-      heatmapYear === "All" ||
-      product.fromDate.startsWith(heatmapYear),
-  );
+  const filteredProducts = baseProducts;
+  const summaryProducts = baseProducts;
+  const categoryProducts = baseProducts;
+  const heatmapProducts = baseProducts;
   const brands = Array.from(
     new Set(filteredProducts.map((product) => product.brand)),
   ).map((brand, index) => {
@@ -80,7 +57,6 @@ export default function BrandAnalytics() {
   React.useEffect(() => {
     setBrandPage(1);
   }, [
-    brandYear,
     filters.market,
     filters.search,
     filters.category,
@@ -204,7 +180,6 @@ export default function BrandAnalytics() {
                 itemLabel="brands"
               />
             )}
-            <YearFilter selectedYear={brandYear} onChange={setBrandYear} />
           </CardContent>
         </Card>
         <Card
@@ -234,9 +209,7 @@ export default function BrandAnalytics() {
                 <Typography
                   sx={{ color: "#111111", fontSize: 11, fontWeight: 700 }}
                 >
-                  {!summaryYear || summaryYear === "All"
-                    ? "All years"
-                    : summaryYear}
+                  All years
                 </Typography>
               </Box>
             </Box>
@@ -359,7 +332,6 @@ export default function BrandAnalytics() {
                 {averageDiscount}% avg
               </Typography>
             </Box>
-            <YearFilter selectedYear={summaryYear} onChange={setSummaryYear} />
           </CardContent>
         </Card>
       </Box>
@@ -460,7 +432,6 @@ export default function BrandAnalytics() {
                 ),
               )}
             </Box>
-            <YearFilter selectedYear={heatmapYear} onChange={setHeatmapYear} />
           </CardContent>
         </Card>
         <Card
@@ -530,10 +501,6 @@ export default function BrandAnalytics() {
                 </Box>
               </Box>
             ))}
-            <YearFilter
-              selectedYear={categoryYear}
-              onChange={setCategoryYear}
-            />
           </CardContent>
         </Card>
       </Box>

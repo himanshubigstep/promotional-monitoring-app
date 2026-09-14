@@ -36,14 +36,6 @@ export const emptyPromotionFilters: PromotionFilters = {
   market: "All",
 };
 
-export const filterYears = Array.from(
-  new Set(
-    catalog.flatMap((product) => [
-      product.fromDate.slice(0, 4),
-      product.toDate.slice(0, 4),
-    ]),
-  ),
-).sort();
 export const filterMonths = [
   ["01", "January"],
   ["02", "February"],
@@ -61,10 +53,6 @@ export const filterMonths = [
 
 export function getMonthFilterValue(date: string) {
   return date ? date.slice(0, 7) : "";
-}
-
-export function getYearFilterValue(date: string) {
-  return date ? date.slice(0, 4) : "";
 }
 
 export function getMonthFilterParts(value: string) {
