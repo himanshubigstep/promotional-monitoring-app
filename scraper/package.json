@@ -1,0 +1,19 @@
+{
+  "name": "promo-monitor-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "scrape": "node dist/scrape.js",
+    "postinstall": "playwright install --with-deps chromium"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.116.0",
+    "playwright": "^1.49.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.5.0"
+  }
+}

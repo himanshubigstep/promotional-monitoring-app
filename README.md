@@ -19,6 +19,15 @@ Local Supabase Studio (DB browser/table editor) runs at the URL printed by `supa
 
 To point at a real hosted Supabase project later instead of local Docker: create the project at supabase.com, run `npx supabase link`, `npx supabase db push`, and swap the URL/keys in `.env.local` for the cloud project's values — no code changes needed.
 
+## Scraper
+
+Standalone project in `scraper/` — daily automated scan of competitor promo pages, runs via GitHub Actions (`.github/workflows/scrape.yml`), not part of the frontend build.
+
+- Covers Notino, Super-Pharm, Drogerie Natura, and Flaconi. Hebe, Douglas, and Sephora are excluded (bot protection) — see `Decisions.md`.
+- Screenshots each retailer's promo page, extracts fields via Gemini vision, writes to `promotions` with `status='pending_review'` for later review.
+- Needs three GitHub Actions secrets: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` (already set), and `GEMINI_API_KEY` (**not yet set** — add it with `gh secret set GEMINI_API_KEY`).
+- Run locally: `cd scraper && npm install && npm run build`, then `SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GEMINI_API_KEY=... npm run scrape`.
+
 ## Available Scripts
 
 In the project directory, you can run:
