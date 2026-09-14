@@ -16,7 +16,6 @@ import {
   Typography,
 } from "@mui/material";
 import { useAppContext } from "../../context/AppContext";
-import { catalog } from "../../data/catalog";
 import { askAssistant, humanizeToolName, isGeminiConfigured } from "../../services/geminiAssistant";
 import type { AssistantDataContext } from "../../services/assistantTools";
 import type { ChatMessage } from "../../types/assistant";
@@ -56,12 +55,13 @@ export default function AssistantWidget() {
 
   const dataContext: AssistantDataContext = useMemo(
     () => ({
-      catalog,
+      // catalog and productsList were separate static/managed datasets
+      // before the app was wired to Supabase; now both are the same
+      // unified set of approved promotions (see Decisions.md).
+      catalog: productsList,
       productsList,
       promotions,
-      retailers: Array.from(
-        new Set([...catalog.map((p) => p.retailer), ...productsList.map((p) => p.retailer)]),
-      ),
+      retailers: Array.from(new Set(productsList.map((p) => p.retailer))),
       // All markets, not just PL — `brandsByMarket.PL` alone would silently
       // treat every CZ-only brand as unknown to anything reading ctx.brands.
       brands: Array.from(new Set([...brandsByMarket.PL, ...brandsByMarket.CZ])),
