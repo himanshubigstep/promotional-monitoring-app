@@ -24,7 +24,7 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 | Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | **In PR #4, awaiting review.** Wired to real Supabase data, static files kept as a verified fallback |
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
 | Review queue (approve/edit/reject `pending_review` rows) | **In PR #3, awaiting Himanshu's review.** Verified end-to-end against local + cloud DB |
-| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists |
+| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists. Deployed anon key currently reads via `0005_anon_public_read.sql` (see below) as a stopgap until this ships — revisit that migration once it does |
 | AI chat assistant | **Merged, but now stale.** Reads static `AppContext` data — once PR #4 merges, `assistantTools.ts` will keep reading the *fallback* shape correctly (same `Promotion`/`Product` types), but the `catalog`/`productsList` split it was written against no longer exists as two things; needs a quick pass to confirm it still behaves post-merge |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
@@ -109,6 +109,18 @@ supabase/migrations/0003_review_audit.sql    Adds reviewed_by/reviewed_at/reject
 ```
 
 **Behavior change from this migration, relevant to whatever you build next:** `promotions_select` now only returns `approved` rows to non-editors. Editors still see everything from any query — add `.eq('status', 'approved')` explicitly on any page that isn't the review queue, or pending/rejected rows will leak into normal views for editor sessions.
+
+### Public anon read access (Gajendra, applied directly to unblock the deployed POC demo)
+
+```
+supabase/migrations/0005_anon_public_read.sql   Adds anon-role select policies on retailers/brands/categories
+                                                   (unrestricted) and promotions/promotion_brands/promotion_creatives/
+                                                   storage.objects (approved promotions only)
+```
+
+**Why this exists:** every RLS policy through `0003` is scoped `to authenticated`. With no login UI built yet, the deployed frontend always runs as the unauthenticated `anon` role, so the live Vercel deployment returned zero rows everywhere — not a data or env-var problem, an access problem. `0005` adds anon read access, deliberately narrower than what authenticated users get: reference tables are fully readable, but promotions (and anything joined off one) are restricted to `status = 'approved'`, matching the same backstop `0003` put in place for the analyst role. No insert/update/delete was added for anon, and `profiles` got no anon policy at all.
+
+**Follow-up once Auth login/session UI ships:** decide whether `0005`'s anon policies should stay (genuinely public read-only demo link) or be walked back to authenticated-only once real editor/analyst login is in use — don't leave this as an accidental permanent public-data-access decision made under demo pressure.
 
 ### Planned, not yet built
 
