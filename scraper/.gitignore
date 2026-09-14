@@ -1,0 +1,6 @@
+node_modules
+dist
+
+# The root .gitignore excludes package-lock.json everywhere, but this
+# scraper runs via `npm ci` in CI, which requires a committed lockfile.
+!package-lock.json
