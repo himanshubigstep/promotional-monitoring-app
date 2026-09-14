@@ -168,7 +168,10 @@ export type Database = {
           parent_promotion_id: string | null
           price_after_discount: number | null
           promotion_type: string | null
+          rejection_reason: string | null
           retailer_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           scope: string | null
           sku_count: number | null
           source: string
@@ -193,7 +196,10 @@ export type Database = {
           parent_promotion_id?: string | null
           price_after_discount?: number | null
           promotion_type?: string | null
+          rejection_reason?: string | null
           retailer_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           scope?: string | null
           sku_count?: number | null
           source?: string
@@ -218,7 +224,10 @@ export type Database = {
           parent_promotion_id?: string | null
           price_after_discount?: number | null
           promotion_type?: string | null
+          rejection_reason?: string | null
           retailer_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           scope?: string | null
           sku_count?: number | null
           source?: string
@@ -253,6 +262,13 @@ export type Database = {
             columns: ["retailer_id"]
             isOneToOne: false
             referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]

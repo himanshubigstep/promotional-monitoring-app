@@ -11,3 +11,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+
+// Dev-only convenience until a real login screen exists: lets you sign in
+// from the browser console, e.g.
+//   await window.supabase.auth.signInWithPassword({ email, password })
+// Never exposed in a production build.
+if (process.env.NODE_ENV === "development") {
+  (window as unknown as { supabase: typeof supabase }).supabase = supabase;
+}
