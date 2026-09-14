@@ -25,7 +25,7 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
 | Review queue (approve/reject `pending_review` rows) | **Not built — real gap, high priority** |
 | Auth login/session UI | Not built |
-| AI chat assistant | In progress on unmerged branch `feature/ai-assistant-chatbot` |
+| AI chat assistant | **Merged.** Works well, live-tested (grounded Q&A + working navigation links) — but reads static `AppContext` data only, zero references to Supabase. Needs reconciling once real data lands (see below) |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
 ## Repository structure
@@ -66,22 +66,25 @@ src/
   utils/geminiOcr.ts          Manual-upload OCR — client-side Gemini call, key currently exposed (needs server-side move)
 ```
 
-### In progress, unmerged (`feature/ai-assistant-chatbot`, Divyanshu)
+### AI chat assistant (Divyanshu, merged)
 
 ```
 src/components/Assistant/AssistantWidget.tsx        Chat UI
-src/components/Assistant/AssistantResultView.tsx    Renders assistant results (product/promo cards, tables)
-src/services/geminiAssistant.ts                     Gemini call + prompt handling
+src/components/Assistant/AssistantResultView.tsx    Renders assistant results (product/promo cards, nav links)
+src/services/geminiAssistant.ts                     Gemini call + prompt handling — client-side key,
+                                                       same exposed-key pattern as geminiOcr.ts (tracked, not new)
 src/services/assistantTools.ts                       Deterministic "tools" the assistant calls — reads
-                                                       AppContext + static data (catalog.ts), NOT Supabase yet
+                                                       AppContext + static data (catalog.ts). Zero references
+                                                       to Supabase anywhere in this branch.
 src/types/assistant.ts
-src/data/navigation.ts                                Lets the assistant navigate the app
+src/data/navigation.ts                                Route registry the assistant navigates against — real
+                                                       react-router <Link>s, confirmed working live
 App.tsx (+2 lines)                                    Mounts the widget
 ```
 
-**Two things to watch when merging this branch:**
-1. It modifies `App.tsx` — same file Himanshu's Supabase wiring will likely also touch. Coordinate before merging either.
-2. `assistantTools.ts` currently reads from `AppContext`'s static in-memory data, not Supabase. Once Himanshu wires real data in, Divyanshu's tools need updating to match — the assistant will otherwise answer from stale/fake data.
+**Verified before merge:** clean merge against main (no conflicts — the App.tsx overlap flagged earlier turned out to be a non-issue since it's only 2 additive lines), typecheck/build/existing tests all pass, and live-tested both a data query (correct, grounded answer + product cards) and navigation ("take me to brand analytics" → real clickable card → actually navigated).
+
+**Real follow-up, not yet started:** `assistantTools.ts` reads only the static frontend data. Once Himanshu wires `AppContext` to Supabase, this needs updating too, or the assistant will silently answer from stale/fake data instead of the real DB (including anything the scraper wrote).
 
 ### Planned, not yet built
 
@@ -116,4 +119,4 @@ api/  (proposed, Vercel serverless, framework-agnostic)
 3. **Create an implementation plan with minimal file touches** — scope the change as tightly as possible. Prefer additive changes over edits to files outside your ownership area (see the ownership map above). If a change must cross into someone else's area, flag it before touching it.
 4. **Then execute.**
 
-Skipping straight to code without steps 1–3 is exactly how the `App.tsx` merge conflict above happens twice.
+Skipping straight to code without steps 1–3 is how two people end up editing the same file with conflicting assumptions — flagging `App.tsx` and `assistantTools.ts` above ahead of time is what kept that from actually happening this round.
