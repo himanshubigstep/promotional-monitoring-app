@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AutoAwesomeRounded,
   CloseRounded,
@@ -20,6 +20,7 @@ import { askAssistant, humanizeToolName, isGeminiConfigured } from "../../servic
 import type { AssistantDataContext } from "../../services/assistantTools";
 import type { ChatMessage } from "../../types/assistant";
 import AssistantResultView from "./AssistantResultView";
+import FormattedText from "./FormattedText";
 
 const SUGGESTIONS = [
   "Where can I see analytics?",
@@ -27,6 +28,26 @@ const SUGGESTIONS = [
   "Show me all Lakmé products",
   "Summarize promotions from the last 10 days",
 ];
+
+// Resizable panel width (desktop only — the drawer stays full-width on
+// mobile). Persisted across sessions so a user's preferred width sticks.
+const MIN_PANEL_WIDTH = 320;
+const MAX_PANEL_WIDTH = 900;
+const DEFAULT_PANEL_WIDTH = 420;
+const PANEL_WIDTH_STORAGE_KEY = "assistantPanelWidth";
+
+function readStoredPanelWidth(): number {
+  try {
+    const stored = Number(localStorage.getItem(PANEL_WIDTH_STORAGE_KEY));
+    if (Number.isFinite(stored) && stored >= MIN_PANEL_WIDTH && stored <= MAX_PANEL_WIDTH) {
+      return stored;
+    }
+  } catch {
+    // localStorage can throw in private/locked-down browser contexts —
+    // fall back to the default rather than breaking the widget.
+  }
+  return DEFAULT_PANEL_WIDTH;
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -52,6 +73,51 @@ export default function AssistantWidget() {
   // fire a second concurrent request. This ref is set synchronously instead.
   const sendingRef = useRef(false);
   const { productsList, promotions, brandsByMarket } = useAppContext();
+
+  const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth);
+  const panelWidthRef = useRef(panelWidth);
+  const isResizingRef = useRef(false);
+  panelWidthRef.current = panelWidth;
+
+  // Drag-to-resize: mousedown on the handle starts tracking, mousemove
+  // (attached to the window, not just the handle, so the drag keeps working
+  // even if the cursor slips past the thin handle) updates the width live,
+  // mouseup ends it and persists the final width. Listeners are attached
+  // once on mount rather than re-attached on every width change.
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const next = Math.min(
+        MAX_PANEL_WIDTH,
+        Math.max(MIN_PANEL_WIDTH, window.innerWidth - event.clientX),
+      );
+      setPanelWidth(next);
+    };
+    const stopResizing = () => {
+      if (!isResizingRef.current) return;
+      isResizingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        localStorage.setItem(PANEL_WIDTH_STORAGE_KEY, String(panelWidthRef.current));
+      } catch {
+        // Ignore storage errors — losing the remembered width isn't critical.
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, []);
+
+  const startResizing = (event: React.MouseEvent) => {
+    event.preventDefault();
+    isResizingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const dataContext: AssistantDataContext = useMemo(
     () => ({
@@ -141,9 +207,32 @@ export default function AssistantWidget() {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        slotProps={{ paper: { sx: { width: { xs: "100%", sm: 420 } } } }}
+        slotProps={{ paper: { sx: { width: { xs: "100%", sm: panelWidth } } } }}
       >
-        <Box className="flex h-full flex-col bg-[#fafafa]">
+        <Box className="relative flex h-full flex-col bg-[#fafafa]">
+          {/* Drag handle: hidden on mobile, where the drawer is always
+              full-width. Listens on mousedown only — the window-level
+              listeners in the effect above handle the rest of the drag. */}
+          <Box
+            onMouseDown={startResizing}
+            sx={{
+              display: { xs: "none", sm: "block" },
+              position: "absolute",
+              // Fully inside the panel, never over the backdrop — straddling
+              // the edge risked a stray pixel registering as a backdrop
+              // click, which closes the whole drawer instead of resizing it.
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 8,
+              cursor: "col-resize",
+              zIndex: 10,
+              "&:hover, &:active": {
+                backgroundColor: "rgba(0,0,0,0.12)",
+              },
+            }}
+            aria-hidden="true"
+          />
           <Box className="flex items-center justify-between border-b border-[#e5e5e5] bg-white px-4 py-3.5">
             <Box className="flex items-center gap-2">
               <Box className="flex h-8 w-8 items-center justify-center rounded-lg bg-black">
@@ -181,15 +270,22 @@ export default function AssistantWidget() {
                           : "border border-[#e5e5e5] bg-white"
                     }`}
                   >
-                    <Typography
-                      sx={{
-                        fontSize: 13,
-                        color: message.role === "user" ? "#fff" : message.isError ? "#e50043" : "#1a1a1a",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {message.text}
-                    </Typography>
+                    {message.role === "user" || message.isError ? (
+                      // The user's own text and error strings are shown as-is
+                      // — only the assistant's replies use markdown (see the
+                      // system prompt), so only they need FormattedText.
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          color: message.role === "user" ? "#fff" : "#e50043",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {message.text}
+                      </Typography>
+                    ) : (
+                      <FormattedText text={message.text} color="#1a1a1a" />
+                    )}
                   </Box>
                   {message.toolName && (
                     <Chip

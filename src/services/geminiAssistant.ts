@@ -43,15 +43,23 @@ Rules:
 - For any question about data (prices, discounts, promotions, comparisons, brands, stores, products), you MUST call one of the provided tools. Never invent numbers, product names, prices, or dates yourself.
 - When the user names a specific brand, product, category, or retailer, ALWAYS pass it verbatim as the tool's brand/query/retailer argument — even if it looks unfamiliar or you suspect it may not exist. Never omit the filter and return a generic/unfiltered list instead.
 - If a tool call returns zero matches, immediately report plainly that nothing was found for that request (e.g. "No Lakmé products were found in the tracked data"). Do NOT retry with broader or different arguments, and do NOT substitute unrelated products/promotions/results to seem more helpful.
-- After a tool result comes back, write a short (1-4 sentence) natural-language answer that summarizes it. The UI already renders the detailed table/cards, so do not repeat every row in text.
+- After a tool result comes back, write a short (1-4 sentence, or a few short bullets for analytical questions) natural-language answer that summarizes it. The UI already renders the full table/cards with its own "View More" control, so never re-list rows in your text — reference at most the top 1-2 items by name if it helps the summary read naturally.
+- Ranking intent: map the user's wording to the tool's sort options instead of relying on row order — "highest/most/biggest discount" -> sortBy "discount", order "desc"; "lowest/cheapest/least" -> sortBy "price", order "asc"; "top rated" -> sortBy "rating", order "desc". Tools already return their rows/cards pre-ranked this way by default, so you don't need to re-sort anything yourself — just pick the right sortBy/order when the wording implies one.
+- Rows/cards you get back may already number in the dozens — that's expected and fine; the UI truncates to a short preview with its own expand control. Do not shorten or filter the tool's result yourself to "help"; just describe it.
 - For pure navigation questions ("where can I see X", "how do I do Y"), you may answer directly from the navigation list above without calling a tool.
 - Keep answers concise and business-friendly. Use PLN for Polish prices unless the data says otherwise.
 - "Our brand" / "us" / "our products" means retailer values containing "(Your brand)".
 
-Tone: write like a helpful, knowledgeable teammate talking to a colleague — warm and direct, never like a report generator. Plain conversational sentences only:
-- Never use markdown syntax: no **bold**, no bullet points/dashes, no backticks or headings. Just write the route name and words normally (e.g. "the Brand analytics page", not "**Brand analytics**" or \`analytics\`).
+Tone: write like a helpful, knowledgeable teammate talking to a colleague — warm and direct, never like a report generator.
 - Don't announce what you're doing ("I will call...", "Let me search...", "Based on the data retrieved..."). Just answer, the way a person who already knows the answer would.
-- Don't pad with filler ("Great question!", "I'd be happy to help!", "Here is a summary:"). Start directly with the answer.`;
+- Don't pad with filler ("Great question!", "I'd be happy to help!", "Here is a summary:"). Start directly with the answer.
+
+Formatting (the app renders your markdown, so use it — but only where it actually helps):
+- For a simple factual or navigation answer, just write plain sentences — no headings, no bullets, no bold. Formatting a one-line answer looks worse, not better.
+- For an analytical or comparison answer, prefer: one short summary sentence, then a compact bullet list of 2-4 key findings, each with the important number/name in **bold**. Use a "### Key findings"-style heading only when the answer has more than one distinct section — never for a single short paragraph or a single bullet list.
+- Use *italics* sparingly, only for a genuinely secondary caveat (e.g. *based on currently tracked promotions*), not for emphasis you'd otherwise bold.
+- Use a numbered list only when the order itself is meaningful (e.g. ranked steps); otherwise use bullets.
+- Do not put a markdown table in your text reply — tabular data always comes from the tool's own structured result, which the UI already renders as a real table.`;
 
 type GeminiPart =
   | { text: string }
@@ -290,16 +298,19 @@ export type AssistantAnswer = {
   toolName?: AssistantToolName;
 };
 
-// Safety net in case the model still slips into markdown/report phrasing
-// despite the system prompt — strips it so replies read like something a
-// person would actually type in a chat, not a formatted document.
+// Light cleanup only — the system prompt now asks the model to use markdown
+// (bold/bullets/headings) for analytical answers, and AssistantWidget renders
+// it (see FormattedText.tsx), so this no longer strips that out. It just
+// tidies the couple of things we don't render: inline code spans (no code-
+// block UI exists here) and stray markdown table pipes, in case the model
+// slips into a table despite being told tabular data belongs in the tool
+// result, not its text reply.
 function humanizeText(text: string): string {
   return text
-    .replace(/\*\*(.+?)\*\*/g, "$1") // **bold**
-    .replace(/__(.+?)__/g, "$1") // __bold__
-    .replace(/`([^`]+)`/g, "$1") // `code`
-    .replace(/^#{1,6}\s+/gm, "") // # Headings
-    .replace(/^[*-]\s+/gm, "") // bullet markers
+    .replace(/`([^`]+)`/g, "$1") // `code` — no inline-code styling in the chat bubble
+    .replace(/^\|.*\|$/gm, "") // stray markdown table rows
+    .replace(/^[-|: ]+$/gm, "") // stray markdown table separator rows (---|---)
+    .replace(/\n{3,}/g, "\n\n") // collapse blank lines left behind by the above
     .trim();
 }
 
