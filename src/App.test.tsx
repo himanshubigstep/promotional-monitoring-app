@@ -7,6 +7,43 @@ import { getMarketBrandOptions } from "./data/brands";
 import { getMarketRetailers } from "./data/retailers";
 import { getMarketProducts } from "./data/marketProducts";
 import { upsertProductInMarket } from "./data/marketProducts";
+import { supabase } from "./lib/supabaseClient";
+
+// Bulk upload is editor-gated (canEdit derives from the real signed-in
+// user's profiles.role now, not a locally-toggleable fake role) — simulate
+// a signed-in editor for this one test so the button is reachable, without
+// disturbing .env.test's deliberate unreachable-URL fallback-data behavior
+// for every other table/test. Restored after each test.
+function mockSignedInEditor() {
+  const realFrom = supabase.from.bind(supabase);
+  jest.spyOn(supabase.auth, "getSession").mockResolvedValue({
+    data: {
+      session: {
+        user: { id: "test-editor-id", email: "editor@test.local" },
+      } as any,
+    },
+    error: null,
+  } as any);
+  jest.spyOn(supabase.auth, "onAuthStateChange").mockReturnValue({
+    data: { subscription: { unsubscribe: () => undefined } },
+  } as any);
+  jest.spyOn(supabase, "from").mockImplementation((table: any) => {
+    if (table === "profiles") {
+      return {
+        select: () => ({
+          eq: () => ({
+            maybeSingle: async () => ({ data: { role: "editor" }, error: null }),
+          }),
+        }),
+      } as any;
+    }
+    return realFrom(table);
+  });
+}
+
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 test("renders the Sephora Promotional Monitoring dashboard", () => {
   render(<App />);
@@ -28,11 +65,12 @@ test("renders a label action for adding a new option", () => {
   expect(screen.getByRole("button", { name: "Add brand" })).toBeInTheDocument();
 });
 
-test("bulk upload modal omits store selection from rows and templates", () => {
+test("bulk upload modal omits store selection from rows and templates", async () => {
+  mockSignedInEditor();
   render(<App />);
 
   fireEvent.click(
-    screen.getByRole("button", { name: /bulk upload brands or products/i }),
+    await screen.findByRole("button", { name: /bulk upload brands or products/i }),
   );
 
   expect(

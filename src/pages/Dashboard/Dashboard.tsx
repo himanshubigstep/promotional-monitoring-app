@@ -60,7 +60,8 @@ function getGreeting() {
 const Dashboard = () => {
   const {
     filters,
-    role,
+    user,
+    authRole,
     products: catalog,
     addPromotion,
     addBrand,
@@ -585,7 +586,7 @@ const Dashboard = () => {
               <Typography
                 sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}
               >
-                {getGreeting()}, {role}
+                {getGreeting()}, {user ? (authRole === "editor" ? "Editor" : "Analyst") : "Guest"}
               </Typography>
             </Box>
             <Box className="flex items-center gap-2">

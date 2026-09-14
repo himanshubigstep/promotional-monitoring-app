@@ -20,8 +20,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  MenuItem,
-  Select,
   ThemeProvider,
   Toolbar,
   Typography,
@@ -41,7 +39,6 @@ import StoreComparison from "./pages/StoreComparison/StoreComparison";
 import {
   AppProvider,
   PromotionFilters,
-  UserRole,
   useAppContext,
 } from "./context/AppContext";
 import BrandAnalytics from "./pages/BrandAnalytics/BrandAnalytics";
@@ -51,6 +48,7 @@ import PromotionalCalendar from "./pages/PromotionalCalendar/PromotionalCalendar
 import PromotionFilterModal from "./components/PromotionFilterModal";
 import AssistantWidget from "./components/Assistant/AssistantWidget";
 import ReviewQueue from "./pages/ReviewQueue/ReviewQueue";
+import Login from "./pages/Auth/Login";
 import { sephoraTheme } from "./theme/sephoraTheme";
 
 const drawerWidth = 244;
@@ -134,7 +132,7 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
 }
 
 function AppLayout() {
-  const { role, setRole, filters, setFilters } = useAppContext();
+  const { user, authRole, signOut, filters, setFilters } = useAppContext();
   const [filterOpen, setFilterOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
@@ -330,7 +328,9 @@ function AppLayout() {
               </Typography>
               <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
                 {location.pathname === "/"
-                  ? `${getTimeGreeting()}, ${role} • Sephora Promotional Monitor`
+                  ? `${getTimeGreeting()}, ${
+                      user ? (authRole === "editor" ? "Editor" : "Analyst") : "Guest"
+                    } • Sephora Promotional Monitor`
                   : "Track competitor promotions, pricing trends, and market campaign analytics."}
               </Typography>
             </Box>
@@ -359,22 +359,55 @@ function AppLayout() {
                 Filters
               </Button>
 
-              <Select
-                size="small"
-                value={role}
-                onChange={(event) => setRole(event.target.value as UserRole)}
-                sx={{
-                  minWidth: 145,
-                  backgroundColor: "#ffffff",
-                  fontSize: 12.5,
-                  fontWeight: 500,
-                  borderColor: "#e7eaee",
-                }}
-              >
-                <MenuItem value="Admin">Admin</MenuItem>
-                <MenuItem value="Data Analytics">Data Analytics</MenuItem>
-                <MenuItem value="Viewer">Viewer</MenuItem>
-              </Select>
+              {user ? (
+                <Box className="flex items-center gap-2">
+                  <Box
+                    sx={{
+                      backgroundColor: "#ffffff",
+                      border: "1px solid #e7eaee",
+                      borderRadius: "8px",
+                      px: 1.5,
+                      py: 0.7,
+                      fontSize: 12.5,
+                      fontWeight: 500,
+                      color: "#20242b",
+                    }}
+                  >
+                    {authRole === "editor" ? "Editor" : "Analyst"} · {user.email}
+                  </Box>
+                  <Button
+                    size="small"
+                    onClick={() => signOut()}
+                    sx={{
+                      color: "#737b88",
+                      textTransform: "none",
+                      fontWeight: 600,
+                      fontSize: 12.5,
+                      "&:hover": { color: "#20242b", backgroundColor: "#f4f6f8" },
+                    }}
+                  >
+                    Sign out
+                  </Button>
+                </Box>
+              ) : (
+                <Button
+                  component={NavLink}
+                  to="/login"
+                  size="small"
+                  variant="contained"
+                  sx={{
+                    backgroundColor: "#22252b",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 700,
+                    fontSize: 12.5,
+                    px: 2,
+                    "&:hover": { backgroundColor: "#343942" },
+                  }}
+                >
+                  Sign in
+                </Button>
+              )}
             </Box>
           </Box>
 
@@ -402,6 +435,11 @@ function App() {
       <AppProvider>
         <BrowserRouter>
           <Routes>
+            {/* Public — no AppLayout chrome, and deliberately no route guard
+                anywhere else either: anon visitors keep seeing everything
+                read-only (0005_anon_public_read.sql), this only adds real
+                editor/analyst capability on top for whoever signs in. */}
+            <Route path="/login" element={<Login />} />
             <Route element={<AppLayout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<PromotionalCalendar />} />
