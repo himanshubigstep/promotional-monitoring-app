@@ -4,6 +4,7 @@ import {
   CalendarMonthRounded,
   ChevronLeftRounded,
   DashboardRounded,
+  FactCheckRounded,
   FilterAltRounded,
   LocalOfferRounded,
   MenuRounded,
@@ -49,6 +50,7 @@ import Promotions from "./pages/Promotions/Promotions";
 import PromotionalCalendar from "./pages/PromotionalCalendar/PromotionalCalendar";
 import PromotionFilterModal from "./components/PromotionFilterModal";
 import AssistantWidget from "./components/Assistant/AssistantWidget";
+import ReviewQueue from "./pages/ReviewQueue/ReviewQueue";
 import { sephoraTheme } from "./theme/sephoraTheme";
 
 const drawerWidth = 260;
@@ -62,6 +64,7 @@ const navigation = [
   { label: "Promotions", path: "/promotions", icon: <LocalOfferRounded /> },
   { label: "Brand analytics", path: "/analytics", icon: <BarChartRounded /> },
   { label: "Store comparison", path: "/stores", icon: <StorefrontRounded /> },
+  { label: "Review queue", path: "/review-queue", icon: <FactCheckRounded /> },
 ];
 
 function getTimeGreeting() {
@@ -412,6 +415,7 @@ function App() {
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/analytics" element={<BrandAnalytics />} />
               <Route path="/stores" element={<StoreComparison />} />
+              <Route path="/review-queue" element={<ReviewQueue />} />
             </Route>
           </Routes>
         </BrowserRouter>

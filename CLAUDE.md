@@ -23,8 +23,8 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 | Scraper (4/7 retailer sites) | Done |
 | Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | Existing, not yet wired to real DB |
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
-| Review queue (approve/reject `pending_review` rows) | **Not built — real gap, high priority** |
-| Auth login/session UI | Not built |
+| Review queue (approve/edit/reject `pending_review` rows) | **In PR #3, awaiting Himanshu's review.** Verified end-to-end against local + cloud DB |
+| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists |
 | AI chat assistant | **Merged.** Works well, live-tested (grounded Q&A + working navigation links) — but reads static `AppContext` data only, zero references to Supabase. Needs reconciling once real data lands (see below) |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
@@ -86,12 +86,21 @@ App.tsx (+2 lines)                                    Mounts the widget
 
 **Real follow-up, not yet started:** `assistantTools.ts` reads only the static frontend data. Once Himanshu wires `AppContext` to Supabase, this needs updating too, or the assistant will silently answer from stale/fake data instead of the real DB (including anything the scraper wrote).
 
+### Review queue (Gajendra, PR #3, awaiting Himanshu's review — not yet merged)
+
+```
+src/pages/ReviewQueue/ReviewQueue.tsx        List + screenshot preview + approve/edit/reject actions
+src/pages/ReviewQueue/ReviewEditModal.tsx    Dedicated edit form — NOT PromotionFormModal, see PR description for why
+src/lib/reviewQueue.ts                       Supabase queries: fetch pending, approve, reject, edit-and-approve
+supabase/migrations/0003_review_audit.sql    Adds reviewed_by/reviewed_at/rejection_reason; tightens promotions_select RLS
+```
+
+**Behavior change from this migration, relevant to whatever you build next:** `promotions_select` now only returns `approved` rows to non-editors. Editors still see everything from any query — add `.eq('status', 'approved')` explicitly on any page that isn't the review queue, or pending/rejected rows will leak into normal views for editor sessions.
+
 ### Planned, not yet built
 
 ```
 src/pages/Auth/                 Login/session UI (Himanshu) — uses supabase.auth, profiles table already exists
-src/pages/ReviewQueue/          Approve/reject pending_review rows (Himanshu) — HIGH PRIORITY, scraped
-                                  data is invisible without this
 api/  (proposed, Vercel serverless, framework-agnostic)
   ocr-proxy.ts                   Moves Gemini OCR call server-side (fixes the exposed-key issue)
   assistant-query.ts             If Divyanshu's assistant needs server-side DB queries beyond client-side
