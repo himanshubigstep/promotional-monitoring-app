@@ -21,10 +21,10 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 |---|---|
 | Backend (DB, auth, roles, persistence) | Done |
 | Scraper (4/7 retailer sites) | Done |
-| Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | **In PR #4, awaiting review.** Wired to real Supabase data, static files kept as a verified fallback |
+| Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | **Merged (PR #4).** Wired to real Supabase data, static files kept as a verified fallback |
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
-| Review queue (approve/edit/reject `pending_review` rows) | **In PR #3, awaiting Himanshu's review.** Verified end-to-end against local + cloud DB |
-| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists. Deployed anon key currently reads via `0005_anon_public_read.sql` (see below) as a stopgap until this ships — revisit that migration once it does |
+| Review queue (approve/edit/reject `pending_review` rows) | **Merged (PR #3).** Verified end-to-end against local + cloud DB. 78 scraper-sourced rows currently sitting unreviewed as of 2026-09-14 — nobody can act on them yet without login (see Auth row below) |
+| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists. Scoped in `AUTH_LOGIN_PLAN.md`, ready to build. Deployed anon key reads via `0005_anon_public_read.sql` (see below) — kept permanently regardless of this shipping, per decision below |
 | AI chat assistant | **Merged, but now stale.** Reads static `AppContext` data — once PR #4 merges, `assistantTools.ts` will keep reading the *fallback* shape correctly (same `Promotion`/`Product` types), but the `catalog`/`productsList` split it was written against no longer exists as two things; needs a quick pass to confirm it still behaves post-merge |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
@@ -67,7 +67,7 @@ src/
   utils/geminiOcr.ts          Manual-upload OCR — client-side Gemini call, key currently exposed (needs server-side move)
 ```
 
-### Supabase data wiring (Gajendra, PR #4, awaiting Himanshu's review — not yet merged)
+### Supabase data wiring (Gajendra, PR #4, merged)
 
 ```
 src/lib/promotionsData.ts    Fetch (with fallback), the DB-row <-> Promotion/Product mapper, async write functions
@@ -99,7 +99,7 @@ App.tsx (+2 lines)                                    Mounts the widget
 
 **Follow-up, now partially resolved by PR #4:** `assistantTools.ts` reads `AppContext`'s `productsList`/`promotions` (real Supabase data once #4 merges) plus a separate `catalog` import that #4 removes — `AssistantWidget.tsx` was updated to point `catalog` at the same unified `productsList` instead, so `assistantTools.ts` itself needs no changes. Worth a quick smoke-test after both PRs land, since this wasn't originally built against a single unified list.
 
-### Review queue (Gajendra, PR #3, awaiting Himanshu's review — not yet merged)
+### Review queue (Gajendra, PR #3, merged)
 
 ```
 src/pages/ReviewQueue/ReviewQueue.tsx        List + screenshot preview + approve/edit/reject actions
@@ -120,7 +120,7 @@ supabase/migrations/0005_anon_public_read.sql   Adds anon-role select policies o
 
 **Why this exists:** every RLS policy through `0003` is scoped `to authenticated`. With no login UI built yet, the deployed frontend always runs as the unauthenticated `anon` role, so the live Vercel deployment returned zero rows everywhere — not a data or env-var problem, an access problem. `0005` adds anon read access, deliberately narrower than what authenticated users get: reference tables are fully readable, but promotions (and anything joined off one) are restricted to `status = 'approved'`, matching the same backstop `0003` put in place for the analyst role. No insert/update/delete was added for anon, and `profiles` got no anon policy at all.
 
-**Follow-up once Auth login/session UI ships:** decide whether `0005`'s anon policies should stay (genuinely public read-only demo link) or be walked back to authenticated-only once real editor/analyst login is in use — don't leave this as an accidental permanent public-data-access decision made under demo pressure.
+**Decided (2026-09-14): `0005`'s anon policies stay permanently**, independent of the Auth login/session UI (see `AUTH_LOGIN_PLAN.md`). This is a deliberate call, not an accidental leftover from demo pressure — the deployed link stays read-only-viewable without login even after real editor/analyst auth ships; login adds real role-based capability on top, it doesn't replace or require removing public anon access.
 
 ### Planned, not yet built
 
