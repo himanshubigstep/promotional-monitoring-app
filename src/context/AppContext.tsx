@@ -317,7 +317,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // const data = await refresh();
       setLastAddedProductId(newId);
     },
-    [refresh, assertWritable],
+    [assertWritable],
   );
 
   const updatePromotion = useCallback(
@@ -366,7 +366,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // const data = await refresh();
       setLastAddedProductId(newId);
     },
-    [refresh, assertWritable],
+    [assertWritable],
   );
 
   const deletePromotion = useCallback(
