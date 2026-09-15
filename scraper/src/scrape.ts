@@ -7,6 +7,13 @@ const CREATIVES_BUCKET = "promotion-creatives";
 const NAV_TIMEOUT_MS = 30_000;
 const BOT_WALL_TITLE_MARKERS = ["just a moment", "attention required", "access denied"];
 
+// Matches the "accept all" button on every consent-management platform seen
+// across these retailers' sites so far (Polish and English wording) — best
+// effort, not an exhaustive list. Scoped to actual button roles so a false
+// match on an unrelated page button is unlikely and harmless either way:
+// worst case it clicks nothing (timeout) or clicks something inert.
+const COOKIE_CONSENT_BUTTON_PATTERN = /akceptuj|zaakceptuj|zgadzam|accept all|allow all/i;
+
 function todayIso() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -54,6 +61,25 @@ async function findCategoryId(categories: { id: string; name: string }[], raw: s
   return partial?.id ?? null;
 }
 
+// Best-effort dismissal of a cookie-consent modal before the screenshot is
+// taken — GH Actions launches a completely cookie-free browser every run, so
+// any retailer running a consent-management platform shows this on every
+// single scrape, potentially covering the real promo content in the
+// screenshot Gemini sees. No-ops harmlessly if no matching button appears in
+// time (most likely there's no modal on this page, or its wording doesn't
+// match — either way the scrape proceeds exactly as before this existed).
+async function dismissCookieConsent(page: import("playwright").Page) {
+  try {
+    await page
+      .getByRole("button", { name: COOKIE_CONSENT_BUTTON_PATTERN })
+      .first()
+      .click({ timeout: 3000 });
+    await page.waitForTimeout(500);
+  } catch {
+    // No matching consent button found/clickable in time — not fatal.
+  }
+}
+
 async function findOrCreateBrandIds(market: "PL", rawBrands: string | undefined) {
   if (!rawBrands) return [];
   const names = rawBrands
@@ -96,6 +122,20 @@ async function scrapeRetailer(
   const page = await browser.newPage({
     userAgent:
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+    viewport: { width: 1366, height: 900 },
+    locale: "pl-PL",
+    timezoneId: "Europe/Warsaw",
+  });
+  // Playwright/CDP-launched Chromium exposes navigator.webdriver=true by
+  // default, one of the most basic signals a WAF can check for. Patching it
+  // (plus the launch args below) removes that tell for free and is safe
+  // hygiene either way, but it is NOT sufficient on its own against a
+  // sophisticated product like Akamai Bot Manager (confirmed by testing
+  // directly against sephora.pl/douglas.pl with exactly this hardening
+  // applied — still an immediate 403; see the long comment in retailers.ts
+  // for what was actually tried and ruled out for those two).
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => undefined });
   });
 
   try {
@@ -114,6 +154,7 @@ async function scrapeRetailer(
       return { retailer: target.name, status: "http_error" as const };
     }
 
+    await dismissCookieConsent(page);
     const screenshot = await page.screenshot({ fullPage: true, type: "png" });
 
     const { data: retailer } = await supabaseAdmin
@@ -233,7 +274,10 @@ async function main() {
   }
 
   const targets = resolveTargets();
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({
+    headless: true,
+    args: ["--disable-blink-features=AutomationControlled"],
+  });
   const results = [];
 
   try {
