@@ -58,16 +58,31 @@ export type AssistantDataContext = {
 // form), which is out of scope for this assistant-only change.
 const isOurs = (retailer: string) => /\(your brand\)/i.test(retailer);
 
+// Product/promotion names, brands, retailers, and categories can arrive
+// all-lowercase — free-text manual entry, or scraper/Gemini-vision
+// extraction — and get displayed exactly as stored (e.g. "lakme" instead of
+// "Lakme"). Force just the first character to uppercase for display: a
+// no-op for anything already capitalized (so "CeraVe" isn't touched beyond
+// its already-uppercase "C") and for values that don't start with a letter
+// (dates, prices, "(Your brand)", codes, URLs), so it's safe to apply broadly
+// without special-casing which fields might contain those.
+const capFirst = (value: string): string =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
+// promotion.brands is a ", "-joined list (e.g. "lakme, cerave") — capitalize
+// each name in it, not just the first character of the whole joined string.
+const capEachName = (value: string): string =>
+  value ? value.split(", ").map(capFirst).join(", ") : value;
+
 function fromProduct(product: Product): UnifiedProduct {
   return {
     id: product.id,
-    name: product.name,
-    brand: product.brand,
-    category: product.category,
+    name: capFirst(product.name),
+    brand: capFirst(product.brand),
+    category: capFirst(product.category),
     price: product.price ?? null,
     currency: product.currency,
     market: product.market,
-    retailer: product.retailer,
+    retailer: capFirst(product.retailer),
     rating: product.rating ?? null,
     stock: product.stock ?? null,
     competitorDiscount: product.competitorDiscount ?? null,
@@ -155,10 +170,10 @@ function toProductCard(product: UnifiedProduct): ProductCardItem {
 function toPromotionCard(promotion: Promotion): PromotionCardItem {
   return {
     id: promotion.id,
-    name: promotion.name,
-    brand: promotion.brands,
-    retailer: promotion.retailer,
-    category: promotion.category,
+    name: capFirst(promotion.name),
+    brand: capEachName(promotion.brands),
+    retailer: capFirst(promotion.retailer),
+    category: capFirst(promotion.category),
     market: promotion.market,
     discount: promotion.discount,
     from: promotion.from,

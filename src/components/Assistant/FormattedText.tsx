@@ -1,5 +1,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
+import { Link } from "react-router-dom";
+import { linkableRoutes } from "../../data/navigation";
 
 // A small, dependency-free renderer for the subset of markdown the
 // assistant's system prompt is told to use (see geminiAssistant.ts):
@@ -88,15 +90,22 @@ function parseBlocks(text: string): Block[] {
   return blocks;
 }
 
-// Splits a line on **bold** / *italic* spans and returns React nodes with the
-// surrounding plain text preserved — a single regex pass rather than nested
-// replace() calls, so "**a** and *b*" doesn't get mangled. Exported so other
-// small pieces of assistant-generated text (e.g. the deterministic "insights"
-// bullets tools attach to a table/cards) can reuse the same inline styling
-// instead of duplicating this parsing.
+// Splits a line on **bold** / *italic* / [label](route) spans and returns
+// React nodes with the surrounding plain text preserved — a single regex pass
+// rather than nested replace() calls, so "**a** and *b*" doesn't get mangled.
+// Exported so other small pieces of assistant-generated text (e.g. the
+// deterministic "insights" bullets tools attach to a table/cards) can reuse
+// the same inline styling instead of duplicating this parsing.
+//
+// [label](route) becomes a real react-router Link — but only when `route` is
+// in the known-pages allowlist (linkableRoutes). The model is asked to use
+// this syntax for navigation answers (see geminiAssistant.ts), but its output
+// isn't trusted blindly: an unrecognized/hallucinated route renders as plain
+// text (just the label, brackets dropped) instead of a broken or unexpected
+// link.
 export function renderInline(text: string): React.ReactNode[] {
   const nodes: React.ReactNode[] = [];
-  const pattern = /\*\*(.+?)\*\*|\*(.+?)\*/g;
+  const pattern = /\*\*(.+?)\*\*|\*(.+?)\*|\[([^\]]+)\]\(([^)]+)\)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -111,11 +120,26 @@ export function renderInline(text: string): React.ReactNode[] {
           {match[1]}
         </strong>,
       );
-    } else {
+    } else if (match[2] !== undefined) {
       nodes.push(
         <em key={key++} style={{ fontStyle: "italic" }}>
           {match[2]}
         </em>,
+      );
+    } else {
+      const [, , , label, route] = match;
+      nodes.push(
+        linkableRoutes.has(route) ? (
+          <Link
+            key={key++}
+            to={route}
+            style={{ color: "#4f82f7", fontWeight: 700, textDecoration: "underline" }}
+          >
+            {label}
+          </Link>
+        ) : (
+          label
+        ),
       );
     }
     lastIndex = pattern.lastIndex;
