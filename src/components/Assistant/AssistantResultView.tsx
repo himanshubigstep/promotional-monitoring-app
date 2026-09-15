@@ -80,7 +80,7 @@ function ResultHeader({ title, caption }: { title: string; caption?: string }) {
 function InsightsList({ items }: { items: string[] }) {
   if (!items.length) return null;
   return (
-    <Box className="flex flex-col gap-1 border-b border-[#e3e6ed] bg-[#eaf1ff] px-3.5 py-2.5">
+    <Box className="flex flex-col gap-1 border-b border-[#e3e6ed] bg-[#f2f2f2] px-3.5 py-2.5">
       {items.map((item, index) => (
         <Box key={index} className="flex items-start gap-1.5">
           <Box
@@ -88,7 +88,7 @@ function InsightsList({ items }: { items: string[] }) {
               width: 4,
               height: 4,
               borderRadius: "50%",
-              backgroundColor: "#3874ff",
+              backgroundColor: "#000000",
               mt: "7px",
               flexShrink: 0,
             }}
@@ -121,11 +121,11 @@ function ShowMoreButton({
         onClick={onToggle}
         endIcon={expanded ? <ExpandLessRounded fontSize="small" /> : <ExpandMoreRounded fontSize="small" />}
         sx={{
-          color: "#3874ff",
+          color: "#000000",
           fontWeight: 700,
           fontSize: 12,
           textTransform: "none",
-          "&:hover": { backgroundColor: "#eaf1ff" },
+          "&:hover": { backgroundColor: "#f2f2f2" },
         }}
       >
         {expanded ? "Show less" : `View more (${hiddenCount})`}
@@ -391,7 +391,7 @@ export default function AssistantResultView({ result }: { result: AssistantResul
           <Box className="flex flex-col gap-2 p-3">
             {result.items.map((item) => (
               <Link key={item.route} to={item.route} className="no-underline">
-                <Box className="flex items-center justify-between rounded-md border border-[#e3e6ed] px-3 py-2 transition-colors hover:border-[#3874ff]">
+                <Box className="flex items-center justify-between rounded-md border border-[#e3e6ed] px-3 py-2 transition-colors hover:border-[#000000]">
                   <Box>
                     <Typography sx={{ color: "#141824", fontSize: 12.5, fontWeight: 800 }}>
                       {item.name}
@@ -400,7 +400,7 @@ export default function AssistantResultView({ result }: { result: AssistantResul
                       {item.description}
                     </Typography>
                   </Box>
-                  <NorthEastRounded sx={{ fontSize: 15, color: "#3874ff" }} />
+                  <NorthEastRounded sx={{ fontSize: 15, color: "#000000" }} />
                 </Box>
               </Link>
             ))}

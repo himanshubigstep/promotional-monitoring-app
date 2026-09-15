@@ -33,6 +33,8 @@ import PromotionFormModal from "../../components/PromotionFormModal";
 import DeleteIcon from "@mui/icons-material/Delete";
 import BrandComparisonTable from "../../components/BrandComparisonTable";
 import { accentTints } from "../../theme/sephoraTheme";
+import { isBenchmarkProduct } from "../../data/marketProducts";
+import { BarChart, LineChart } from "@mui/x-charts";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
@@ -62,6 +64,7 @@ const Dashboard = () => {
   const [bulkSaving, setBulkSaving] = useState(false);
   const [brandRows, setBrandRows] = useState([{ brand: "" }]);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
+  const [displayLang, setDisplayLang] = useState<"PL" | "CZ" | "EN">("PL");
   const [bulkMarket, setBulkMarket] = useState<"PL" | "CZ">(
     filters.market === "All" ? "PL" : (filters.market as "PL" | "CZ"),
   );
@@ -75,63 +78,60 @@ const Dashboard = () => {
     );
   }, [filters.market]);
 
-  const locale = filters.market === "CZ" ? "CZ" : "PL";
-
   const bulkText =
-    bulkMarket === "PL"
+    displayLang === "EN"
       ? {
-        heading: "Import masowy marek",
-        market: "Rynek",
-        excelTemplate: "Szablon Excel",
-        downloadXlsx: "Pobierz szablon (.xlsx)",
-        downloadCsv: "Pobierz szablon (.csv)",
-        addBrandRow: "+ Dodaj kolejną markę",
-        saveRows: "Zapisz wpisy",
-        cancel: "Anuluj",
-        brand: "Marka",
-        fileLabel: "Importuj z CSV/XLSX",
-        fileHint: "Obsługiwane pliki: .csv, .xlsx, .xls",
+        heading: "Bulk brand import",
+        market: "Market",
+        excelTemplate: "Excel template",
+        downloadXlsx: "Download template (.xlsx)",
+        downloadCsv: "Download template (.csv)",
+        addBrandRow: "+ Add another brand",
+        saveRows: "Save entries",
+        cancel: "Cancel",
+        brand: "Brand",
+        fileLabel: "Import from CSV/XLSX",
+        fileHint: "Supported files: .csv, .xlsx, .xls",
         marketOptions: [
           { label: "PL", value: "PL" },
           { label: "CZ", value: "CZ" },
         ],
       }
-      : {
-        heading: "Hromadný import značek",
-        market: "Trh",
-        excelTemplate: "Excel šablona",
-        downloadXlsx: "Stáhnout šablonu (.xlsx)",
-        downloadCsv: "Stáhnout šablonu (.csv)",
-        addBrandRow: "+ Přidat další značku",
-        saveRows: "Uložit záznamy",
-        cancel: "Zrušit",
-        brand: "Značka",
-        fileLabel: "Importovat z CSV/XLSX",
-        fileHint: "Podporované soubory: .csv, .xlsx, .xls",
-        marketOptions: [
-          { label: "PL", value: "PL" },
-          { label: "CZ", value: "CZ" },
-        ],
-      };
-
-  const dashboardText =
-    locale === "CZ"
-      ? {
-        offersTracked: "Sledované nabídky",
-        activeToday: "Dnes aktivní",
-        averageDiscount: "Průměrná sleva",
-        peakMonth: "Nejvyšší měsíc",
-        pulseSubtitle: "Všechny dostupné roky s filtrováním objemu nabídek.",
-        ends: "Končí",
-      }
-      : {
-        offersTracked: "Śledzone oferty",
-        activeToday: "Aktywne dziś",
-        averageDiscount: "Średnia zniżka",
-        peakMonth: "Miesiąc szczytu",
-        pulseSubtitle: "Wszystkie dostępne lata z filtrowaniem wolumenu ofert.",
-        ends: "Kończy się",
-      };
+      : bulkMarket === "PL"
+        ? {
+          heading: "Import masowy marek",
+          market: "Rynek",
+          excelTemplate: "Szablon Excel",
+          downloadXlsx: "Pobierz szablon (.xlsx)",
+          downloadCsv: "Pobierz szablon (.csv)",
+          addBrandRow: "+ Dodaj kolejną markę",
+          saveRows: "Zapisz wpisy",
+          cancel: "Anuluj",
+          brand: "Marka",
+          fileLabel: "Importuj z CSV/XLSX",
+          fileHint: "Obsługiwane pliki: .csv, .xlsx, .xls",
+          marketOptions: [
+            { label: "PL", value: "PL" },
+            { label: "CZ", value: "CZ" },
+          ],
+        }
+        : {
+          heading: "Hromadný import značek",
+          market: "Trh",
+          excelTemplate: "Excel šablona",
+          downloadXlsx: "Stáhnout šablonu (.xlsx)",
+          downloadCsv: "Stáhnout šablonu (.csv)",
+          addBrandRow: "+ Přidat další značku",
+          saveRows: "Uložit záznamy",
+          cancel: "Zrušit",
+          brand: "Značka",
+          fileLabel: "Importovat z CSV/XLSX",
+          fileHint: "Podporované soubory: .csv, .xlsx, .xls",
+          marketOptions: [
+            { label: "PL", value: "PL" },
+            { label: "CZ", value: "CZ" },
+          ],
+        };
 
   const resetBulkRows = () => {
     setBrandRows([{ brand: "" }]);
@@ -227,10 +227,12 @@ const Dashboard = () => {
     event?.preventDefault();
     setBulkSaving(true);
     try {
+      const marketToSave = displayLang === "EN" ? "PL" : bulkMarket;
+
       for (const row of brandRows) {
         const brandName = row.brand.trim();
         if (!brandName) continue;
-        await addBrand(brandName, bulkMarket);
+        await addBrand(brandName, marketToSave);
       }
       showToast("Brands saved successfully.");
       setBulkModalOpen(false);
@@ -265,6 +267,9 @@ const Dashboard = () => {
           );
         })
         .sort((a, b) => {
+          const aBench = isBenchmarkProduct(a);
+          const bBench = isBenchmarkProduct(b);
+          if (aBench !== bBench) return aBench ? -1 : 1;
           const aActive = a.toDate >= today;
           const bActive = b.toDate >= today;
           if (aActive && !bActive) return -1;
@@ -366,6 +371,68 @@ const Dashboard = () => {
     [catalog, filteredProducts],
   );
 
+  const retailerComparison = useMemo(() => {
+    const map = new Map<
+      string,
+      { totalDiscount: number; count: number; activeCount: number }
+    >();
+
+    chartProducts.forEach((product) => {
+      const key = product.retailer || "Unknown";
+      const entry = map.get(key) ?? {
+        totalDiscount: 0,
+        count: 0,
+        activeCount: 0,
+      };
+      entry.totalDiscount += product.competitorDiscount;
+      entry.count += 1;
+      if (product.fromDate <= today && product.toDate >= today) {
+        entry.activeCount += 1;
+      }
+      map.set(key, entry);
+    });
+
+    return Array.from(map.entries())
+      .map(([retailer, stats]) => ({
+        retailer,
+        avgDiscount: Math.round(stats.totalDiscount / stats.count),
+        offers: stats.count,
+        active: stats.activeCount,
+      }))
+      .sort((a, b) => b.avgDiscount - a.avgDiscount);
+  }, [chartProducts]);
+
+  const retailerLine = useMemo(() => {
+    const topPad = 15;
+    const innerHeight = 85;
+    const values = retailerComparison.map((r) => r.avgDiscount);
+    const maxVal = Math.max(...values, 1);
+    const count = retailerComparison.length;
+
+    const points = retailerComparison.map((item, index) => {
+      const xPct = count > 1 ? (index / (count - 1)) * 100 : 50;
+      const heightFraction = item.avgDiscount / maxVal;
+      const yPct = topPad + (1 - heightFraction) * innerHeight;
+      return {
+        ...item,
+        xPct,
+        yPct,
+        isPeak: item.avgDiscount === maxVal && item.avgDiscount > 0,
+      };
+    });
+
+    const linePath = points
+      .map(
+        (p, i) =>
+          `${i === 0 ? "M" : "L"} ${p.xPct.toFixed(2)} ${p.yPct.toFixed(2)}`,
+      )
+      .join(" ");
+    const areaPath =
+      points.length > 0 ? `${linePath} L 100 100 L 0 100 Z` : "";
+
+    return { points, linePath, areaPath };
+  }, [retailerComparison]);
+
   const catalogProducts = filteredProducts.slice(
     (catalogPage - 1) * catalogPageSize,
     catalogPage * catalogPageSize,
@@ -453,12 +520,12 @@ const Dashboard = () => {
                   startIcon={<AddRounded />}
                   onClick={() => setFormOpen(true)}
                   sx={{
-                    backgroundColor: "#3874ff",
+                    backgroundColor: "#000000",
                     color: "#ffffff",
                     textTransform: "none",
                     fontWeight: 700,
                     borderRadius: "8px",
-                    "&:hover": { backgroundColor: "#2c5fd6" },
+                    "&:hover": { backgroundColor: "#333333" },
                   }}
                 >
                   Add promotion
@@ -477,8 +544,8 @@ const Dashboard = () => {
                     fontWeight: 500,
                     borderRadius: "8px",
                     "&:hover": {
-                      borderColor: "#3874ff",
-                      backgroundColor: "#eaf1ff",
+                      borderColor: "#000000",
+                      backgroundColor: "#f2f2f2",
                     },
                   }}
                 >
@@ -501,8 +568,8 @@ const Dashboard = () => {
                   value: `${analytics.active} active today`,
                   detail: "across monitored retailers",
                   icon: <StorefrontRounded sx={{ fontSize: 18 }} />,
-                  bg: "#eaf1ff",
-                  fg: "#3874ff",
+                  bg: "#f2f2f2",
+                  fg: "#000000",
                 },
                 {
                   value: `${analytics.average}% avg discount`,
@@ -562,8 +629,8 @@ const Dashboard = () => {
                 label={`${chartProducts.length} offers`}
                 size="small"
                 sx={{
-                  backgroundColor: "#eaf1ff",
-                  color: "#3874ff",
+                  backgroundColor: "#f2f2f2",
+                  color: "#000000",
                   fontWeight: 500,
                   fontSize: 11,
                   borderRadius: "6px",
@@ -572,7 +639,9 @@ const Dashboard = () => {
             </Box>
 
             {/* Line chart */}
-            <Box className="relative h-44">
+            <Box className="relative" sx={{
+              height: "calc(20rem)"
+            }}>
               {monthlyLine.points.map((p, index) => (
                 <Box
                   key={months[index]}
@@ -581,7 +650,7 @@ const Dashboard = () => {
                 >
                   <Typography
                     sx={{
-                      color: p.isPeak ? "#3874ff" : p.value ? "#525b75" : "#cbd0dd",
+                      color: p.isPeak ? "#000000" : p.value ? "#525b75" : "#cbd0dd",
                       fontSize: 10,
                       fontWeight: 800,
                       whiteSpace: "nowrap",
@@ -607,11 +676,11 @@ const Dashboard = () => {
                   preserveAspectRatio="none"
                   className="absolute inset-0 h-full w-full"
                 >
-                  <path d={monthlyLine.areaPath} fill="#eaf1ff" stroke="none" />
+                  <path d={monthlyLine.areaPath} fill="#f2f2f2" stroke="none" />
                   <path
                     d={monthlyLine.linePath}
                     fill="none"
-                    stroke="#3874ff"
+                    stroke="#000000"
                     strokeWidth={2.5}
                     vectorEffect="non-scaling-stroke"
                     strokeLinejoin="round"
@@ -627,8 +696,8 @@ const Dashboard = () => {
                       top: `${p.yPct}%`,
                       width: p.isPeak ? 9 : 6,
                       height: p.isPeak ? 9 : 6,
-                      backgroundColor: p.isPeak ? "#3874ff" : "#ffffff",
-                      border: "2px solid #3874ff",
+                      backgroundColor: p.isPeak ? "#000000" : "#ffffff",
+                      border: "2px solid #000000",
                     }}
                   />
                 ))}
@@ -648,72 +717,210 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Box className="grid grid-cols-2 gap-4 lg:col-span-2">
-          {[
-            {
-              label: "Peak month",
-              value: analytics.peakMonth || "No data",
-              detail: `${analytics.peak}% max monthly avg`,
-              icon: <TrendingDownRounded sx={{ fontSize: 18 }} />,
-              tint: { bg: "#ffe2dc", fg: "#c92e13" },
-            },
-            ...yearlyTrend.map((item, index) => ({
-              label: item.year,
-              value: `${item.offers} offers`,
-              detail: `${item.low}-${item.high}% range`,
-              icon: <TrendingUpRounded sx={{ fontSize: 18 }} />,
-              tint: accentTints[index % 3],
-            })),
-          ].map((stat) => (
-            <Card
-              key={stat.label}
-              elevation={0}
-              className="rounded-2xl border border-[#e3e6ed] bg-white transition-all hover:border-[#cbd0dd]"
-            >
-              <CardContent className="!p-4">
-                <Box className="flex items-center justify-between mb-2">
+        <Box className="grid grid-cols-1 gap-4 lg:col-span-2">
+          {/* Yearly promotions comparison */}
+          <Card
+            elevation={0}
+            className="rounded-2xl border border-[#e3e6ed] bg-white"
+          >
+            <CardContent className="!p-4">
+              <Box className="mb-2 flex items-center justify-between">
+                <Box>
                   <Typography
                     sx={{
-                      color: "#525b75",
-                      fontSize: 10.5,
+                      color: "#141824",
+                      fontSize: 14,
                       fontWeight: 700,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.3px",
+                      letterSpacing: "-0.01em",
                     }}
                   >
-                    {stat.label}
+                    Yearly Promotions
                   </Typography>
-                  <Box
+                  <Typography sx={{ color: "#525b75", fontSize: 11 }}>
+                    Offers tracked per year
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`${yearlyTrend.length} years`}
+                  size="small"
+                  sx={{
+                    backgroundColor: "#f2f2f2",
+                    color: "#000000",
+                    fontWeight: 500,
+                    fontSize: 10,
+                    borderRadius: "6px",
+                  }}
+                />
+              </Box>
+              <Box sx={{ width: "100%", height: 200 }}>
+                {yearlyTrend.length > 0 ? (
+                  <BarChart
+                    height={200}
+                    hideLegend
+                    xAxis={[
+                      {
+                        scaleType: "band",
+                        data: yearlyTrend.map((item) => item.year),
+                        tickLabelStyle: { fontSize: 10, fill: "#525b75" },
+                      },
+                    ]}
+                    yAxis={[
+                      {
+                        tickLabelStyle: { fontSize: 10, fill: "#525b75" },
+                      },
+                    ]}
+                    series={[
+                      {
+                        data: yearlyTrend.map((item) => item.offers),
+                        label: "Offers",
+                        color: "#141824",
+                      },
+                    ]}
+                    margin={{ top: 10, right: 10, bottom: 24, left: 32 }}
                     sx={{
-                      width: 28,
-                      height: 28,
-                      borderRadius: "8px",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: stat.tint.bg,
-                      color: stat.tint.fg,
+                      "& .MuiBarElement-root": { rx: 4 },
+                    }}
+                  />
+                ) : (
+                  <Box className="flex h-full items-center justify-center">
+                    <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                      No yearly data available.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            </CardContent>
+          </Card>
+
+          {/* Retailer discount comparison */}
+          <Card
+            elevation={0}
+            className="rounded-2xl border border-[#e3e6ed] bg-white"
+          >
+            <CardContent className="!p-4">
+              <Box className="mb-2 flex items-center justify-between">
+                <Box>
+                  <Typography
+                    sx={{
+                      color: "#141824",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      letterSpacing: "-0.01em",
                     }}
                   >
-                    {stat.icon}
+                    Retailer Discount Comparison
+                  </Typography>
+                  <Typography sx={{ color: "#525b75", fontSize: 11 }}>
+                    Average competitor discount by retailer
+                  </Typography>
+                </Box>
+                <Chip
+                  label={`${retailerComparison.length} retailers`}
+                  size="small"
+                  sx={{
+                    backgroundColor: "#ffe2dc",
+                    color: "#c92e13",
+                    fontWeight: 500,
+                    fontSize: 10,
+                    borderRadius: "6px",
+                  }}
+                />
+              </Box>
+
+              {retailerComparison.length === 0 ? (
+                <Box className="flex h-[200px] items-center justify-center">
+                  <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                    No retailer data available.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box className="relative" sx={{ height: "12.5rem" }}>
+                  {/* Value labels */}
+                  {retailerLine.points.map((p: any) => (
+                    <Box
+                      key={`label-${p.retailer}`}
+                      className="absolute -translate-x-1/2"
+                      sx={{ left: `${p.xPct}%`, top: 0 }}
+                    >
+                      <Typography
+                        sx={{
+                          color: p.isPeak ? "#e5780b" : p.value ? "#525b75" : "#cbd0dd",
+                          fontSize: 10,
+                          fontWeight: 800,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {p.avgDiscount ? `${p.avgDiscount}%` : "-"}
+                      </Typography>
+                    </Box>
+                  ))}
+
+                  {/* Plot area */}
+                  <Box className="absolute inset-x-0" sx={{ top: 20, bottom: 20 }}>
+                    <Box className="absolute inset-0 flex justify-between">
+                      {retailerLine.points.map((p) => (
+                        <Box
+                          key={`grid-${p.retailer}`}
+                          className="h-full border-l border-[#eff2f6] first:border-l-0"
+                        />
+                      ))}
+                    </Box>
+                    <svg
+                      viewBox="0 0 100 100"
+                      preserveAspectRatio="none"
+                      className="absolute inset-0 h-full w-full"
+                    >
+                      <path d={retailerLine.areaPath} fill="#ffe2dc" stroke="none" />
+                      <path
+                        d={retailerLine.linePath}
+                        fill="none"
+                        stroke="#e5780b"
+                        strokeWidth={2.5}
+                        vectorEffect="non-scaling-stroke"
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {retailerLine.points.map((p) => (
+                      <Box
+                        key={`dot-${p.retailer}`}
+                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        sx={{
+                          left: `${p.xPct}%`,
+                          top: `${p.yPct}%`,
+                          width: p.isPeak ? 9 : 6,
+                          height: p.isPeak ? 9 : 6,
+                          backgroundColor: p.isPeak ? "#e5780b" : "#ffffff",
+                          border: "2px solid #e5780b",
+                        }}
+                      />
+                    ))}
+                  </Box>
+
+                  {/* Retailer labels */}
+                  <Box className="absolute inset-x-0 bottom-0 flex justify-between">
+                    {retailerLine.points.map((p) => (
+                      <Typography
+                        key={`xlabel-${p.retailer}`}
+                        sx={{
+                          color: "#525b75",
+                          fontSize: 10,
+                          fontWeight: 500,
+                          maxWidth: 60,
+                          textAlign: "center",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {p.retailer}
+                      </Typography>
+                    ))}
                   </Box>
                 </Box>
-                <Typography
-                  sx={{
-                    color: "#141824",
-                    fontSize: 18,
-                    fontWeight: 700,
-                    letterSpacing: "-0.01em",
-                  }}
-                >
-                  {stat.value}
-                </Typography>
-                <Typography sx={{ color: "#525b75", fontSize: 11 }}>
-                  {stat.detail}
-                </Typography>
-              </CardContent>
-            </Card>
-          ))}
+              )}
+            </CardContent>
+          </Card>
         </Box>
       </Box>
 
@@ -745,7 +952,7 @@ const Dashboard = () => {
                   color: "#141824",
                   textTransform: "none",
                   fontWeight: 500,
-                  "&:hover": { color: "#3874ff" },
+                  "&:hover": { color: "#000000" },
                 }}
               >
                 Manage promotions
@@ -775,7 +982,7 @@ const Dashboard = () => {
                 component={Link}
                 to={`/products/${product.id}`}
                 key={product.id}
-                className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#3874ff] hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#000000] hover:shadow-md"
               >
                 <Box className="relative h-36 bg-[#f5f7fa]">
                   <img
@@ -821,8 +1028,8 @@ const Dashboard = () => {
                         color: "#141824",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#eaf1ff",
-                          color: "#3874ff",
+                          backgroundColor: "#f2f2f2",
+                          color: "#000000",
                         },
                       }}
                     >
@@ -901,7 +1108,7 @@ const Dashboard = () => {
                       mt: 0.75,
                     }}
                   >
-                    {dashboardText.ends} {product.toDate}
+                    {product.fromDate}:{product.toDate}
                   </Typography>
                 </Box>
               </Box>
@@ -931,10 +1138,44 @@ const Dashboard = () => {
             className="flex flex-col max-h-[80vh]"
           >
             {/* Header */}
-            <Box className="pb-4">
+            <Box className="pb-4 flex items-start justify-between gap-3">
               <Typography variant="h5" sx={{ fontWeight: 800, fontSize: 22 }}>
                 {bulkText.heading}
               </Typography>
+
+              {/* Language toggle */}
+              <Box className="flex gap-1 rounded-lg bg-[#f5f7fa] p-1">
+                {(["PL", "CZ", "EN"] as const).map((market) => (
+                  <Button
+                    key={market}
+                    onClick={() => {
+                      if (market === "EN") {
+                        setDisplayLang("EN");
+                        return;
+                      }
+                      setDisplayLang(market);
+                      setBulkMarket(market);
+                    }}
+                    variant={displayLang === market ? "contained" : "text"}
+                    size="small"
+                    sx={{
+                      minWidth: 44,
+                      backgroundColor:
+                        displayLang === market ? "#141824" : "transparent",
+                      color: displayLang === market ? "#ffffff" : "#525b75",
+                      fontWeight: 800,
+                      boxShadow: "none",
+                      "&:hover": {
+                        backgroundColor:
+                          displayLang === market ? "#31374a" : "#e3e6ed",
+                        boxShadow: "none",
+                      },
+                    }}
+                  >
+                    {market}
+                  </Button>
+                ))}
+              </Box>
             </Box>
 
             {/* Scrollable body */}
@@ -944,6 +1185,7 @@ const Dashboard = () => {
                   type="select"
                   label={bulkText.market}
                   value={bulkMarket}
+                  disabled={displayLang === "EN"}
                   onValueChange={(value) =>
                     setBulkMarket(String(value) as "PL" | "CZ")
                   }
@@ -974,8 +1216,8 @@ const Dashboard = () => {
                         color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#3874ff",
-                          backgroundColor: "#eaf1ff",
+                          borderColor: "#000000",
+                          backgroundColor: "#f2f2f2",
                         },
                       }}
                     >
@@ -1003,8 +1245,8 @@ const Dashboard = () => {
                         color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#3874ff",
-                          backgroundColor: "#eaf1ff",
+                          borderColor: "#000000",
+                          backgroundColor: "#f2f2f2",
                         },
                       }}
                     >
@@ -1020,8 +1262,8 @@ const Dashboard = () => {
                         color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#3874ff",
-                          backgroundColor: "#eaf1ff",
+                          borderColor: "#000000",
+                          backgroundColor: "#f2f2f2",
                         },
                       }}
                     >
@@ -1176,7 +1418,7 @@ const Dashboard = () => {
                   key={product.id}
                   component={Link}
                   to={`/products/${product.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#3874ff]"
+                  className="group relative overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#000000]"
                 >
                   <Box className="relative h-32 bg-[#f5f7fa]">
                     <img
@@ -1237,7 +1479,7 @@ const Dashboard = () => {
                     <Typography
                       sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}
                     >
-                      {product.fromDate} - {product.toDate}
+                      {product.fromDate}:{product.toDate}
                     </Typography>
                     <Typography
                       sx={{

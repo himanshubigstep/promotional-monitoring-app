@@ -126,7 +126,7 @@ export default function StoreComparison() {
       >
         <Box className="border-b border-[#e3e6ed] px-5 py-4">
           <Box className="flex items-center gap-2">
-            <FilterAltRounded sx={{ color: "#3874ff", fontSize: 18 }} />
+            <FilterAltRounded sx={{ color: "#000000", fontSize: 18 }} />
             <Typography
               sx={{
                 color: "#141824",
@@ -189,10 +189,10 @@ export default function StoreComparison() {
                     <TableCell
                       sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
                     >
-                      {retailer[0]}
+                      {retailer[0].toUpperCase()}
                     </TableCell>
                     <TableCell
-                      sx={{ color: "#3874ff", fontSize: 13.5, fontWeight: 500 }}
+                      sx={{ color: "#000000", fontSize: 13.5, fontWeight: 500 }}
                     >
                       -{retailer[1]}%
                     </TableCell>
@@ -240,13 +240,13 @@ export default function StoreComparison() {
                             status === "Active"
                               ? "#141824"
                               : status === "Upcoming"
-                                ? "#eaf1ff"
+                                ? "#f2f2f2"
                                 : "#eff2f6",
                           color:
                             status === "Active"
                               ? "#ffffff"
                               : status === "Upcoming"
-                                ? "#3874ff"
+                                ? "#000000"
                                 : "#525b75",
                           fontWeight: 500,
                           fontSize: 10,

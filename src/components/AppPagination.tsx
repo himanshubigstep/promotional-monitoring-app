@@ -38,12 +38,12 @@ export default function AppPagination({
             borderRadius: "6px",
           },
           "& .Mui-selected": {
-            backgroundColor: "#3874ff !important",
+            backgroundColor: "#000000 !important",
             color: "white !important",
             fontWeight: 700,
           },
           "& .MuiPaginationItem-root:hover": {
-            backgroundColor: "#eaf1ff",
+            backgroundColor: "#f2f2f2",
           },
         }}
       />

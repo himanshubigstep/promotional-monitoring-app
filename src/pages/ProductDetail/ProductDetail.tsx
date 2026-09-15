@@ -28,7 +28,7 @@ function CatalogProductDetail({
           color: "#141824",
           fontWeight: 700,
           textTransform: "none",
-          "&:hover": { backgroundColor: "#eaf1ff", color: "#3874ff" },
+          "&:hover": { backgroundColor: "#f2f2f2", color: "#000000" },
         }}
       >
         Back to product catalog
@@ -149,7 +149,7 @@ function CatalogProductDetail({
       >
         <Box className="grid grid-cols-1 gap-5 p-6 md:grid-cols-3">
           <Box className="flex gap-3">
-            <StorefrontRounded sx={{ color: "#3874ff" }} />
+            <StorefrontRounded sx={{ color: "#000000" }} />
             <Box>
               <Typography
                 sx={{
@@ -211,7 +211,7 @@ function CatalogProductDetail({
                   target="_blank"
                   rel="noopener noreferrer"
                   sx={{
-                    color: "#3874ff",
+                    color: "#000000",
                     fontSize: 13,
                     fontWeight: 700,
                     mt: 0.5,
@@ -283,7 +283,7 @@ export default function ProductDetail() {
           color: "#141824",
           fontWeight: 700,
           textTransform: "none",
-          "&:hover": { backgroundColor: "#eaf1ff", color: "#3874ff" },
+          "&:hover": { backgroundColor: "#f2f2f2", color: "#000000" },
         }}
       >
         Back to promotions
@@ -491,7 +491,7 @@ export default function ProductDetail() {
       >
         <Box className="grid grid-cols-1 gap-5 p-6 md:grid-cols-3">
           <Box className="flex gap-3">
-            <CalendarMonthRounded sx={{ color: "#3874ff" }} />
+            <CalendarMonthRounded sx={{ color: "#000000" }} />
             <Box>
               <Typography
                 sx={{

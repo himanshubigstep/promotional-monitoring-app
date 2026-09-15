@@ -3,7 +3,7 @@ import { createTheme } from "@mui/material/styles";
 // Soft, pastel icon-badge tints used for stat/feature cards (dashboard KPIs,
 // brand analytics summaries) — cycle through these instead of one flat color.
 export const accentTints = [
-  { bg: "#eaf1ff", fg: "#3874ff" },
+  { bg: "#f2f2f2", fg: "#000000" },
   { bg: "#d9fbd0", fg: "#1c6c09" },
   { bg: "#e3e6ed", fg: "#31374a" },
   { bg: "#ffffff", fg: "#141824" },
@@ -11,19 +11,23 @@ export const accentTints = [
 
 export const dangerColor = { main: "#fa3b1d", dark: "#c92e13", light: "#ffe2dc" };
 
+// Matches sephora.pl's real design tokens: --surface-brand/--text-primary (#000),
+// hover/pressed states (#333/#4d4d4d), and --surface-promotion (#d60032) for emphasis.
+export const brandRed = { main: "#d60032", dark: "#b0002a", light: "#ffe2ea" };
+
 export const sephoraTheme = createTheme({
   palette: {
     primary: {
-      main: "#3874ff",
-      light: "#78a1ff",
-      dark: "#2c5fd6",
+      main: "#000000",
+      light: "#4d4d4d",
+      dark: "#333333",
       contrastText: "#ffffff",
     },
     secondary: {
-      main: "#eaf1ff",
-      light: "#f5f8ff",
-      dark: "#cbd8f5",
-      contrastText: "#3874ff",
+      main: "#f2f2f2",
+      light: "#fafafa",
+      dark: "#e0e0e0",
+      contrastText: "#000000",
     },
     text: {
       primary: "#141824",
@@ -102,18 +106,24 @@ export const sephoraTheme = createTheme({
           },
         },
         contained: {
-          backgroundColor: "#3874ff",
+          backgroundColor: "#000000",
           color: "#ffffff",
           "&:hover": {
-            backgroundColor: "#2c5fd6",
+            backgroundColor: "#333333",
           },
         },
         outlined: {
           borderColor: "#cbd0dd",
           color: "#31374a",
           "&:hover": {
-            borderColor: "#3874ff",
-            backgroundColor: "#eaf1ff",
+            borderColor: "#000000",
+            backgroundColor: "#f2f2f2",
+          },
+        },
+        text: {
+          color: "#000000",
+          "&:hover": {
+            backgroundColor: "#f2f2f2",
           },
         },
       },
@@ -141,7 +151,7 @@ export const sephoraTheme = createTheme({
         root: {
           borderRadius: 8,
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#3874ff",
+            borderColor: "#000000",
             borderWidth: "1.5px",
           },
         },

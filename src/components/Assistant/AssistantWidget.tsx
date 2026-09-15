@@ -236,7 +236,7 @@ export default function AssistantWidget() {
           <Box className="flex items-center justify-between border-b border-[#e3e6ed] bg-white px-4 py-3.5">
             <Box className="flex items-center gap-2">
               <Box className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a1d23]">
-                <AutoAwesomeRounded sx={{ fontSize: 17, color: "#78a1ff" }} />
+                <AutoAwesomeRounded sx={{ fontSize: 17, color: "#4d4d4d" }} />
               </Box>
               <Box>
                 <Typography sx={{ color: "#141824", fontSize: 14, fontWeight: 800 }}>
@@ -309,7 +309,7 @@ export default function AssistantWidget() {
               ))}
               {loading && (
                 <Box className="flex items-center gap-2 rounded-xl border border-[#e3e6ed] bg-white px-3 py-2">
-                  <CircularProgress size={14} sx={{ color: "#3874ff" }} />
+                  <CircularProgress size={14} sx={{ color: "#000000" }} />
                   <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>Thinking…</Typography>
                 </Box>
               )}

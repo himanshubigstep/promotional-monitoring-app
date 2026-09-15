@@ -10,6 +10,7 @@ import {
   Card,
   Chip,
   IconButton,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -18,10 +19,38 @@ import { Link } from "react-router-dom";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
+import { isBenchmarkProduct } from "../../data/marketProducts";
 
 const today = new Date().toISOString().slice(0, 10);
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+
+function PromotionCardSkeleton() {
+  return (
+    <Card
+      elevation={0}
+      className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white"
+    >
+      <Skeleton
+        variant="rectangular"
+        animation="wave"
+        sx={{ height: 144, bgcolor: "#f5f7fa" }}
+      />
+      <Box className="p-3">
+        <Skeleton variant="text" animation="wave" width="45%" height={12} />
+        <Skeleton variant="text" animation="wave" width="90%" height={18} />
+        <Skeleton variant="text" animation="wave" width="75%" height={14} />
+        <Skeleton
+          variant="text"
+          animation="wave"
+          width="55%"
+          height={14}
+          sx={{ mt: 1 }}
+        />
+      </Box>
+    </Card>
+  );
+}
 
 export default function Promotions() {
   const {
@@ -60,6 +89,11 @@ export default function Promotions() {
           );
         })
         .sort((a, b) => {
+          const aBench = isBenchmarkProduct(a);
+          const bBench = isBenchmarkProduct(b);
+          if (aBench !== bBench) {
+            return aBench ? -1 : 1;
+          }
           const aActive = a.toDate >= today;
           const bActive = b.toDate >= today;
           if (aActive !== bActive) {
@@ -144,158 +178,166 @@ export default function Promotions() {
             sx={{ minWidth: 320 }}
           />
         </Box>
-        <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
-          {visibleProducts.map((product) => {
-            const expired = product.toDate < today;
-            return (
-              <Card
-                key={product.id}
-                component={Link}
-                to={`/products/${product.id}`}
-                elevation={0}
-                className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline transition-all hover:border-[#3874ff] hover:shadow-md bg-white"
-              >
-                <Box className="relative h-36 bg-[#f5f7fa]">
-                  <img
-                    src={product.image || fallbackImage}
-                    alt={product.name}
-                    className="h-full w-full object-cover"
-                    onError={(event) => {
-                      event.currentTarget.onerror = null;
-                      event.currentTarget.src = fallbackImage;
-                    }}
-                  />
-                  <Box className="absolute left-2 top-2">
-                    <Chip
-                      label={expired ? "Expired" : "Active"}
-                      size="small"
-                      sx={{
-                        backgroundColor: expired ? "#eff2f6" : "#141824",
-                        color: expired ? "#525b75" : "#ffffff",
-                        fontSize: 10,
-                        fontWeight: 800,
-                        letterSpacing: "0.04em",
-                        textTransform: "uppercase",
-                        borderRadius: "4px",
+        {visibleProducts.length === 0 ? (
+          <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <PromotionCardSkeleton key={index} />
+            ))}
+          </Box>
+        ) : (
+          <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
+            {visibleProducts.map((product) => {
+              const expired = product.toDate < today;
+              return (
+                <Card
+                  key={product.id}
+                  component={Link}
+                  to={`/products/${product.id}`}
+                  elevation={0}
+                  className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline transition-all hover:border-[#000000] hover:shadow-md bg-white"
+                >
+                  <Box className="relative h-36 bg-[#f5f7fa]">
+                    <img
+                      src={product.image || fallbackImage}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                      onError={(event) => {
+                        event.currentTarget.onerror = null;
+                        event.currentTarget.src = fallbackImage;
                       }}
                     />
-                  </Box>
-                  <Box className="absolute right-2 top-2 flex items-center gap-1">
-                    {!expired && canEdit && (
-                      <IconButton
+                    <Box className="absolute left-2 top-2">
+                      <Chip
+                        label={expired ? "Expired" : "Active"}
                         size="small"
-                        title="Edit promotion"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          setEditingPromotion({
-                            ...product,
-                            id: product.id,
-                            market: product.market,
-                            name: product.promotionName || product.name,
-                            from: product.fromDate,
-                            to: product.toDate,
-                            scope: "Wielokanałowa",
-                            channel: "Sklep stacjonarny",
-                            category: product.category,
-                            brands: product.brand,
-                            retailer: product.retailer,
-                            discount: `-${product.competitorDiscount}%`,
-                            threshold: "",
-                            promoPrice: String(product.priceAfterDiscount ?? product.price ?? ""),
-                            promotionType: product.promotionType || "Fixed promotion",
-                            skuCount: 1,
-                            notes: product.terms || product.description || "",
-                            creativeName: product.name,
-                            creativeData: product.image || "",
-                            averageMarketDiscount: `${product.competitorDiscount}%`,
-                            createdAt: product.fromDate,
-                          });
-                          setFormOpen(true);
-                        }}
                         sx={{
-                          backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#141824",
-                          padding: "4px",
-                          borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#eaf1ff", color: "#3874ff" },
+                          backgroundColor: expired ? "#eff2f6" : "#141824",
+                          color: expired ? "#525b75" : "#ffffff",
+                          fontSize: 10,
+                          fontWeight: 800,
+                          letterSpacing: "0.04em",
+                          textTransform: "uppercase",
+                          borderRadius: "4px",
                         }}
-                      >
-                        <EditRounded sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    )}
-                    {expired && canEdit && (
-                      <IconButton
-                        size="small"
-                        title="Delete expired promotion"
-                        onClick={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          handleDelete(product.id);
-                        }}
-                        sx={{
-                          backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#fa3b1d",
-                          padding: "4px",
-                          borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#ffe2dc" },
-                        }}
-                      >
-                        <DeleteOutlineRounded sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    )}
-                    <Box className="rounded-md bg-[#e5780b] px-2 py-0.5 shadow-sm">
-                      <Typography
-                        sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
-                      >
-                        -{product.competitorDiscount}%
-                      </Typography>
+                      />
+                    </Box>
+                    <Box className="absolute right-2 top-2 flex items-center gap-1">
+                      {!expired && canEdit && (
+                        <IconButton
+                          size="small"
+                          title="Edit promotion"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            setEditingPromotion({
+                              ...product,
+                              id: product.id,
+                              market: product.market,
+                              name: product.promotionName || product.name,
+                              from: product.fromDate,
+                              to: product.toDate,
+                              scope: "Wielokanałowa",
+                              channel: "Sklep stacjonarny",
+                              category: product.category,
+                              brands: product.brand,
+                              retailer: product.retailer,
+                              discount: `-${product.competitorDiscount}%`,
+                              threshold: "",
+                              promoPrice: String(product.priceAfterDiscount ?? product.price ?? ""),
+                              promotionType: product.promotionType || "Fixed promotion",
+                              skuCount: 1,
+                              notes: product.terms || product.description || "",
+                              creativeName: product.name,
+                              creativeData: product.image || "",
+                              averageMarketDiscount: `${product.competitorDiscount}%`,
+                              createdAt: product.fromDate,
+                            });
+                            setFormOpen(true);
+                          }}
+                          sx={{
+                            backgroundColor: "rgba(255,255,255,0.95)",
+                            color: "#141824",
+                            padding: "4px",
+                            borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#f2f2f2", color: "#000000" },
+                          }}
+                        >
+                          <EditRounded sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                      {expired && canEdit && (
+                        <IconButton
+                          size="small"
+                          title="Delete expired promotion"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            handleDelete(product.id);
+                          }}
+                          sx={{
+                            backgroundColor: "rgba(255,255,255,0.95)",
+                            color: "#fa3b1d",
+                            padding: "4px",
+                            borderRadius: "6px",
+                            "&:hover": { backgroundColor: "#ffe2dc" },
+                          }}
+                        >
+                          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
+                        </IconButton>
+                      )}
+                      <Box className="rounded-md bg-[#e5780b] px-2 py-0.5 shadow-sm">
+                        <Typography
+                          sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
+                        >
+                          -{product.competitorDiscount}%
+                        </Typography>
+                      </Box>
                     </Box>
                   </Box>
-                </Box>
-                <Box className="p-3">
-                  <Typography
-                    sx={{
-                      color: "#525b75",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      letterSpacing: "0.05em",
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {product.brand}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: "#141824",
-                      fontSize: 13,
-                      fontWeight: 500,
-                      lineHeight: 1.3,
-                      mt: 0.25,
-                    }}
-                  >
-                    {product.name}
-                  </Typography>
-                  <Typography sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}>
-                    {product.category} · {product.retailer}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      color: expired ? "#525b75" : "#3874ff",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      mt: 1,
-                    }}
-                  >
-                    {expired
-                      ? `Expired ${product.toDate}`
-                      : `Ends ${product.toDate}`}
-                  </Typography>
-                </Box>
-              </Card>
-            );
-          })}
-        </Box>
+                  <Box className="p-3">
+                    <Typography
+                      sx={{
+                        color: "#525b75",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        letterSpacing: "0.05em",
+                        textTransform: "uppercase",
+                      }}
+                    >
+                      {product.brand}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: "#141824",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        lineHeight: 1.3,
+                        mt: 0.25,
+                      }}
+                    >
+                      {product.name}
+                    </Typography>
+                    <Typography sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}>
+                      {product.category} · {product.retailer}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        color: expired ? "#525b75" : "#000000",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        mt: 1,
+                      }}
+                    >
+                      {expired
+                        ? `Expired ${product.toDate}`
+                        : `Ends ${product.toDate}`}
+                    </Typography>
+                  </Box>
+                </Card>
+              );
+            })}
+          </Box>
+        )}
         <AppPagination
           count={Math.ceil(filteredProducts.length / pageSize)}
           page={page}

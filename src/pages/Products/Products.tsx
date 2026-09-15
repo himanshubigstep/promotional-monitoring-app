@@ -5,6 +5,7 @@ import {
   Card,
   Chip,
   Modal,
+  Skeleton,
   TextField,
   Typography,
 } from "@mui/material";
@@ -28,6 +29,27 @@ const emptyForm = {
   imageUrl: "",
 };
 
+function ProductCardSkeleton() {
+  return (
+    <Box className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white">
+      <Skeleton
+        variant="rectangular"
+        animation="wave"
+        sx={{ height: 128, bgcolor: "#f5f7fa" }}
+      />
+      <Box className="p-3">
+        <Skeleton variant="text" animation="wave" width="50%" height={12} />
+        <Skeleton variant="text" animation="wave" width="90%" height={16} />
+        <Skeleton variant="text" animation="wave" width="100%" height={14} />
+        <Box className="mt-1 flex items-center justify-between">
+          <Skeleton variant="text" animation="wave" width="40%" height={12} />
+          <Skeleton variant="text" animation="wave" width="25%" height={14} />
+        </Box>
+      </Box>
+    </Box>
+  );
+}
+
 export default function Products() {
   const {
     productCatalog,
@@ -46,6 +68,7 @@ export default function Products() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [imagePreview, setImagePreview] = useState("");
+  const [displayLang, setDisplayLang] = useState<"PL" | "CZ" | "EN">("PL");
   const selectedMarket = retailerOptions.find((r) => r.name === form.retailer)?.market ?? "PL";
   const brandOptions = brandsByMarket[selectedMarket];
   const onDrop = (files: File[]) => {
@@ -113,14 +136,18 @@ export default function Products() {
     setSaving(true);
     try {
       const retailer = retailerOptions.find((r) => r.name === form.retailer);
+      // When EN view is active, force market to PL on save.
+      // Otherwise keep the retailer's actual market (PL or CZ).
+      const marketToSave = displayLang === "EN" ? "PL" : retailer?.market ?? "PL";
+
       await addCatalogProduct({
         name: form.name,
         brand: form.brand,
         category: form.category,
         retailer: form.retailer,
-        market: retailer?.market ?? "PL",
+        market: marketToSave,
         price: form.price ? Number(form.price) : undefined,
-        currency: retailer?.market === "CZ" ? "CZK" : "PLN",
+        currency: marketToSave === "CZ" ? "CZK" : "PLN",
         imageUrl: form.imageUrl || undefined,
       });
       showToast("Product added to the catalog.");
@@ -133,6 +160,7 @@ export default function Products() {
       setSaving(false);
     }
   };
+
 
   return (
     <Box className="flex flex-col gap-5">
@@ -220,10 +248,11 @@ export default function Products() {
         </Box>
 
         {filteredProducts.length === 0 ? (
-          <Typography sx={{ color: "#525b75", fontSize: 13, py: 6, textAlign: "center" }}>
-            No products found yet. Once the scraper's catalog crawl runs, products from
-            every monitored store will show up here.
-          </Typography>
+          <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <ProductCardSkeleton key={index} />
+            ))}
+          </Box>
         ) : (
           <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
             {visibleProducts.map((product) => (
@@ -231,7 +260,7 @@ export default function Products() {
                 key={product.id}
                 component={Link}
                 to={`/products/${product.id}`}
-                className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white no-underline transition-all hover:border-[#3874ff] hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white no-underline transition-all hover:border-[#000000] hover:shadow-md"
               >
                 <Box className="relative h-32 bg-[#f5f7fa]">
                   <img
@@ -307,63 +336,203 @@ export default function Products() {
         <Box
           className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e3e6ed]"
         >
-          <Typography sx={{ color: "#141824", fontSize: 18, fontWeight: 700, mb: 3 }}>
-            Add a product
-          </Typography>
+          <Box className="flex items-start justify-between gap-3 mb-3">
+            <Typography sx={{ color: "#141824", fontSize: 18, fontWeight: 700 }}>
+              {displayLang === "EN"
+                ? "Add a product"
+                : displayLang === "CZ"
+                  ? "Přidat produkt"
+                  : "Dodaj produkt"}
+            </Typography>
+
+            {/* Language toggle inside modal */}
+            <Box className="flex gap-1 rounded-lg bg-[#f5f7fa] p-1">
+              {(["PL", "CZ", "EN"] as const).map((market) => (
+                <Button
+                  key={market}
+                  onClick={() => {
+                    if (market === "EN") {
+                      setDisplayLang("EN");
+                      return;
+                    }
+                    setDisplayLang(market);
+                    setForm((current) => ({
+                      ...current,
+                      brand: "",
+                      retailer: "",
+                      category: "",
+                    }));
+                  }}
+                  variant={displayLang === market ? "contained" : "text"}
+                  size="small"
+                  sx={{
+                    minWidth: 44,
+                    backgroundColor:
+                      displayLang === market ? "#141824" : "transparent",
+                    color: displayLang === market ? "#ffffff" : "#525b75",
+                    fontWeight: 800,
+                    boxShadow: "none",
+                    "&:hover": {
+                      backgroundColor:
+                        displayLang === market ? "#31374a" : "#e3e6ed",
+                      boxShadow: "none",
+                    },
+                  }}
+                >
+                  {market}
+                </Button>
+              ))}
+            </Box>
+          </Box>
+
           <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField
               className="sm:col-span-2"
-              label="Product name"
+              label={
+                displayLang === "EN"
+                  ? "Product name"
+                  : displayLang === "CZ"
+                    ? "Název produktu"
+                    : "Nazwa produktu"
+              }
               value={form.name}
-              onValueChange={(value) => setForm((f) => ({ ...f, name: String(value) }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, name: String(value) }))
+              }
               required
-              placeholder="e.g. Advanced Night Repair Serum"
+              placeholder={
+                displayLang === "EN"
+                  ? "e.g. Advanced Night Repair Serum"
+                  : "np. Advanced Night Repair Serum"
+              }
             />
             <FormField
-              label="Brand"
+              label={
+                displayLang === "EN"
+                  ? "Brand"
+                  : displayLang === "CZ"
+                    ? "Značka"
+                    : "Marka"
+              }
               type="select"
               value={form.brand}
-              onValueChange={(value) => setForm((f) => ({ ...f, brand: String(value) }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, brand: String(value) }))
+              }
               options={brandOptions.map((brand) => ({ label: brand, value: brand }))}
               required
-              placeholder="Choose a scraped brand"
+              placeholder={
+                displayLang === "EN"
+                  ? "Choose a scraped brand"
+                  : displayLang === "CZ"
+                    ? "Vyberte značku"
+                    : "Wybierz markę"
+              }
             />
             <FormField
               type="select"
-              label="Category"
+              label={
+                displayLang === "EN"
+                  ? "Category"
+                  : displayLang === "CZ"
+                    ? "Kategorie"
+                    : "Kategoria"
+              }
               value={form.category}
-              onValueChange={(value) => setForm((f) => ({ ...f, category: String(value) }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, category: String(value) }))
+              }
               options={categories.map((c) => ({ label: c.name, value: c.name }))}
-              placeholder="Choose a category"
+              placeholder={
+                displayLang === "EN"
+                  ? "Choose a category"
+                  : displayLang === "CZ"
+                    ? "Vyberte kategorii"
+                    : "Wybierz kategorię"
+              }
             />
             <FormField
               type="select"
-              label="Retailer"
+              label={
+                displayLang === "EN"
+                  ? "Retailer"
+                  : displayLang === "CZ"
+                    ? "Prodejce"
+                    : "Sprzedawca"
+              }
               value={form.retailer}
-              onValueChange={(value) => setForm((f) => ({ ...f, retailer: String(value) }))}
-              options={retailerOptions.map((r) => ({ label: `${r.name} (${r.market})`, value: r.name }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, retailer: String(value) }))
+              }
+              options={retailerOptions.map((r) => ({
+                label: `${r.name} (${r.market})`,
+                value: r.name,
+              }))}
               required
-              placeholder="Choose a store"
+              placeholder={
+                displayLang === "EN"
+                  ? "Choose a store"
+                  : displayLang === "CZ"
+                    ? "Vyberte obchod"
+                    : "Wybierz sklep"
+              }
             />
             <FormField
               type="number"
-              label="Price"
+              label={
+                displayLang === "EN"
+                  ? "Price"
+                  : displayLang === "CZ"
+                    ? "Cena"
+                    : "Cena"
+              }
               value={form.price}
-              onValueChange={(value) => setForm((f) => ({ ...f, price: String(value) }))}
+              onValueChange={(value) =>
+                setForm((f) => ({ ...f, price: String(value) }))
+              }
               placeholder="e.g. 199"
             />
-            <Box {...getRootProps()} className={`sm:col-span-2 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center ${isDragActive ? "border-[#3874ff] bg-[#eaf1ff]" : "border-[#e3e6ed]"}`}>
+            <Box
+              {...getRootProps()}
+              className={`sm:col-span-2 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center ${isDragActive ? "border-[#000000] bg-[#f2f2f2]" : "border-[#e3e6ed]"
+                }`}
+            >
               <input {...getInputProps()} />
               <Typography sx={{ color: "#141824", fontSize: 13, fontWeight: 600 }}>
-                {isDragActive ? "Drop image here" : "Upload or drop product image"}
+                {isDragActive
+                  ? displayLang === "EN"
+                    ? "Drop image here"
+                    : displayLang === "CZ"
+                      ? "Přetáhněte obrázek sem"
+                      : "Upuść obraz tutaj"
+                  : displayLang === "EN"
+                    ? "Upload or drop product image"
+                    : displayLang === "CZ"
+                      ? "Nahrajte nebo přetáhněte obrázek produktu"
+                      : "Prześlij lub przeciągnij zdjęcie produktu"}
               </Typography>
-              <Button component="span" variant="text" startIcon={<ImageRounded />}>Choose image</Button>
-              {imagePreview && <img src={imagePreview} alt="Product preview" className="mt-2 h-24 w-24 rounded-lg object-cover" />}
+              <Button component="span" variant="text" startIcon={<ImageRounded />}>
+                {displayLang === "EN"
+                  ? "Choose image"
+                  : displayLang === "CZ"
+                    ? "Vybrat obrázek"
+                    : "Wybierz obraz"}
+              </Button>
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="Product preview"
+                  className="mt-2 h-24 w-24 rounded-lg object-cover"
+                />
+              )}
             </Box>
           </Box>
           <Box className="mt-5 flex justify-end gap-2">
-            <Button onClick={() => setAddOpen(false)} sx={{ textTransform: "none", fontWeight: 700 }}>
-              Cancel
+            <Button
+              onClick={() => setAddOpen(false)}
+              sx={{ textTransform: "none", fontWeight: 700 }}
+            >
+              {displayLang === "EN" ? "Cancel" : displayLang === "CZ" ? "Zrušit" : "Anuluj"}
             </Button>
             <Button
               variant="contained"
@@ -377,7 +546,17 @@ export default function Products() {
                 "&:hover": { backgroundColor: "#31374a" },
               }}
             >
-              {saving ? "Saving…" : "Add product"}
+              {saving
+                ? displayLang === "EN"
+                  ? "Saving…"
+                  : displayLang === "CZ"
+                    ? "Ukládání…"
+                    : "Zapisywanie…"
+                : displayLang === "EN"
+                  ? "Add product"
+                  : displayLang === "CZ"
+                    ? "Přidat produkt"
+                    : "Dodaj produkt"}
             </Button>
           </Box>
         </Box>

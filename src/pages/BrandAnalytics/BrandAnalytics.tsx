@@ -38,7 +38,7 @@ export default function BrandAnalytics() {
       brand,
       `${offers.length} offers`,
       discount,
-      ["#3874ff", "#7c5cfa", "#e5780b", "#25b003"][index % 4],
+      ["#000000", "#7c5cfa", "#e5780b", "#25b003"][index % 4],
     ] as const;
   });
   const brandsPerPage = 5;
@@ -198,13 +198,13 @@ export default function BrandAnalytics() {
           elevation={0}
           className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white"
         >
-          <Box className="h-1 bg-[#3874ff]" />
+          <Box className="h-1 bg-[#000000]" />
           <CardContent className="!p-6">
             <Box className="flex items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
-                    color: "#3874ff",
+                    color: "#000000",
                     fontSize: 11,
                     fontWeight: 500,
                     letterSpacing: 1.2,
@@ -268,7 +268,7 @@ export default function BrandAnalytics() {
                           height: `${Math.max(8, Math.min(item.discount * 2.5, 72))}px`,
                           backgroundColor:
                             item.category === strongestCategory
-                              ? "#3874ff"
+                              ? "#000000"
                               : "#141824",
                           opacity:
                             item.category === strongestCategory ? 1 : 0.65,
@@ -322,7 +322,7 @@ export default function BrandAnalytics() {
             </Box>
             <Box
               className="mt-4 flex items-end justify-between gap-3 rounded-xl px-4 py-3 text-white"
-              sx={{ backgroundImage: "linear-gradient(135deg, #3874ff 0%, #2c5fd6 100%)" }}
+              sx={{ backgroundImage: "linear-gradient(135deg, #000000 0%, #333333 100%)" }}
             >
               <Box>
                 <Typography
@@ -376,7 +376,7 @@ export default function BrandAnalytics() {
                 <Box className="h-3 w-3 rounded-xs bg-[#eff2f6]" />
                 <Box className="h-3 w-3 rounded-xs bg-[#cfe0ff]" />
                 <Box className="h-3 w-3 rounded-xs bg-[#8fb4ff]" />
-                <Box className="h-3 w-3 rounded-xs bg-[#3874ff]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#000000]" />
               </Box>
             </Box>
             <Box className="grid grid-cols-9 gap-2 text-center">
@@ -432,7 +432,7 @@ export default function BrandAnalytics() {
                               "#eff2f6",
                               "#cfe0ff",
                               "#8fb4ff",
-                              "#3874ff",
+                              "#000000",
                             ][intensity],
                           }}
                         />
@@ -487,8 +487,8 @@ export default function BrandAnalytics() {
                       label={`${item.discount}% avg`}
                       size="small"
                       sx={{
-                        backgroundColor: "#eaf1ff",
-                        color: "#3874ff",
+                        backgroundColor: "#f2f2f2",
+                        color: "#000000",
                         fontWeight: 500,
                         fontSize: 10,
                         borderRadius: "6px",
@@ -503,7 +503,7 @@ export default function BrandAnalytics() {
                       borderRadius: 4,
                       backgroundColor: "#eff2f6",
                       "& .MuiLinearProgress-bar": {
-                        backgroundColor: "#3874ff",
+                        backgroundColor: "#000000",
                         borderRadius: 4,
                       },
                     }}

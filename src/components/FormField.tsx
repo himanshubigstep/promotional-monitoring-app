@@ -71,7 +71,7 @@ function getErrorMessage(
 const datePickerTheme = createTheme({
   palette: {
     primary: {
-      main: "#3874ff",
+      main: "#000000",
     },
     secondary: {
       main: "#525b75",
@@ -85,7 +85,7 @@ const datePickerTheme = createTheme({
       styleOverrides: {
         root: {
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#3874ff !important",
+            borderColor: "#000000 !important",
             borderWidth: "1.5px !important",
           },
           "&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline": {
@@ -99,7 +99,7 @@ const datePickerTheme = createTheme({
       styleOverrides: {
         root: {
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#3874ff !important",
+            borderColor: "#000000 !important",
             borderWidth: "1.5px !important",
           },
         },
@@ -160,7 +160,7 @@ export default function FormField(props: FormFieldProps) {
           sx={{
             border: "none",
             background: "transparent",
-            color: "#3874ff",
+            color: "#000000",
             fontSize: 12,
             fontWeight: 700,
             cursor: "pointer",
@@ -171,7 +171,7 @@ export default function FormField(props: FormFieldProps) {
             whiteSpace: "nowrap",
             fontFamily: "inherit",
             "&:hover": {
-              color: "#2c5fd6",
+              color: "#333333",
             },
           }}
         >
@@ -277,11 +277,11 @@ export default function FormField(props: FormFieldProps) {
               },
 
               "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: error ? "#fa3b1d" : "#3874ff",
+                borderColor: error ? "#fa3b1d" : "#000000",
               },
 
               "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: error ? "#fa3b1d" : "#3874ff",
+                borderColor: error ? "#fa3b1d" : "#000000",
                 borderWidth: 1.5,
               },
 
@@ -340,10 +340,10 @@ export default function FormField(props: FormFieldProps) {
                         borderColor: "#cbd0dd",
                       },
                       "&:hover fieldset": {
-                        borderColor: "#3874ff",
+                        borderColor: "#000000",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#3874ff",
+                        borderColor: "#000000",
                         borderWidth: "1.5px",
                       },
                     },
@@ -360,12 +360,12 @@ export default function FormField(props: FormFieldProps) {
                   fontSize: 13.5,
 
                   "&.Mui-selected": {
-                    backgroundColor: "#eaf1ff",
+                    backgroundColor: "#f2f2f2",
                     fontWeight: 700,
                   },
 
                   "&.Mui-selected:hover": {
-                    backgroundColor: "#eaf1ff",
+                    backgroundColor: "#f2f2f2",
                   },
                 }}
               >
@@ -376,7 +376,7 @@ export default function FormField(props: FormFieldProps) {
                     sx={{
                       mr: 1,
                       fontSize: 18,
-                      color: "#3874ff",
+                      color: "#000000",
                     }}
                   />
                 )}
@@ -441,11 +441,11 @@ export default function FormField(props: FormFieldProps) {
                       },
 
                       "&:hover fieldset": {
-                        borderColor: error ? "#fa3b1d" : "#3874ff",
+                        borderColor: error ? "#fa3b1d" : "#000000",
                       },
 
                       "&.Mui-focused fieldset": {
-                        borderColor: error ? "#fa3b1d" : "#3874ff",
+                        borderColor: error ? "#fa3b1d" : "#000000",
                         borderWidth: "1.5px !important",
                       },
                     },
@@ -462,7 +462,7 @@ export default function FormField(props: FormFieldProps) {
                     },
 
                     "& .MuiSvgIcon-root": {
-                      color: "#3874ff",
+                      color: "#000000",
                       fontSize: 20,
                     },
 
@@ -544,25 +544,25 @@ export default function FormField(props: FormFieldProps) {
                       transition: "all 0.12s ease-in-out",
 
                       "&:hover": {
-                        backgroundColor: "#eaf1ff",
+                        backgroundColor: "#f2f2f2",
                       },
 
                       "&.Mui-selected": {
-                        backgroundColor: "#3874ff",
+                        backgroundColor: "#000000",
                         color: "#fff",
                         fontWeight: 700,
                         "&:hover": {
-                          backgroundColor: "#2c5fd6",
+                          backgroundColor: "#333333",
                         },
                       },
 
                       "&.MuiPickersDay-today": {
-                        border: "1.5px solid #3874ff",
+                        border: "1.5px solid #000000",
                         fontWeight: 700,
                       },
 
                       "&.MuiPickersDay-today.Mui-selected": {
-                        border: "1.5px solid #2c5fd6",
+                        border: "1.5px solid #333333",
                       },
                     },
 
@@ -591,14 +591,14 @@ export default function FormField(props: FormFieldProps) {
                         color: "#141824",
                         padding: "8px 12px",
                         "&:hover": {
-                          backgroundColor: "#eaf1ff",
+                          backgroundColor: "#f2f2f2",
                         },
                         "&.Mui-selected": {
-                          backgroundColor: "#3874ff",
+                          backgroundColor: "#000000",
                           color: "#fff",
                           fontWeight: 700,
                           "&:hover": {
-                            backgroundColor: "#2c5fd6",
+                            backgroundColor: "#333333",
                           },
                         },
                       },
@@ -613,14 +613,14 @@ export default function FormField(props: FormFieldProps) {
                         color: "#141824",
                         padding: "8px 12px",
                         "&:hover": {
-                          backgroundColor: "#eaf1ff",
+                          backgroundColor: "#f2f2f2",
                         },
                         "&.Mui-selected": {
-                          backgroundColor: "#3874ff",
+                          backgroundColor: "#000000",
                           color: "#fff",
                           fontWeight: 700,
                           "&:hover": {
-                            backgroundColor: "#2c5fd6",
+                            backgroundColor: "#333333",
                           },
                         },
                       },
@@ -643,10 +643,10 @@ export default function FormField(props: FormFieldProps) {
                           },
                         },
                         "&.MuiButton-contained": {
-                          backgroundColor: "#3874ff",
+                          backgroundColor: "#000000",
                           color: "#fff",
                           "&:hover": {
-                            backgroundColor: "#2c5fd6",
+                            backgroundColor: "#333333",
                           },
                         },
                       },
@@ -691,11 +691,11 @@ export default function FormField(props: FormFieldProps) {
             },
 
             "&:hover fieldset": {
-              borderColor: error ? "#fa3b1d" : "#3874ff",
+              borderColor: error ? "#fa3b1d" : "#000000",
             },
 
             "&.Mui-focused fieldset": {
-              borderColor: error ? "#fa3b1d" : "#3874ff",
+              borderColor: error ? "#fa3b1d" : "#000000",
               borderWidth: 1.5,
             },
           },

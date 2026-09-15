@@ -111,6 +111,11 @@ const promotionTypeOptions = {
     { label: "Kupte jeden a druhý získejte zdarma", value: "Buy one get one free" },
     { label: "Zvyk", value: "Custom" },
   ],
+  EN: [
+    { label: "Fixed discount", value: "Fixed promotion" },
+    { label: "Buy one get one free", value: "Buy one get one free" },
+    { label: "Custom", value: "Custom" },
+  ],
 } as const;
 
 const emptyForm: FormState = {
@@ -204,6 +209,7 @@ export default function PromotionFormModal({
   const { brandsByMarket, productCatalog, retailers: retailerOptions } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
+  const [displayLang, setDisplayLang] = useState<"PL" | "CZ" | "EN">("PL");
   const promotionFieldConfig = getPromotionTypeFieldConfig(
     form.market,
     form.promotionType,
@@ -214,148 +220,221 @@ export default function PromotionFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
 
   const currentLanguage =
-    form.market === "CZ"
+    displayLang === "EN"
       ? {
-        addPromotion: "Přidat akci",
+        addPromotion: "Add promotion",
         marketSubtitle:
-          "Zadejte podrobnosti kampaně. Uložená akce zůstane ve stejném formátu v polštině.",
-        market: "Trh *",
-        marketLabel: "Trh",
-        promotionType: "Typ akce",
-        promotionTypeOptions: promotionTypeOptions.CZ,
-        productCategory: "Kategorie produktu",
-        categoryPlaceholder: "Vyberte kategorii",
-        promoName: "Název akce",
-        promoNamePlaceholder: "Zadejte název akce",
-        startDate: "Datum začátku",
-        endDate: "Datum ukončení",
-        scope: "Rozsah akce",
-        scopePlaceholder: "Vyberte rozsah akce",
-        channel: "Propagační kanál",
-        channelPlaceholder: "Vyberte propagační kanál",
-        lockedEdit: "Uzamčeno v režimu úprav",
-        editableEdit: "Upravitelný v režimu úprav",
-        brand: "Značka",
-        product: "Produkt",
-        retailer: "Prodejce",
-        discount: "Typ a výše slevy",
-        discountPlaceholder: "např. -25% nad 999 CZK",
-        threshold: "Minimální nákup",
-        thresholdPlaceholder: "např. 999 CZK",
-        sku: "Počet SKU",
-        skuPlaceholder: "Zadejte počet SKU",
-        avgDiscount: "Průměrná tržní sleva",
-        avgDiscountPlaceholder: "např. 18%",
-        notes: "Poznámky a podmínky",
-        notesPlaceholder: "Podmínky, výjimky, pravidla...",
-        upload: "Nahrajte screenshot nebo kreativ",
-        changeImage: "Změnit obrázek",
-        loading: "Načítání textu...",
-        cancel: "Zrušit",
-        save: "Uložit akci",
-        add: "Přidat",
-        addBrand: "Přidat značku",
-        addProduct: "Přidat produkt",
-        addBrandTitle: "Přidat novou značku",
-        addProductTitle: "Přidat nový produkt",
-        brandNameLabel: "Název značky",
-        brandNamePlaceholder: "Zadejte název značky",
-        productNameLabel: "Název produktu",
-        productNamePlaceholder: "Název produktu",
-        brandSelectLabel: "Značka",
-        brandSelectPlaceholder: "Vyberte značku",
-        productBrandLabel: "Vybrat značku",
-        categorySelectLabel: "Kategorie",
-        categorySelectPlaceholder: "Vyberte kategorii",
-        priceLabel: "Cena",
-        pricePlaceholder: "Cena",
-        descriptionLabel: "Popis",
-        descriptionPlaceholder: "Popis",
-        retailerLabel: "Prodejce",
-        retailerPlaceholder: "Prodejce",
-        saveBrand: "Uložit značku",
-        saveProduct: "Uložit produkt",
-        validationError: "Zkontrolujte povinná pole formuláře.",
+          "Enter campaign details. The saved promotion will remain in Polish format.",
+        market: "Market *",
+        marketLabel: "Market",
+        promotionType: "Promotion type",
+        promotionTypeOptions: promotionTypeOptions.EN,
+        productCategory: "Product category",
+        categoryPlaceholder: "Select category",
+        promoName: "Promotion name",
+        promoNamePlaceholder: "Enter promotion name",
+        startDate: "Start date",
+        endDate: "End date",
+        scope: "Promotion scope",
+        scopePlaceholder: "Select promotion scope",
+        channel: "Promotional channel",
+        channelPlaceholder: "Select promotional channel",
+        lockedEdit: "Locked in edit mode",
+        editableEdit: "Editable in edit mode",
+        brand: "Brand",
+        product: "Product",
+        retailer: "Retailer",
+        discount: "Discount level and type",
+        discountPlaceholder: "e.g. -25% above 99 PLN",
+        threshold: "Purchase threshold",
+        thresholdPlaceholder: "e.g. 99 PLN",
+        sku: "SKU count",
+        skuPlaceholder: "Enter SKU count",
+        avgDiscount: "Average market discount",
+        avgDiscountPlaceholder: "e.g. 18%",
+        notes: "Notes and conditions",
+        notesPlaceholder: "Conditions, exclusions, rules...",
+        upload: "Upload screenshot or creative",
+        changeImage: "Change image",
+        loading: "Loading text...",
+        cancel: "Cancel",
+        save: "Save promotion",
+        add: "Add",
+        addBrand: "Add brand",
+        addProduct: "Add product",
+        addBrandTitle: "Add new brand",
+        addProductTitle: "Add new product",
+        brandNameLabel: "Brand name",
+        brandNamePlaceholder: "Enter brand name",
+        productNameLabel: "Product name",
+        productNamePlaceholder: "Product name",
+        brandSelectLabel: "Brand",
+        brandSelectPlaceholder: "Select brand",
+        productBrandLabel: "Select brand",
+        categorySelectLabel: "Category",
+        categorySelectPlaceholder: "Select category",
+        priceLabel: "Price",
+        pricePlaceholder: "Price",
+        descriptionLabel: "Description",
+        descriptionPlaceholder: "Description",
+        retailerLabel: "Retailer",
+        retailerPlaceholder: "Retailer",
+        saveBrand: "Save brand",
+        saveProduct: "Save product",
+        validationError: "Please check the required form fields.",
         errors: {
-          name: "Zadejte název akce.",
-          from: "Vyberte datum začátku.",
-          to: "Vyberte datum ukončení.",
-          invalidDates: "Datum ukončení musí být po datu začátku.",
-          discount: "Zadejte výši slevy.",
-          brand: "Vyberte značku.",
-          product: "Vyberte produkt.",
+          name: "Enter promotion name.",
+          from: "Select start date.",
+          to: "Select end date.",
+          invalidDates: "End date must be after start date.",
+          discount: "Enter discount level.",
+          brand: "Select brand.",
+          product: "Select product.",
         },
       }
-      : {
-        addPromotion: "Dodaj promocję",
-        marketSubtitle: "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim.",
-        market: "Rynek *",
-        marketLabel: "Rynek",
-        promotionType: "Typ promocji",
-        promotionTypeOptions: promotionTypeOptions.PL,
-        productCategory: "Kategoria produktu",
-        categoryPlaceholder: "Wybierz kategorię",
-        promoName: "Nazwa promocji",
-        promoNamePlaceholder: "Wprowadź nazwę promocji",
-        startDate: "Data rozpoczęcia",
-        endDate: "Data zakończenia",
-        scope: "Zasięg promocji",
-        scopePlaceholder: "Wybierz zasięg promocji",
-        channel: "Kanał promocyjny",
-        channelPlaceholder: "Wybierz kanał promocyjny",
-        lockedEdit: "Zablokowane w trybie edycji",
-        editableEdit: "Edytowalne w trybie edycji",
-        brand: "Marka",
-        product: "Produkt",
-        retailer: "Sprzedawca",
-        discount: "Poziom i typ rabatu",
-        discountPlaceholder: "np. -25% powyżej 99 PLN",
-        threshold: "Próg zakupowy",
-        thresholdPlaceholder: "np. 99 PLN",
-        sku: "Liczba SKU",
-        skuPlaceholder: "Wpisz liczbę SKU",
-        avgDiscount: "Średni rabat rynkowy",
-        avgDiscountPlaceholder: "np. 18%",
-        notes: "Uwagi i warunki",
-        notesPlaceholder: "Warunki, wykluczenia, zasady...",
-        upload: "Prześlij screenshot lub kreację",
-        changeImage: "Zmień obraz",
-        loading: "Wczytuję tekst...",
-        cancel: "Anuluj",
-        save: "Zapisz promocję",
-        add: "Dodaj",
-        addBrand: "Dodaj markę",
-        addProduct: "Dodaj produkt",
-        addBrandTitle: "Dodaj nową markę",
-        addProductTitle: "Dodaj nowy produkt",
-        brandNameLabel: "Nazwa marki",
-        brandNamePlaceholder: "Wpisz nazwę marki",
-        productNameLabel: "Nazwa produktu",
-        productNamePlaceholder: "Nazwa produktu",
-        brandSelectLabel: "Marka",
-        brandSelectPlaceholder: "Wybierz markę",
-        productBrandLabel: "Wybierz markę",
-        categorySelectLabel: "Kategoria",
-        categorySelectPlaceholder: "Wybierz kategorię",
-        priceLabel: "Cena",
-        pricePlaceholder: "Cena",
-        descriptionLabel: "Opis",
-        descriptionPlaceholder: "Opis",
-        retailerLabel: "Sprzedawca",
-        retailerPlaceholder: "Sprzedawca",
-        saveBrand: "Zapisz markę",
-        saveProduct: "Zapisz produkt",
-        validationError: "Sprawdź wymagane pola formularza.",
-        errors: {
-          name: "Podaj nazwę promocji.",
-          from: "Wybierz datę rozpoczęcia.",
-          to: "Wybierz datę zakończenia.",
-          invalidDates: "Data zakończenia musi być po dacie rozpoczęcia.",
-          discount: "Podaj poziom rabatu.",
-          brand: "Wybierz markę.",
-          product: "Wybierz produkt.",
-        },
-      };
+      : form.market === "CZ"
+        ? {
+          addPromotion: "Přidat akci",
+          marketSubtitle:
+            "Zadejte podrobnosti kampaně. Uložená akce zůstane ve stejném formátu v polštině.",
+          market: "Trh *",
+          marketLabel: "Trh",
+          promotionType: "Typ akce",
+          promotionTypeOptions: promotionTypeOptions.CZ,
+          productCategory: "Kategorie produktu",
+          categoryPlaceholder: "Vyberte kategorii",
+          promoName: "Název akce",
+          promoNamePlaceholder: "Zadejte název akce",
+          startDate: "Datum začátku",
+          endDate: "Datum ukončení",
+          scope: "Rozsah akce",
+          scopePlaceholder: "Vyberte rozsah akce",
+          channel: "Propagační kanál",
+          channelPlaceholder: "Vyberte propagační kanál",
+          lockedEdit: "Uzamčeno v režimu úprav",
+          editableEdit: "Upravitelný v režimu úprav",
+          brand: "Značka",
+          product: "Produkt",
+          retailer: "Prodejce",
+          discount: "Typ a výše slevy",
+          discountPlaceholder: "např. -25% nad 999 CZK",
+          threshold: "Minimální nákup",
+          thresholdPlaceholder: "např. 999 CZK",
+          sku: "Počet SKU",
+          skuPlaceholder: "Zadejte počet SKU",
+          avgDiscount: "Průměrná tržní sleva",
+          avgDiscountPlaceholder: "např. 18%",
+          notes: "Poznámky a podmínky",
+          notesPlaceholder: "Podmínky, výjimky, pravidla...",
+          upload: "Nahrajte screenshot nebo kreativ",
+          changeImage: "Změnit obrázek",
+          loading: "Načítání textu...",
+          cancel: "Zrušit",
+          save: "Uložit akci",
+          add: "Přidat",
+          addBrand: "Přidat značku",
+          addProduct: "Přidat produkt",
+          addBrandTitle: "Přidat novou značku",
+          addProductTitle: "Přidat nový produkt",
+          brandNameLabel: "Název značky",
+          brandNamePlaceholder: "Zadejte název značky",
+          productNameLabel: "Název produktu",
+          productNamePlaceholder: "Název produktu",
+          brandSelectLabel: "Značka",
+          brandSelectPlaceholder: "Vyberte značku",
+          productBrandLabel: "Vybrat značku",
+          categorySelectLabel: "Kategorie",
+          categorySelectPlaceholder: "Vyberte kategorii",
+          priceLabel: "Cena",
+          pricePlaceholder: "Cena",
+          descriptionLabel: "Popis",
+          descriptionPlaceholder: "Popis",
+          retailerLabel: "Prodejce",
+          retailerPlaceholder: "Prodejce",
+          saveBrand: "Uložit značku",
+          saveProduct: "Uložit produkt",
+          validationError: "Zkontrolujte povinná pole formuláře.",
+          errors: {
+            name: "Zadejte název akce.",
+            from: "Vyberte datum začátku.",
+            to: "Vyberte datum ukončení.",
+            invalidDates: "Datum ukončení musí být po datu začátku.",
+            discount: "Zadejte výši slevy.",
+            brand: "Vyberte značku.",
+            product: "Vyberte produkt.",
+          },
+        }
+        : {
+          addPromotion: "Dodaj promocję",
+          marketSubtitle:
+            "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim.",
+          market: "Rynek *",
+          marketLabel: "Rynek",
+          promotionType: "Typ promocji",
+          promotionTypeOptions: promotionTypeOptions.PL,
+          productCategory: "Kategoria produktu",
+          categoryPlaceholder: "Wybierz kategorię",
+          promoName: "Nazwa promocji",
+          promoNamePlaceholder: "Wprowadź nazwę promocji",
+          startDate: "Data rozpoczęcia",
+          endDate: "Data zakończenia",
+          scope: "Zasięg promocji",
+          scopePlaceholder: "Wybierz zasięg promocji",
+          channel: "Kanał promocyjny",
+          channelPlaceholder: "Wybierz kanał promocyjny",
+          lockedEdit: "Zablokowane w trybie edycji",
+          editableEdit: "Edytowalne w trybie edycji",
+          brand: "Marka",
+          product: "Produkt",
+          retailer: "Sprzedawca",
+          discount: "Poziom i typ rabatu",
+          discountPlaceholder: "np. -25% powyżej 99 PLN",
+          threshold: "Próg zakupowy",
+          thresholdPlaceholder: "np. 99 PLN",
+          sku: "Liczba SKU",
+          skuPlaceholder: "Wpisz liczbę SKU",
+          avgDiscount: "Średni rabat rynkowy",
+          avgDiscountPlaceholder: "np. 18%",
+          notes: "Uwagi i warunki",
+          notesPlaceholder: "Warunki, wykluczenia, zasady...",
+          upload: "Prześlij screenshot lub kreację",
+          changeImage: "Zmień obraz",
+          loading: "Wczytuję tekst...",
+          cancel: "Anuluj",
+          save: "Zapisz promocję",
+          add: "Dodaj",
+          addBrand: "Dodaj markę",
+          addProduct: "Dodaj produkt",
+          addBrandTitle: "Dodaj nową markę",
+          addProductTitle: "Dodaj nowy produkt",
+          brandNameLabel: "Nazwa marki",
+          brandNamePlaceholder: "Wpisz nazwę marki",
+          productNameLabel: "Nazwa produktu",
+          productNamePlaceholder: "Nazwa produktu",
+          brandSelectLabel: "Marka",
+          brandSelectPlaceholder: "Wybierz markę",
+          productBrandLabel: "Wybierz markę",
+          categorySelectLabel: "Kategoria",
+          categorySelectPlaceholder: "Wybierz kategorię",
+          priceLabel: "Cena",
+          pricePlaceholder: "Cena",
+          descriptionLabel: "Opis",
+          descriptionPlaceholder: "Opis",
+          retailerLabel: "Sprzedawca",
+          retailerPlaceholder: "Sprzedawca",
+          saveBrand: "Zapisz markę",
+          saveProduct: "Zapisz produkt",
+          validationError: "Sprawdź wymagane pola formularza.",
+          errors: {
+            name: "Podaj nazwę promocji.",
+            from: "Wybierz datę rozpoczęcia.",
+            to: "Wybierz datę zakończenia.",
+            invalidDates: "Data zakończenia musi być po dacie rozpoczęcia.",
+            discount: "Podaj poziom rabatu.",
+            brand: "Wybierz markę.",
+            product: "Wybierz produkt.",
+          },
+        };
 
   const [submitting, setSubmitting] = useState(false);
 
@@ -450,15 +529,8 @@ export default function PromotionFormModal({
       threshold: raw.threshold || "",
       averageMarketDiscount: raw.averageMarketDiscount || "",
       name: raw.name || "",
-      // Real brand/retailer lists from Supabase (both markets — the OCR
-      // result doesn't know the selected market yet at this point).
       brands: findKnownMatches(raw.brands || "", [...brandsByMarket.PL, ...brandsByMarket.CZ]) as string,
       retailer: findKnownMatches(raw.retailer || "", retailerOptions.map((r) => r.name)) as string,
-      // Category matching stays against the Polish-labeled constant below —
-      // the form stores category in Polish internally (translated to
-      // English later via toEnglish()), but Supabase's categories are
-      // already English, so matching OCR'd Polish text against them here
-      // would never hit.
       category: findKnownMatches(raw.category || "", categories) as string,
       notes: raw.notes || "",
     };
@@ -468,7 +540,6 @@ export default function PromotionFormModal({
     setImageFile(file);
     setForm((current) => ({ ...clearOcrDerivedFields(current) }));
 
-    // Save the ORIGINAL image for preview/storage
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === "string" ? reader.result : "";
@@ -478,7 +549,6 @@ export default function PromotionFormModal({
     };
     reader.readAsDataURL(file);
 
-    // Extract fields
     setOcrLoading(true);
     try {
       let extracted: ExtractedFields;
@@ -532,22 +602,13 @@ export default function PromotionFormModal({
     if (!form.to) errors.to = currentLanguage.errors.to;
     if (form.from && form.to && form.from > form.to)
       errors.to = currentLanguage.errors.invalidDates;
-    if (
-      promotionFieldConfig.requiredFields.discount &&
-      !form.discount
-    ) {
+    if (promotionFieldConfig.requiredFields.discount && !form.discount) {
       errors.discount = currentLanguage.errors.discount;
     }
-    if (
-      promotionFieldConfig.requiredFields.threshold &&
-      !form.threshold
-    ) {
+    if (promotionFieldConfig.requiredFields.threshold && !form.threshold) {
       errors.threshold = currentLanguage.errors.discount;
     }
-    if (
-      promotionFieldConfig.requiredFields.promoPrice &&
-      !form.promoPrice
-    ) {
+    if (promotionFieldConfig.requiredFields.promoPrice && !form.promoPrice) {
       errors.promoPrice = currentLanguage.errors.discount;
     }
     if (!form.brands) errors.brands = currentLanguage.errors.brand;
@@ -573,14 +634,21 @@ export default function PromotionFormModal({
       }
     }
 
+    // When EN view is active, force market to PL on save.
+    // Otherwise keep the actual selected market (PL or CZ).
+    const marketToSave = displayLang === "EN" ? "PL" : form.market;
+
     await onSave({
       ...{
         ...form,
+        market: marketToSave,
         promotionType: form.promotionType || "Fixed promotion",
         promoPrice: form.promoPrice || "",
-      }, notes: finalNotes
+      },
+      notes: finalNotes,
     });
     setForm(emptyForm);
+    setDisplayLang("PL");
     setError("");
     setFieldErrors({});
     setPreviewUrl("");
@@ -590,6 +658,7 @@ export default function PromotionFormModal({
   useEffect(() => {
     if (!editingPromotion) {
       setForm(emptyForm);
+      setDisplayLang("PL");
       setPreviewUrl("");
       setImageFile(null);
       return;
@@ -599,6 +668,7 @@ export default function PromotionFormModal({
     const safePreview = nextCreativeData || fallbackImage;
     setPreviewUrl(safePreview);
     setImageFile(null);
+    setDisplayLang(editingPromotion.market);
 
     setForm({
       ...emptyForm,
@@ -633,9 +703,11 @@ export default function PromotionFormModal({
   );
   const discountLabel =
     form.promotionType === "Buy one get one free"
-      ? currentLanguage.discount === "Typ a výše slevy"
-        ? "Typ nabídky"
-        : "Typ oferty"
+      ? displayLang === "EN"
+        ? "Offer type"
+        : currentLanguage.discount === "Typ a výše slevy"
+          ? "Typ nabídky"
+          : "Typ oferty"
       : currentLanguage.discount;
 
   const editableFields = new Set([
@@ -680,7 +752,7 @@ export default function PromotionFormModal({
                     width: 18,
                     height: 18,
                     border: "2px solid rgba(255,255,255,0.3)",
-                    borderTopColor: "#3874ff",
+                    borderTopColor: "#000000",
                     borderRadius: "50%",
                     display: "inline-block",
                     animation: "spin 0.8s linear infinite",
@@ -708,16 +780,18 @@ export default function PromotionFormModal({
                   {currentLanguage.addPromotion}
                 </Typography>
                 <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
-                  {form.market === "CZ"
-                    ? "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu."
-                    : "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim."}
+                  {displayLang === "EN"
+                    ? "Enter campaign details. The saved promotion will remain in Polish format."
+                    : form.market === "CZ"
+                      ? "Zadejte údaje kampaně. Uložená akce zůstane v českém formátu."
+                      : "Wprowadź dane kampanii. Zapisana promocja pozostanie w tym samym formacie w języku polskim."}
                 </Typography>
               </Box>
               <Button
                 onClick={ocrLoading ? undefined : onClose}
                 disabled={ocrLoading}
                 aria-label="Zamknij"
-                sx={{ minWidth: 36, width: 36, height: 36, color: "#141824", p: 0, borderRadius: "50%", "&:hover": { backgroundColor: "#eaf1ff", color: "#3874ff" } }}
+                sx={{ minWidth: 36, width: 36, height: 36, color: "#141824", p: 0, borderRadius: "50%", "&:hover": { backgroundColor: "#f2f2f2", color: "#000000" } }}
               >
                 <CloseRounded />
               </Button>
@@ -730,10 +804,17 @@ export default function PromotionFormModal({
                   {currentLanguage.market}
                 </Typography>
                 <Box className="flex gap-1 rounded-lg bg-[#f5f7fa] p-1">
-                  {(["PL", "CZ"] as const).map((market) => (
+                  {(["PL", "CZ", "EN"] as const).map((market) => (
                     <Button
                       key={market}
                       onClick={() => {
+                        if (market === "EN") {
+                          // EN is a view-only language toggle.
+                          // form.market stays as-is; on save we force PL.
+                          setDisplayLang("EN");
+                          return;
+                        }
+                        setDisplayLang(market);
                         update("market", market);
                         setForm((current) => ({
                           ...current,
@@ -744,17 +825,18 @@ export default function PromotionFormModal({
                           category: "",
                         }));
                       }}
-                      variant={form.market === market ? "contained" : "text"}
+                      variant={displayLang === market ? "contained" : "text"}
                       size="small"
                       sx={{
                         minWidth: 54,
                         backgroundColor:
-                          form.market === market ? "#141824" : "transparent",
-                        color: form.market === market ? "#ffffff" : "#525b75",
+                          displayLang === market ? "#141824" : "transparent",
+                        color: displayLang === market ? "#ffffff" : "#525b75",
                         fontWeight: 800,
                         boxShadow: "none",
                         "&:hover": {
-                          backgroundColor: form.market === market ? "#31374a" : "#e3e6ed",
+                          backgroundColor:
+                            displayLang === market ? "#31374a" : "#e3e6ed",
                           boxShadow: "none",
                         },
                       }}
@@ -932,16 +1014,22 @@ export default function PromotionFormModal({
                     label={discountLabel}
                     placeholder={
                       form.promotionType === "Buy one get one free"
-                        ? form.market === "CZ"
-                          ? "např. Kupte 1 a 2. zdarma"
-                          : "np. Kup 1, dostaniesz 1 gratis"
-                        : form.promotionType === "Custom"
-                          ? form.market === "CZ"
-                            ? "např. 2 za 1 nebo 299 CZK"
-                            : "np. 2 za 1 lub 299 PLN"
+                        ? displayLang === "EN"
+                          ? "e.g. Buy 1 get 1 free"
                           : form.market === "CZ"
-                            ? "např. -25% nad 999 CZK"
-                            : "np. -25% powyżej 99 PLN"
+                            ? "např. Kupte 1 a 2. zdarma"
+                            : "np. Kup 1, dostaniesz 1 gratis"
+                        : form.promotionType === "Custom"
+                          ? displayLang === "EN"
+                            ? "e.g. 2 for 1 or 299 PLN"
+                            : form.market === "CZ"
+                              ? "např. 2 za 1 nebo 299 CZK"
+                              : "np. 2 za 1 lub 299 PLN"
+                          : displayLang === "EN"
+                            ? "e.g. -25% above 99 PLN"
+                            : form.market === "CZ"
+                              ? "např. -25% nad 999 CZK"
+                              : "np. -25% powyżej 99 PLN"
                     }
                     value={form.discount}
                     disabled={isReadOnlyField("discount")}
@@ -954,12 +1042,18 @@ export default function PromotionFormModal({
                   <FormField
                     type="number"
                     label={
-                      form.market === "CZ"
-                        ? "Cena po slevě"
-                        : "Cena po promocji"
+                      displayLang === "EN"
+                        ? "Price after discount"
+                        : form.market === "CZ"
+                          ? "Cena po slevě"
+                          : "Cena po promocji"
                     }
                     placeholder={
-                      form.market === "CZ" ? "např. 999 CZK" : "np. 299 PLN"
+                      displayLang === "EN"
+                        ? "e.g. 299 PLN"
+                        : form.market === "CZ"
+                          ? "např. 999 CZK"
+                          : "np. 299 PLN"
                     }
                     value={form.promoPrice}
                     disabled={isReadOnlyField("promoPrice")}
@@ -972,7 +1066,11 @@ export default function PromotionFormModal({
                   <FormField
                     label={currentLanguage.threshold}
                     placeholder={
-                      form.market === "CZ" ? "např. 999 CZK" : "np. 99 PLN"
+                      displayLang === "EN"
+                        ? "e.g. 99 PLN"
+                        : form.market === "CZ"
+                          ? "např. 999 CZK"
+                          : "np. 99 PLN"
                     }
                     value={form.threshold}
                     disabled={isReadOnlyField("threshold")}
@@ -986,7 +1084,7 @@ export default function PromotionFormModal({
                   label={currentLanguage.sku}
                   value={form.skuCount}
                   onValueChange={(value) => update("skuCount", value)}
-                  placeholder="Wpisz liczbę SKU"
+                  placeholder={currentLanguage.skuPlaceholder}
                 />
                 <FormField
                   label={currentLanguage.avgDiscount}
@@ -1026,7 +1124,7 @@ export default function PromotionFormModal({
                           size="small"
                           sx={{
                             bgcolor: "white",
-                            "&:hover": { bgcolor: "#eaf1ff" },
+                            "&:hover": { bgcolor: "#f2f2f2" },
                             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                           }}
                           onClick={() => {
@@ -1066,7 +1164,7 @@ export default function PromotionFormModal({
                                 width: 16,
                                 height: 16,
                                 border: "2px solid #e3e6ed",
-                                borderTopColor: "#3874ff",
+                                borderTopColor: "#000000",
                                 borderRadius: "50%",
                                 display: "inline-block",
                                 animation: "spin 0.8s linear infinite",
@@ -1094,8 +1192,8 @@ export default function PromotionFormModal({
                   <Box
                     {...getRootProps()}
                     className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${isDragActive
-                      ? "border-[#3874ff] bg-[#eaf1ff]"
-                      : "border-[#cbd0dd] hover:border-[#3874ff] bg-[#f5f7fa]"
+                      ? "border-[#000000] bg-[#f2f2f2]"
+                      : "border-[#cbd0dd] hover:border-[#000000] bg-[#f5f7fa]"
                       } ${ocrLoading ? "pointer-events-none opacity-60" : ""}`}
                   >
                     <input {...getInputProps()} disabled={ocrLoading} />
@@ -1106,7 +1204,9 @@ export default function PromotionFormModal({
                       sx={{ color: "#141824", fontSize: 13, fontWeight: 700 }}
                     >
                       {isDragActive
-                        ? "Upuść obraz tutaj"
+                        ? displayLang === "EN"
+                          ? "Drop image here"
+                          : "Upuść obraz tutaj"
                         : currentLanguage.upload}
                     </Typography>
                     <Typography
@@ -1116,7 +1216,7 @@ export default function PromotionFormModal({
                     </Typography>
                     {ocrLoading && (
                       <Typography
-                        sx={{ color: "#3874ff", fontSize: 12, mt: 1, fontWeight: 700 }}
+                        sx={{ color: "#000000", fontSize: 12, mt: 1, fontWeight: 700 }}
                       >
                         {currentLanguage.loading}
                       </Typography>

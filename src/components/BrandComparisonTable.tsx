@@ -13,14 +13,16 @@ import {
 } from "@mui/icons-material";
 import { matchesPromotionFilters, useAppContext } from "../context/AppContext";
 import { getMarketRetailers } from "../data/retailers";
+import { isBenchmarkProduct } from "../data/marketProducts";
+import AppPagination from "./AppPagination";
 
 const today = new Date().toISOString().slice(0, 10);
 
 const YOUR_STORE_PL = "sephora";
 const YOUR_STORE_CZ = "CZ Demo Store Prague";
+const ROWS_PER_PAGE = 10;
 
-type StatusFilter = "all" | "active" | "expired";
-type MarketFilter = "All" | "PL" | "CZ";
+type MarketFilter = "PL" | "CZ";
 
 interface RetailerCell {
     active: boolean;
@@ -40,27 +42,22 @@ interface Row {
     market: "PL" | "CZ";
     retailers: Record<string, RetailerCell | undefined>;
     yourStoreRetailer: string;
+    isBenchmark: boolean;
 }
 
 const BrandComparisonTable = () => {
     const { products, filters } = useAppContext();
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [brandFilter, setBrandFilter] = useState("");
+    const [page, setPage] = useState(1);
     const [selectedMarket, setSelectedMarket] = useState<MarketFilter>(
-        (filters.market as MarketFilter) || "All"
+        filters.market === "CZ" ? "CZ" : "PL"
     );
 
     const yourStore = selectedMarket === "CZ" ? YOUR_STORE_CZ : YOUR_STORE_PL;
 
     const retailers = useMemo(() => {
-        const all =
-            selectedMarket === "All"
-                ? [
-                    ...getMarketRetailers("PL"),
-                    ...getMarketRetailers("CZ"),
-                ]
-                : getMarketRetailers(selectedMarket as "PL" | "CZ");
+        const all = getMarketRetailers(selectedMarket);
         return [
             ...(all.includes(yourStore) ? [yourStore] : []),
             ...all.filter((r) => r !== yourStore),
@@ -74,8 +71,7 @@ const BrandComparisonTable = () => {
                 p.name.toLowerCase().includes(search.toLowerCase()) ||
                 p.brand.toLowerCase().includes(search.toLowerCase());
             const matchesGlobalFilters = matchesPromotionFilters(p, filters);
-            const matchesMarket =
-                selectedMarket === "All" || p.market === selectedMarket;
+            const matchesMarket = p.market === selectedMarket;
             const matchesBrand =
                 !brandFilter ||
                 p.brand.toLowerCase().includes(brandFilter.toLowerCase());
@@ -95,6 +91,7 @@ const BrandComparisonTable = () => {
                     market: p.market as "PL" | "CZ",
                     retailers: {},
                     yourStoreRetailer: yourStore,
+                    isBenchmark: isBenchmarkProduct(p),
                 });
             }
             const row = groups.get(key)!;
@@ -111,28 +108,40 @@ const BrandComparisonTable = () => {
             };
         });
 
-        let result = Array.from(groups.values());
+        // Only active data — a row qualifies if at least one retailer's
+        // offer is currently running.
+        let result = Array.from(groups.values()).filter((row) => {
+            const cells = retailers.map((r) => row.retailers[r]);
+            return cells.some((c) => c?.active);
+        });
 
-        if (statusFilter !== "all") {
-            result = result.filter((row) => {
-                const cells = retailers.map((r) => row.retailers[r]);
-                if (statusFilter === "active") return cells.some((c) => c?.active);
-                if (statusFilter === "expired")
-                    return cells.some((c) => c && !c.active);
-                return true;
-            });
-        }
-
-        return result.sort((a, b) =>
-            a.brand === b.brand
+        return result.sort((a, b) => {
+            if (a.isBenchmark !== b.isBenchmark) return a.isBenchmark ? -1 : 1;
+            return a.brand === b.brand
                 ? a.name.localeCompare(b.name)
-                : a.brand.localeCompare(b.brand)
-        );
-    }, [products, filters, search, brandFilter, selectedMarket, retailers, statusFilter, yourStore]);
+                : a.brand.localeCompare(b.brand);
+        });
+    }, [products, filters, search, brandFilter, selectedMarket, retailers, yourStore]);
+
+    const pageCount = Math.max(1, Math.ceil(rows.length / ROWS_PER_PAGE));
+    const visibleRows = rows.slice(
+        (page - 1) * ROWS_PER_PAGE,
+        page * ROWS_PER_PAGE,
+    );
 
     React.useEffect(() => {
-        setSelectedMarket(filters.market as MarketFilter);
+        if (filters.market === "CZ" || filters.market === "PL") {
+            setSelectedMarket(filters.market);
+        }
     }, [filters.market]);
+
+    React.useEffect(() => {
+        setPage(1);
+    }, [search, brandFilter, selectedMarket, filters]);
+
+    React.useEffect(() => {
+        if (page > pageCount) setPage(pageCount);
+    }, [page, pageCount]);
 
     const renderCell = (cell: RetailerCell | undefined) => {
         if (!cell) {
@@ -183,7 +192,7 @@ const BrandComparisonTable = () => {
                 <Box className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
                     <Box>
                         <Box className="flex items-center gap-2 mb-1">
-                            <StorefrontRounded sx={{ color: "#3874ff", fontSize: 18 }} />
+                            <StorefrontRounded sx={{ color: "#000000", fontSize: 18 }} />
                             <Typography sx={{ fontSize: 17, fontWeight: 800, color: "#141824", letterSpacing: "-0.3px" }}>
                                 Brand × Retailer Comparison
                             </Typography>
@@ -216,14 +225,13 @@ const BrandComparisonTable = () => {
                                 py: 0.5,
                                 color: "#525b75",
                                 "&.Mui-selected": {
-                                    backgroundColor: "#3874ff",
+                                    backgroundColor: "#000000",
                                     color: "#ffffff",
-                                    "&:hover": { backgroundColor: "#2c5fd6" },
+                                    "&:hover": { backgroundColor: "#333333" },
                                 },
                             },
                         }}
                     >
-                        <ToggleButton value="All">All Markets</ToggleButton>
                         <ToggleButton value="PL">Poland (PL)</ToggleButton>
                         <ToggleButton value="CZ">Czechia (CZ)</ToggleButton>
                     </ToggleButtonGroup>
@@ -268,39 +276,6 @@ const BrandComparisonTable = () => {
                             },
                         }}
                     />
-
-                    <ToggleButtonGroup
-                        size="small"
-                        exclusive
-                        value={statusFilter}
-                        onChange={(_, v) => v && setStatusFilter(v)}
-                        sx={{
-                            backgroundColor: "#ffffff",
-                            p: "2px",
-                            borderRadius: "8px",
-                            ml: "auto",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
-                            "& .MuiToggleButton-root": {
-                                border: 0,
-                                borderRadius: "6px",
-                                textTransform: "none",
-                                fontWeight: 500,
-                                fontSize: "12px",
-                                px: 1.8,
-                                py: 0.5,
-                                color: "#525b75",
-                                "&.Mui-selected": {
-                                    backgroundColor: "#3874ff",
-                                    color: "#ffffff",
-                                    "&:hover": { backgroundColor: "#2c5fd6" },
-                                },
-                            },
-                        }}
-                    >
-                        <ToggleButton value="all">All</ToggleButton>
-                        <ToggleButton value="active">Active</ToggleButton>
-                        <ToggleButton value="expired">Expired</ToggleButton>
-                    </ToggleButtonGroup>
                 </Box>
 
                 {/* Table Section */}
@@ -359,8 +334,8 @@ const BrandComparisonTable = () => {
                                             sx={{
                                                 fontWeight: 700,
                                                 minWidth: 110,
-                                                backgroundColor: isYour ? "#eaf1ff" : "#ffffff",
-                                                color: isYour ? "#3874ff" : "#525b75",
+                                                backgroundColor: isYour ? "#f2f2f2" : "#ffffff",
+                                                color: isYour ? "#000000" : "#525b75",
                                                 borderBottom: isYour ? "1px solid #cfe0ff" : "1px solid #e3e6ed",
                                                 fontSize: "10.5px",
                                                 letterSpacing: "0.3px",
@@ -373,7 +348,7 @@ const BrandComparisonTable = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {rows.map((row) => (
+                            {visibleRows.map((row) => (
                                 <TableRow
                                     key={row.key}
                                     sx={{
@@ -383,14 +358,16 @@ const BrandComparisonTable = () => {
                                     }}
                                 >
                                     <TableCell>
-                                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "#3874ff" }}>
+                                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "#000000" }}>
                                             {row.brand}
                                         </Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: "#141824" }}>
-                                            {row.name}
-                                        </Typography>
+                                        <Box className="flex items-center gap-1">
+                                            <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: "#141824" }}>
+                                                {row.name}
+                                            </Typography>
+                                        </Box>
                                         <Typography sx={{ fontSize: 11, color: "#525b75", fontWeight: 500 }}>
                                             {row.category} • <span style={{ fontWeight: 500 }}>{row.market}</span>
                                         </Typography>
@@ -404,7 +381,7 @@ const BrandComparisonTable = () => {
                                                 key={r}
                                                 align="center"
                                                 sx={{
-                                                    backgroundColor: isYour ? "rgba(56,116,255,0.04)" : "transparent",
+                                                    backgroundColor: isYour ? "rgba(0,0,0,0.04)" : "transparent",
                                                     px: 1,
                                                     py: 1,
                                                 }}
@@ -433,11 +410,14 @@ const BrandComparisonTable = () => {
                 </TableContainer>
 
                 {rows.length > 0 && (
-                    <Box className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-[#e3e6ed]">
-                        <Typography sx={{ fontSize: 12, color: "#525b75", fontWeight: 500 }}>
-                            Showing {rows.length} product{rows.length === 1 ? "" : "s"} across {retailers.length} retailer{retailers.length === 1 ? "" : "s"}
-                        </Typography>
-                    </Box>
+                    <AppPagination
+                        count={pageCount}
+                        page={page}
+                        onChange={setPage}
+                        total={rows.length}
+                        pageSize={ROWS_PER_PAGE}
+                        itemLabel={`products across ${retailers.length} retailer${retailers.length === 1 ? "" : "s"}`}
+                    />
                 )}
             </CardContent>
         </Card>

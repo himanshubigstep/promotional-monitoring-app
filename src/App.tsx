@@ -97,25 +97,29 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="rounded-lg transition-all"
             sx={{
-              color: selected ? "#3874ff" : "#525b75",
-              backgroundColor: selected ? "#eaf1ff !important" : "transparent",
+              color: selected ? "#ffffff" : "#525b75",
+              backgroundColor: selected ? "#d60032 !important" : "transparent",
               "&.Mui-selected": {
-                backgroundColor: "#eaf1ff",
-                color: "#3874ff",
+                backgroundColor: "#d60032",
+                color: "#ffffff",
                 boxShadow: "none",
               },
               "&.Mui-selected:hover": {
-                backgroundColor: "#eaf1ff",
+                backgroundColor: "#d60032",
               },
               "&:hover": {
-                backgroundColor: "#f5f7fa",
+                backgroundColor: "#d60032",
+                color: "#ffffff",
+                "& .MuiListItemIcon-root": {
+                  color: "#ffffff",
+                },
               },
             }}
           >
             <ListItemIcon
               sx={{
                 minWidth: 36,
-                color: selected ? "#3874ff" : "inherit",
+                color: selected ? "#ffffff" : "inherit",
               }}
             >
               {item.icon}
@@ -166,7 +170,7 @@ function AppLayout() {
             </Typography>
             <Box
               sx={{
-                backgroundColor: "#3874ff",
+                backgroundColor: "#000000",
                 color: "#ffffff",
                 fontSize: 9,
                 fontWeight: 700,
@@ -182,7 +186,7 @@ function AppLayout() {
           </Box>
           <Typography
             sx={{
-                color: "#9fa6bc",
+              color: "#9fa6bc",
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: 1.5,
@@ -203,10 +207,10 @@ function AppLayout() {
         )}
       </Box>
 
-        <Box className="mx-3.5 my-3 rounded-xl bg-[#f5f7fa] p-3">
+      <Box className="mx-3.5 my-3 rounded-xl bg-[#f5f7fa] p-3">
         <Typography
           sx={{
-            color: "#3874ff",
+            color: "#000000",
             fontSize: 10,
             fontWeight: 700,
             letterSpacing: 1.2,
@@ -240,7 +244,7 @@ function AppLayout() {
               backgroundColor: "#25b003",
             }}
           />
-            <Typography sx={{ color: "#525b75", fontSize: 11, fontWeight: 500 }}>
+          <Typography sx={{ color: "#525b75", fontSize: 11, fontWeight: 500 }}>
             Catalog synced live • 2026
           </Typography>
         </Box>
@@ -282,7 +286,7 @@ function AppLayout() {
           </Box>
           <Box
             sx={{
-              backgroundColor: "#3874ff",
+              backgroundColor: "#000000",
               color: "#ffffff",
               fontSize: 10,
               fontWeight: 800,
@@ -318,7 +322,7 @@ function AppLayout() {
         </Drawer>
       </Box>
 
-        <Box component="main" className="min-h-screen p-4 md:p-7 md:ml-[244px]">
+      <Box component="main" className="min-h-screen p-4 md:p-7 md:ml-[244px]">
         <Box className="mx-auto max-w-['100%']">
           <Box className="mb-4 flex flex-wrap items-center justify-between gap-4">
             <Box>
@@ -335,9 +339,8 @@ function AppLayout() {
               </Typography>
               <Typography sx={{ color: "#525b75", fontSize: 13, mt: 0.5 }}>
                 {location.pathname === "/"
-                  ? `${getTimeGreeting()}, ${
-                      user ? (authRole === "editor" ? "Editor" : "Analyst") : "Guest"
-                    } • Sephora Promotional Monitor`
+                  ? `${getTimeGreeting()}, ${user ? (authRole === "editor" ? "Editor" : "Analyst") : "Guest"
+                  } • Sephora Promotional Monitor`
                   : "Track competitor promotions, pricing trends, and market campaign analytics."}
               </Typography>
             </Box>
@@ -346,7 +349,7 @@ function AppLayout() {
               <Button
                 variant="outlined"
                 size="small"
-                startIcon={<FilterAltRounded sx={{ color: "#3874ff" }} />}
+                startIcon={<FilterAltRounded sx={{ color: "#000000" }} />}
                 onClick={() => setFilterOpen(true)}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
@@ -358,8 +361,8 @@ function AppLayout() {
                   px: 2,
                   py: 0.8,
                   "&:hover": {
-                    borderColor: "#3874ff",
-                    backgroundColor: "#eaf1ff",
+                    borderColor: "#000000",
+                    backgroundColor: "#f2f2f2",
                   },
                 }}
               >
@@ -370,29 +373,18 @@ function AppLayout() {
 
               {user ? (
                 <Box className="flex items-center gap-2">
-                  <Box
-                    sx={{
-                      backgroundColor: "#ffffff",
-                      border: "1px solid #e3e6ed",
-                      borderRadius: "8px",
-                      px: 1.5,
-                      py: 0.7,
-                      fontSize: 12.5,
-                      fontWeight: 500,
-                      color: "#31374a",
-                    }}
-                  >
-                    {authRole === "editor" ? "Editor" : "Analyst"} · {user.email}
-                  </Box>
                   <Button
                     size="small"
                     onClick={() => signOut()}
                     sx={{
-                      color: "#525b75",
-                      textTransform: "none",
-                      fontWeight: 600,
-                      fontSize: 12.5,
-                      "&:hover": { color: "#31374a", backgroundColor: "#f5f7fa" },
+                      borderColor: "#cbd0dd",
+                      backgroundColor: "#000000",
+                      color: "#ffffff",
+                      fontSize: 13,
+                      fontWeight: 500,
+                      px: 2,
+                      py: 0.8,
+                      "&:hover": { backgroundColor: "#333333" },
                     }}
                   >
                     Sign out
@@ -405,13 +397,14 @@ function AppLayout() {
                   size="small"
                   variant="contained"
                   sx={{
-                    backgroundColor: "#3874ff",
+                    backgroundColor: "#000000",
                     color: "#ffffff",
                     textTransform: "none",
-                    fontWeight: 700,
-                    fontSize: 12.5,
+                    fontSize: 13,
+                    fontWeight: 500,
                     px: 2,
-                    "&:hover": { backgroundColor: "#2c5fd6" },
+                    py: 0.8,
+                    "&:hover": { backgroundColor: "#333333" },
                   }}
                 >
                   Sign in
