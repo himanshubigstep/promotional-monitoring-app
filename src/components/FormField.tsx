@@ -71,25 +71,25 @@ function getErrorMessage(
 const datePickerTheme = createTheme({
   palette: {
     primary: {
-      main: "#000000",
+      main: "#3874ff",
     },
     secondary: {
-      main: "#52525b",
+      main: "#525b75",
     },
   },
   typography: {
-  fontFamily: "Inter, sans-serif",
+  fontFamily: "Nunito Sans, sans-serif",
   },
   components: {
     MuiOutlinedInput: {
       styleOverrides: {
         root: {
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#4f82f7 !important",
+            borderColor: "#3874ff !important",
             borderWidth: "1.5px !important",
           },
           "&.Mui-error.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#e5484d !important",
+            borderColor: "#fa3b1d !important",
             borderWidth: "1.5px !important",
           },
         },
@@ -99,7 +99,7 @@ const datePickerTheme = createTheme({
       styleOverrides: {
         root: {
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: "#4f82f7 !important",
+            borderColor: "#3874ff !important",
             borderWidth: "1.5px !important",
           },
         },
@@ -141,7 +141,7 @@ export default function FormField(props: FormFieldProps) {
         component="label"
         sx={{
           display: "block",
-          color: error ? "#e5484d" : "#20242b",
+          color: error ? "#fa3b1d" : "#141824",
           fontSize: 12,
           fontWeight: 700,
           letterSpacing: "0.02em",
@@ -160,7 +160,7 @@ export default function FormField(props: FormFieldProps) {
           sx={{
             border: "none",
             background: "transparent",
-            color: "#4f82f7",
+            color: "#3874ff",
             fontSize: 12,
             fontWeight: 700,
             cursor: "pointer",
@@ -171,7 +171,7 @@ export default function FormField(props: FormFieldProps) {
             whiteSpace: "nowrap",
             fontFamily: "inherit",
             "&:hover": {
-              color: "#2e63d4",
+              color: "#2c5fd6",
             },
           }}
         >
@@ -233,7 +233,7 @@ export default function FormField(props: FormFieldProps) {
                   maxHeight: 280,
                   overflow: "hidden",
                   borderRadius: "8px",
-                  border: "1px solid #e7eaee",
+                  border: "1px solid #e3e6ed",
                   boxShadow: "0px 10px 30px rgba(0, 0, 0, 0.12)",
                 },
                 "& .MuiMenu-list": {
@@ -251,7 +251,7 @@ export default function FormField(props: FormFieldProps) {
                 return (
                   <Typography
                     sx={{
-                      color: "#a0a8b3",
+                      color: "#9fa6bc",
                       fontSize: 13.5,
                     }}
                   >
@@ -273,15 +273,15 @@ export default function FormField(props: FormFieldProps) {
               backgroundColor: "#fff",
 
               "& .MuiOutlinedInput-notchedOutline": {
-                borderColor: error ? "#e5484d" : "#dce1e8",
+                borderColor: error ? "#fa3b1d" : "#cbd0dd",
               },
 
               "&:hover .MuiOutlinedInput-notchedOutline": {
-                borderColor: error ? "#e5484d" : "#4f82f7",
+                borderColor: error ? "#fa3b1d" : "#3874ff",
               },
 
               "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                borderColor: error ? "#e5484d" : "#4f82f7",
+                borderColor: error ? "#fa3b1d" : "#3874ff",
                 borderWidth: 1.5,
               },
 
@@ -302,7 +302,7 @@ export default function FormField(props: FormFieldProps) {
                 disabled
                 sx={{
                   fontSize: 13.5,
-                  color: "#a0a8b3",
+                  color: "#9fa6bc",
                   fontStyle: "italic",
                 }}
               >
@@ -317,7 +317,7 @@ export default function FormField(props: FormFieldProps) {
                 top: 0,
                 zIndex: 2,
                 backgroundColor: "#fff",
-                borderBottom: "1px solid #e7eaee",
+                borderBottom: "1px solid #e3e6ed",
                 padding: "8px 10px",
                 lineHeight: 1.2,
               }}
@@ -333,17 +333,17 @@ export default function FormField(props: FormFieldProps) {
                   input: {
                     sx: {
                       borderRadius: "6px",
-                      backgroundColor: "#f4f6f8",
+                      backgroundColor: "#f5f7fa",
                       fontSize: 13,
                       height: 34,
                       "& fieldset": {
-                        borderColor: "#dce1e8",
+                        borderColor: "#cbd0dd",
                       },
                       "&:hover fieldset": {
-                        borderColor: "#4f82f7",
+                        borderColor: "#3874ff",
                       },
                       "&.Mui-focused fieldset": {
-                        borderColor: "#4f82f7",
+                        borderColor: "#3874ff",
                         borderWidth: "1.5px",
                       },
                     },
@@ -360,7 +360,7 @@ export default function FormField(props: FormFieldProps) {
                   fontSize: 13.5,
 
                   "&.Mui-selected": {
-                    backgroundColor: "#f5f8ff",
+                    backgroundColor: "#eaf1ff",
                     fontWeight: 700,
                   },
 
@@ -376,7 +376,7 @@ export default function FormField(props: FormFieldProps) {
                     sx={{
                       mr: 1,
                       fontSize: 18,
-                      color: "#4f82f7",
+                      color: "#3874ff",
                     }}
                   />
                 )}
@@ -387,7 +387,7 @@ export default function FormField(props: FormFieldProps) {
           </Select>
 
           {helperText && (
-            <FormHelperText sx={{ color: error ? "#e5484d" : "#737b88" }}>
+            <FormHelperText sx={{ color: error ? "#fa3b1d" : "#525b75" }}>
               {helperText}
             </FormHelperText>
           )}
@@ -434,25 +434,25 @@ export default function FormField(props: FormFieldProps) {
                       padding: 0,
 
                       "& fieldset": {
-                        borderColor: error ? "#e5484d" : "#dce1e8",
+                        borderColor: error ? "#fa3b1d" : "#cbd0dd",
                         borderRadius: "8px !important",
                         top: 0,
                         height: "100%",
                       },
 
                       "&:hover fieldset": {
-                        borderColor: error ? "#e5484d" : "#4f82f7",
+                        borderColor: error ? "#fa3b1d" : "#3874ff",
                       },
 
                       "&.Mui-focused fieldset": {
-                        borderColor: error ? "#e5484d" : "#4f82f7",
+                        borderColor: error ? "#fa3b1d" : "#3874ff",
                         borderWidth: "1.5px !important",
                       },
                     },
 
                     "& .MuiInputBase-input": {
                       fontSize: 13.5,
-                      color: "#20242b",
+                      color: "#141824",
                       padding: "10px 14px !important",
                       height: "44px !important",
                       minHeight: "44px !important",
@@ -462,7 +462,7 @@ export default function FormField(props: FormFieldProps) {
                     },
 
                     "& .MuiSvgIcon-root": {
-                      color: "#4f82f7",
+                      color: "#3874ff",
                       fontSize: 20,
                     },
 
@@ -479,7 +479,7 @@ export default function FormField(props: FormFieldProps) {
                     "& .MuiFormHelperText-root": {
                       marginLeft: 0,
                       fontSize: 12,
-                      color: error ? "#e5484d" : "#737b88",
+                      color: error ? "#fa3b1d" : "#525b75",
                     },
                   },
                 },
@@ -488,7 +488,7 @@ export default function FormField(props: FormFieldProps) {
                   sx: {
                     "& .MuiPaper-root": {
                       borderRadius: "10px",
-                      border: "1px solid #e7eaee",
+                      border: "1px solid #e3e6ed",
                       boxShadow: "0px 8px 32px rgba(0, 0, 0, 0.12)",
                       overflow: "hidden",
                       marginTop: "4px",
@@ -496,21 +496,21 @@ export default function FormField(props: FormFieldProps) {
 
                     "& .MuiPickersCalendarHeader-root": {
                       padding: "14px 18px 8px 18px",
-                      backgroundColor: "#f4f6f8",
-                      borderBottom: "1px solid #e7eaee",
+                      backgroundColor: "#f5f7fa",
+                      borderBottom: "1px solid #e3e6ed",
                     },
 
                     "& .MuiPickersCalendarHeader-label": {
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#20242b",
+                      color: "#141824",
                     },
 
                     "& .MuiPickersCalendarHeader-switchViewButton": {
                       borderRadius: "6px",
                       padding: "4px",
                       "&:hover": {
-                        backgroundColor: "#eef1f4",
+                        backgroundColor: "#eff2f6",
                       },
                     },
 
@@ -525,7 +525,7 @@ export default function FormField(props: FormFieldProps) {
                     "& .MuiDayCalendar-weekDayLabel": {
                       fontSize: 11.5,
                       fontWeight: 700,
-                      color: "#737b88",
+                      color: "#525b75",
                       width: "36px",
                       height: "36px",
                     },
@@ -544,25 +544,25 @@ export default function FormField(props: FormFieldProps) {
                       transition: "all 0.12s ease-in-out",
 
                       "&:hover": {
-                        backgroundColor: "#f5f8ff",
+                        backgroundColor: "#eaf1ff",
                       },
 
                       "&.Mui-selected": {
-                        backgroundColor: "#4f82f7",
+                        backgroundColor: "#3874ff",
                         color: "#fff",
                         fontWeight: 700,
                         "&:hover": {
-                          backgroundColor: "#2e63d4",
+                          backgroundColor: "#2c5fd6",
                         },
                       },
 
                       "&.MuiPickersDay-today": {
-                        border: "1.5px solid #4f82f7",
+                        border: "1.5px solid #3874ff",
                         fontWeight: 700,
                       },
 
                       "&.MuiPickersDay-today.Mui-selected": {
-                        border: "1.5px solid #2e63d4",
+                        border: "1.5px solid #2c5fd6",
                       },
                     },
 
@@ -575,9 +575,9 @@ export default function FormField(props: FormFieldProps) {
                       "& .MuiIconButton-root": {
                         borderRadius: "6px",
                         padding: "4px",
-                        color: "#20242b",
+                        color: "#141824",
                         "&:hover": {
-                          backgroundColor: "#eef1f4",
+                          backgroundColor: "#eff2f6",
                         },
                       },
                     },
@@ -588,17 +588,17 @@ export default function FormField(props: FormFieldProps) {
                         borderRadius: "6px",
                         fontSize: 13,
                         fontWeight: 600,
-                        color: "#20242b",
+                        color: "#141824",
                         padding: "8px 12px",
                         "&:hover": {
-                          backgroundColor: "#f5f8ff",
+                          backgroundColor: "#eaf1ff",
                         },
                         "&.Mui-selected": {
-                          backgroundColor: "#4f82f7",
+                          backgroundColor: "#3874ff",
                           color: "#fff",
                           fontWeight: 700,
                           "&:hover": {
-                            backgroundColor: "#2e63d4",
+                            backgroundColor: "#2c5fd6",
                           },
                         },
                       },
@@ -610,17 +610,17 @@ export default function FormField(props: FormFieldProps) {
                         borderRadius: "6px",
                         fontSize: 13,
                         fontWeight: 600,
-                        color: "#20242b",
+                        color: "#141824",
                         padding: "8px 12px",
                         "&:hover": {
-                          backgroundColor: "#f5f8ff",
+                          backgroundColor: "#eaf1ff",
                         },
                         "&.Mui-selected": {
-                          backgroundColor: "#4f82f7",
+                          backgroundColor: "#3874ff",
                           color: "#fff",
                           fontWeight: 700,
                           "&:hover": {
-                            backgroundColor: "#2e63d4",
+                            backgroundColor: "#2c5fd6",
                           },
                         },
                       },
@@ -628,7 +628,7 @@ export default function FormField(props: FormFieldProps) {
 
                     "& .MuiDialogActions-root": {
                       padding: "8px 16px 14px 16px",
-                      borderTop: "1px solid #e7eaee",
+                      borderTop: "1px solid #e3e6ed",
                       gap: "8px",
                       "& .MuiButton-root": {
                         borderRadius: "6px",
@@ -637,16 +637,16 @@ export default function FormField(props: FormFieldProps) {
                         textTransform: "none",
                         padding: "6px 14px",
                         "&.MuiButton-text": {
-                          color: "#737b88",
+                          color: "#525b75",
                           "&:hover": {
-                            backgroundColor: "#eef1f4",
+                            backgroundColor: "#eff2f6",
                           },
                         },
                         "&.MuiButton-contained": {
-                          backgroundColor: "#4f82f7",
+                          backgroundColor: "#3874ff",
                           color: "#fff",
                           "&:hover": {
-                            backgroundColor: "#2e63d4",
+                            backgroundColor: "#2c5fd6",
                           },
                         },
                       },
@@ -687,22 +687,22 @@ export default function FormField(props: FormFieldProps) {
             }),
 
             "& fieldset": {
-              borderColor: error ? "#e5484d" : "#dce1e8",
+              borderColor: error ? "#fa3b1d" : "#cbd0dd",
             },
 
             "&:hover fieldset": {
-              borderColor: error ? "#e5484d" : "#4f82f7",
+              borderColor: error ? "#fa3b1d" : "#3874ff",
             },
 
             "&.Mui-focused fieldset": {
-              borderColor: error ? "#e5484d" : "#4f82f7",
+              borderColor: error ? "#fa3b1d" : "#3874ff",
               borderWidth: 1.5,
             },
           },
 
           "& .MuiInputBase-input": {
             fontSize: 13.5,
-            color: "#20242b",
+            color: "#141824",
             boxSizing: "border-box",
             padding: "10px 14px",
             ...(!props.multiline && {

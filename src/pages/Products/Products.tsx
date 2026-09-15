@@ -10,6 +10,7 @@ import {
 } from "@mui/material";
 import { useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
+import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
@@ -74,15 +75,33 @@ export default function Products() {
     () =>
       productCatalog.filter((product) => {
         const searchValue = search.trim().toLowerCase();
+        const globalSearch = filters.search.trim().toLowerCase();
         return (
+          // Global filters — set via the "Filters" modal shared across pages.
+          // Discount/date range fields from that modal don't apply here since
+          // catalog products (unlike promotions) don't carry discount/date data.
           (filters.market === "All" || product.market === filters.market) &&
+          (filters.category === "All" || product.category === filters.category) &&
+          (filters.retailer === "All" || product.retailer === filters.retailer) &&
+          (!globalSearch ||
+            product.name.toLowerCase().includes(globalSearch) ||
+            product.brand.toLowerCase().includes(globalSearch)) &&
+          // Local on-page quick filters.
           (retailerFilter === "All" || product.retailer === retailerFilter) &&
           (!searchValue ||
             product.name.toLowerCase().includes(searchValue) ||
             product.brand.toLowerCase().includes(searchValue))
         );
       }),
-    [productCatalog, filters.market, retailerFilter, search],
+    [
+      productCatalog,
+      filters.market,
+      filters.category,
+      filters.retailer,
+      filters.search,
+      retailerFilter,
+      search,
+    ],
   );
   const visibleProducts = filteredProducts.slice(
     (page - 1) * pageSize,
@@ -120,11 +139,11 @@ export default function Products() {
       <Box className="flex flex-wrap items-center justify-between gap-3">
         <Box>
           <Typography
-            sx={{ color: "#20242b", fontSize: 16, fontWeight: 500, letterSpacing: "-0.01em" }}
+            sx={{ color: "#141824", fontSize: 16, fontWeight: 500, letterSpacing: "-0.01em" }}
           >
             Product Catalog
           </Typography>
-          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: "#525b75", fontSize: 13, mt: 0.5 }}>
             Every product our scraper has found across all monitored stores — pick from
             these when creating a promotion, even before a campaign exists for it.
           </Typography>
@@ -135,14 +154,14 @@ export default function Products() {
             startIcon={<AddRounded />}
             onClick={() => setAddOpen(true)}
             sx={{
-              backgroundColor: "#22252b",
+              backgroundColor: "#141824",
               color: "#ffffff",
               textTransform: "none",
               borderRadius: "8px",
               fontWeight: 700,
               fontSize: 13,
               px: 2.5,
-              "&:hover": { backgroundColor: "#343942" },
+              "&:hover": { backgroundColor: "#31374a" },
             }}
           >
             Add product
@@ -150,8 +169,8 @@ export default function Products() {
         )}
       </Box>
 
-      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
-        <Box className="border-b border-[#e7eaee] p-4 flex flex-wrap items-center gap-3">
+      <Card elevation={0} className="rounded-2xl border border-[#e3e6ed] bg-white">
+        <Box className="border-b border-[#e3e6ed] p-4 flex flex-wrap items-center gap-3">
           <TextField
             size="small"
             placeholder="Search products or brands"
@@ -161,7 +180,7 @@ export default function Products() {
               setPage(1);
             }}
             slotProps={{
-              input: { startAdornment: <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} /> },
+              input: { startAdornment: <SearchRounded sx={{ color: "#9fa6bc", mr: 1 }} /> },
             }}
             sx={{ minWidth: 280 }}
           />
@@ -174,8 +193,8 @@ export default function Products() {
                 setPage(1);
               }}
               sx={{
-                backgroundColor: retailerFilter === "All" ? "#22252b" : "#eef1f4",
-                color: retailerFilter === "All" ? "#ffffff" : "#737b88",
+                backgroundColor: retailerFilter === "All" ? "#141824" : "#eff2f6",
+                color: retailerFilter === "All" ? "#ffffff" : "#525b75",
                 fontWeight: 700,
                 cursor: "pointer",
               }}
@@ -190,8 +209,8 @@ export default function Products() {
                   setPage(1);
                 }}
                 sx={{
-                  backgroundColor: retailerFilter === retailer.name ? "#22252b" : "#eef1f4",
-                  color: retailerFilter === retailer.name ? "#ffffff" : "#737b88",
+                  backgroundColor: retailerFilter === retailer.name ? "#141824" : "#eff2f6",
+                  color: retailerFilter === retailer.name ? "#ffffff" : "#525b75",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -201,7 +220,7 @@ export default function Products() {
         </Box>
 
         {filteredProducts.length === 0 ? (
-          <Typography sx={{ color: "#737b88", fontSize: 13, py: 6, textAlign: "center" }}>
+          <Typography sx={{ color: "#525b75", fontSize: 13, py: 6, textAlign: "center" }}>
             No products found yet. Once the scraper's catalog crawl runs, products from
             every monitored store will show up here.
           </Typography>
@@ -210,9 +229,11 @@ export default function Products() {
             {visibleProducts.map((product) => (
               <Box
                 key={product.id}
-                className="overflow-hidden rounded-2xl border border-[#e7eaee] bg-white transition-all hover:border-[#4f82f7] hover:shadow-md"
+                component={Link}
+                to={`/products/${product.id}`}
+                className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white no-underline transition-all hover:border-[#3874ff] hover:shadow-md"
               >
-                <Box className="relative h-32 bg-[#f4f6f8]">
+                <Box className="relative h-32 bg-[#f5f7fa]">
                   <img
                     src={product.imageUrl || fallbackImage}
                     alt={product.name}
@@ -229,8 +250,8 @@ export default function Products() {
                       position: "absolute",
                       left: 8,
                       top: 8,
-                      backgroundColor: product.isClient ? "#22252b" : "#ffffff",
-                      color: product.isClient ? "#ffffff" : "#20242b",
+                      backgroundColor: product.isClient ? "#141824" : "#ffffff",
+                      color: product.isClient ? "#ffffff" : "#141824",
                       fontSize: 10,
                       fontWeight: 800,
                       letterSpacing: "0.02em",
@@ -241,7 +262,7 @@ export default function Products() {
                 <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#737b88",
+                      color: "#525b75",
                       fontSize: 10,
                       fontWeight: 700,
                       letterSpacing: "0.05em",
@@ -251,16 +272,16 @@ export default function Products() {
                     {product.brand || "Unknown brand"}
                   </Typography>
                   <Typography
-                    sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 500, lineHeight: 1.3, mt: 0.25 }}
+                    sx={{ color: "#141824", fontSize: 12.5, fontWeight: 500, lineHeight: 1.3, mt: 0.25 }}
                   >
                     {product.name}
                   </Typography>
                   <Box className="mt-1 flex items-center justify-between">
-                    <Typography sx={{ color: "#737b88", fontSize: 11 }}>
+                    <Typography sx={{ color: "#525b75", fontSize: 11 }}>
                       {product.category || "Uncategorized"}
                     </Typography>
                     {product.price != null && (
-                      <Typography sx={{ color: "#20242b", fontSize: 12, fontWeight: 700 }}>
+                      <Typography sx={{ color: "#141824", fontSize: 12, fontWeight: 700 }}>
                         {product.price} {product.currency}
                       </Typography>
                     )}
@@ -284,9 +305,9 @@ export default function Products() {
 
       <Modal open={addOpen} onClose={() => setAddOpen(false)}>
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e7eaee]"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e3e6ed]"
         >
-          <Typography sx={{ color: "#20242b", fontSize: 18, fontWeight: 700, mb: 3 }}>
+          <Typography sx={{ color: "#141824", fontSize: 18, fontWeight: 700, mb: 3 }}>
             Add a product
           </Typography>
           <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -331,9 +352,9 @@ export default function Products() {
               onValueChange={(value) => setForm((f) => ({ ...f, price: String(value) }))}
               placeholder="e.g. 199"
             />
-            <Box {...getRootProps()} className={`sm:col-span-2 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center ${isDragActive ? "border-[#000000] bg-[#d4f9e0]" : "border-[#e4e4e7]"}`}>
+            <Box {...getRootProps()} className={`sm:col-span-2 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center ${isDragActive ? "border-[#3874ff] bg-[#eaf1ff]" : "border-[#e3e6ed]"}`}>
               <input {...getInputProps()} />
-              <Typography sx={{ color: "#000000", fontSize: 13, fontWeight: 600 }}>
+              <Typography sx={{ color: "#141824", fontSize: 13, fontWeight: 600 }}>
                 {isDragActive ? "Drop image here" : "Upload or drop product image"}
               </Typography>
               <Button component="span" variant="text" startIcon={<ImageRounded />}>Choose image</Button>
@@ -349,11 +370,11 @@ export default function Products() {
               disabled={saving}
               onClick={handleAdd}
               sx={{
-                backgroundColor: "#22252b",
+                backgroundColor: "#141824",
                 color: "#ffffff",
                 textTransform: "none",
                 fontWeight: 700,
-                "&:hover": { backgroundColor: "#343942" },
+                "&:hover": { backgroundColor: "#31374a" },
               }}
             >
               {saving ? "Saving…" : "Add product"}

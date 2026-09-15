@@ -38,7 +38,7 @@ export default function BrandAnalytics() {
       brand,
       `${offers.length} offers`,
       discount,
-      ["#4f82f7", "#7c5cfa", "#f3873a", "#22b573"][index % 4],
+      ["#3874ff", "#7c5cfa", "#e5780b", "#25b003"][index % 4],
     ] as const;
   });
   const brandsPerPage = 5;
@@ -80,11 +80,30 @@ export default function BrandAnalytics() {
         ) / summaryProducts.length,
       )
     : 0;
+  // Buckets fromDate values into `weeks.length` chronological buckets spanning
+  // the earliest-to-latest date actually present in the filtered data, rather
+  // than day-of-month modulo 4 (which conflated e.g. Jan 3rd and Aug 3rd into
+  // the same "week").
+  const productDates = baseProducts
+    .map((product) => product.fromDate)
+    .filter(Boolean)
+    .sort();
+  const rangeStart = productDates.length
+    ? new Date(productDates[0]).getTime()
+    : 0;
+  const rangeEnd = productDates.length
+    ? new Date(productDates[productDates.length - 1]).getTime()
+    : 0;
+  const rangeSpan = Math.max(rangeEnd - rangeStart, 1);
+  const weekBucketIndex = (dateStr: string) => {
+    if (!dateStr) return 0;
+    const ratio = (new Date(dateStr).getTime() - rangeStart) / rangeSpan;
+    return Math.min(weeks.length - 1, Math.max(0, Math.floor(ratio * weeks.length)));
+  };
   const weeklyActivity = weeks.map((week, index) => {
-    const weekProducts = summaryProducts.filter((product) => {
-      const day = Number(product.fromDate.slice(8, 10));
-      return day >= index * 4 + 1 && day <= (index + 1) * 4;
-    });
+    const weekProducts = summaryProducts.filter(
+      (product) => weekBucketIndex(product.fromDate) === index,
+    );
     return {
       week,
       count: weekProducts.length,
@@ -111,12 +130,12 @@ export default function BrandAnalytics() {
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
+          className="rounded-2xl border border-[#e3e6ed] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
               sx={{
-                color: "#20242b",
+                color: "#141824",
                 fontSize: 16,
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
@@ -125,7 +144,7 @@ export default function BrandAnalytics() {
               Average Market Discount vs. Brand
             </Typography>
             <Typography
-              sx={{ color: "#737b88", fontSize: 12.5, mb: 4, mt: 0.5 }}
+              sx={{ color: "#525b75", fontSize: 12.5, mb: 4, mt: 0.5 }}
             >
               Benchmark competitive discount pressure across beauty brands.
             </Typography>
@@ -133,18 +152,18 @@ export default function BrandAnalytics() {
               <Box key={name} className="mb-5">
                 <Box className="mb-1.5 flex justify-between">
                   <Typography
-                    sx={{ color: "#20242b", fontSize: 13.5, fontWeight: 500 }}
+                    sx={{ color: "#141824", fontSize: 13.5, fontWeight: 500 }}
                   >
                     {name}
                   </Typography>
                   <Box className="flex gap-3">
-                    <Typography sx={{ color: "#737b88", fontSize: 12 }}>
-                      Market {averageDiscount}%
+                    <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                      Owns {averageDiscount}%
                     </Typography>
                     <Typography
-                      sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 500 }}
+                      sx={{ color: "#141824", fontSize: 12.5, fontWeight: 500 }}
                     >
-                      Owns {score}%
+                      Market {score}%
                     </Typography>
                   </Box>
                 </Box>
@@ -154,7 +173,7 @@ export default function BrandAnalytics() {
                   sx={{
                     height: 8,
                     borderRadius: 4,
-                    backgroundColor: "#eef1f4",
+                    backgroundColor: "#eff2f6",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: color,
                       borderRadius: 4,
@@ -177,15 +196,15 @@ export default function BrandAnalytics() {
         </Card>
         <Card
           elevation={0}
-          className="overflow-hidden rounded-2xl border border-[#e7eaee] bg-white"
+          className="overflow-hidden rounded-2xl border border-[#e3e6ed] bg-white"
         >
-          <Box className="h-1 bg-[#4f82f7]" />
+          <Box className="h-1 bg-[#3874ff]" />
           <CardContent className="!p-6">
             <Box className="flex items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
-                    color: "#4f82f7",
+                    color: "#3874ff",
                     fontSize: 11,
                     fontWeight: 500,
                     letterSpacing: 1.2,
@@ -194,13 +213,13 @@ export default function BrandAnalytics() {
                 >
                   Promotion Summary
                 </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 12, mt: 0.5 }}>
+                <Typography sx={{ color: "#525b75", fontSize: 12, mt: 0.5 }}>
                   Campaign intensity snapshot
                 </Typography>
               </Box>
-              <Box className="rounded-md bg-[#f4f6f8] border border-[#e7eaee] px-2.5 py-0.5">
+              <Box className="rounded-md bg-[#f5f7fa] border border-[#e3e6ed] px-2.5 py-0.5">
                 <Typography
-                  sx={{ color: "#20242b", fontSize: 11, fontWeight: 500 }}
+                  sx={{ color: "#141824", fontSize: 11, fontWeight: 500 }}
                 >
                   All years
                 </Typography>
@@ -208,7 +227,7 @@ export default function BrandAnalytics() {
             </Box>
             <Typography
               sx={{
-                color: "#20242b",
+                color: "#141824",
                 fontSize: 22,
                 fontWeight: 500,
                 lineHeight: 1.3,
@@ -219,17 +238,17 @@ export default function BrandAnalytics() {
               {strongestCategory} leads discount depth across monitored data.
             </Typography>
             <Typography
-              sx={{ color: "#737b88", fontSize: 13, lineHeight: 1.6, mt: 1.5 }}
+              sx={{ color: "#525b75", fontSize: 13, lineHeight: 1.6, mt: 1.5 }}
             >
               {summaryProducts.length} offers are included, with an average
               discount of {averageDiscount}%. Compare brand campaigns before
               launching upcoming seasonal offers.
             </Typography>
-            <Box className="mt-5 grid grid-cols-2 gap-3 border-t border-[#e7eaee] pt-4">
-              <Box className="rounded-lg border border-[#e7eaee] bg-[#f4f6f8] p-3">
+            <Box className="mt-5 grid grid-cols-2 gap-3 border-t border-[#e3e6ed] pt-4">
+              <Box className="rounded-lg border border-[#e3e6ed] bg-[#f5f7fa] p-3">
                 <Typography
                   sx={{
-                    color: "#737b88",
+                    color: "#525b75",
                     fontSize: 11,
                     fontWeight: 500,
                     textTransform: "uppercase",
@@ -249,15 +268,15 @@ export default function BrandAnalytics() {
                           height: `${Math.max(8, Math.min(item.discount * 2.5, 72))}px`,
                           backgroundColor:
                             item.category === strongestCategory
-                              ? "#4f82f7"
-                              : "#20242b",
+                              ? "#3874ff"
+                              : "#141824",
                           opacity:
                             item.category === strongestCategory ? 1 : 0.65,
                         }}
                         title={`${item.category}: ${item.discount}%`}
                       />
                       <Typography
-                        sx={{ color: "#737b88", fontSize: 9, fontWeight: 500 }}
+                        sx={{ color: "#525b75", fontSize: 9, fontWeight: 500 }}
                       >
                         {item.category.slice(0, 3)}
                       </Typography>
@@ -265,10 +284,10 @@ export default function BrandAnalytics() {
                   ))}
                 </Box>
               </Box>
-              <Box className="rounded-lg border border-[#e7eaee] bg-[#f4f6f8] p-3">
+              <Box className="rounded-lg border border-[#e3e6ed] bg-[#f5f7fa] p-3">
                 <Typography
                   sx={{
-                    color: "#737b88",
+                    color: "#525b75",
                     fontSize: 11,
                     fontWeight: 500,
                     textTransform: "uppercase",
@@ -286,13 +305,13 @@ export default function BrandAnalytics() {
                         className="w-full rounded-t-sm"
                         sx={{
                           height: `${Math.max(8, Math.min((item.count / Math.max(summaryProducts.length, 1)) * 72, 72))}px`,
-                          backgroundColor: "#f3873a",
+                          backgroundColor: "#e5780b",
                           opacity: item.count ? 1 : 0.3,
                         }}
                         title={`${item.week}: ${item.count} offers, ${item.discount}% average discount`}
                       />
                       <Typography
-                        sx={{ color: "#737b88", fontSize: 9, fontWeight: 500 }}
+                        sx={{ color: "#525b75", fontSize: 9, fontWeight: 500 }}
                       >
                         {item.week}
                       </Typography>
@@ -301,10 +320,13 @@ export default function BrandAnalytics() {
                 </Box>
               </Box>
             </Box>
-            <Box className="mt-4 flex items-end justify-between gap-3 rounded-xl bg-[#1a1d23] px-4 py-3 text-white">
+            <Box
+              className="mt-4 flex items-end justify-between gap-3 rounded-xl px-4 py-3 text-white"
+              sx={{ backgroundImage: "linear-gradient(135deg, #3874ff 0%, #2c5fd6 100%)" }}
+            >
               <Box>
                 <Typography
-                  sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}
+                  sx={{ color: "rgba(255,255,255,0.75)", fontSize: 11, fontWeight: 500 }}
                 >
                   Latest promotion year
                 </Typography>
@@ -320,7 +342,7 @@ export default function BrandAnalytics() {
                 </Typography>
               </Box>
               <Typography
-                sx={{ color: "#78a1ff", fontSize: 22, fontWeight: 500 }}
+                sx={{ color: "#ffffff", fontSize: 22, fontWeight: 700 }}
               >
                 {averageDiscount}% avg
               </Typography>
@@ -331,14 +353,14 @@ export default function BrandAnalytics() {
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
+          className="rounded-2xl border border-[#e3e6ed] bg-white"
         >
           <CardContent className="!p-6">
             <Box className="mb-4 flex items-center justify-between">
               <Box>
                 <Typography
                   sx={{
-                    color: "#20242b",
+                    color: "#141824",
                     fontSize: 16,
                     fontWeight: 500,
                     letterSpacing: "-0.01em",
@@ -346,15 +368,15 @@ export default function BrandAnalytics() {
                 >
                   Promotion Intensity Heatmap
                 </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
+                <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
                   Seasonality across the last eight weeks
                 </Typography>
               </Box>
               <Box className="flex items-center gap-1">
-                <Box className="h-3 w-3 rounded-xs bg-[#eef1f4]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#eff2f6]" />
                 <Box className="h-3 w-3 rounded-xs bg-[#cfe0ff]" />
                 <Box className="h-3 w-3 rounded-xs bg-[#8fb4ff]" />
-                <Box className="h-3 w-3 rounded-xs bg-[#3b6fed]" />
+                <Box className="h-3 w-3 rounded-xs bg-[#3874ff]" />
               </Box>
             </Box>
             <Box className="grid grid-cols-9 gap-2 text-center">
@@ -362,7 +384,7 @@ export default function BrandAnalytics() {
               {weeks.map((week) => (
                 <Typography
                   key={week}
-                  sx={{ color: "#737b88", fontSize: 10, fontWeight: 500 }}
+                  sx={{ color: "#525b75", fontSize: 10, fontWeight: 500 }}
                 >
                   {week}
                 </Typography>
@@ -372,7 +394,7 @@ export default function BrandAnalytics() {
                   <React.Fragment key={category}>
                     <Typography
                       sx={{
-                        color: "#20242b",
+                        color: "#141824",
                         fontSize: 11,
                         fontWeight: 500,
                         textAlign: "left",
@@ -385,12 +407,7 @@ export default function BrandAnalytics() {
                         (product) => product.category === category,
                       );
                       const weekProducts = categoryProducts.filter(
-                        (product) => {
-                          const day = Number(product.fromDate.slice(8, 10));
-                          return (
-                            day >= column * 4 + 1 && day <= (column + 1) * 4
-                          );
-                        },
+                        (product) => weekBucketIndex(product.fromDate) === column,
                       );
                       const intensity = weekProducts.length
                         ? Math.min(
@@ -412,10 +429,10 @@ export default function BrandAnalytics() {
                           className="h-8 rounded-sm transition-all"
                           sx={{
                             backgroundColor: [
-                              "#eef1f4",
+                              "#eff2f6",
                               "#cfe0ff",
                               "#8fb4ff",
-                              "#3b6fed",
+                              "#3874ff",
                             ][intensity],
                           }}
                         />
@@ -429,12 +446,12 @@ export default function BrandAnalytics() {
         </Card>
         <Card
           elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
+          className="rounded-2xl border border-[#e3e6ed] bg-white"
         >
           <CardContent className="!p-6">
             <Typography
               sx={{
-                color: "#20242b",
+                color: "#141824",
                 fontSize: 16,
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
@@ -443,7 +460,7 @@ export default function BrandAnalytics() {
               Top-Promoted Categories
             </Typography>
             <Typography
-              sx={{ color: "#737b88", fontSize: 12.5, mb: 4, mt: 0.5 }}
+              sx={{ color: "#525b75", fontSize: 12.5, mb: 4, mt: 0.5 }}
             >
               Ranked by discount level and SKU coverage
             </Typography>
@@ -451,7 +468,7 @@ export default function BrandAnalytics() {
               <Box key={item.category} className="mb-4 flex items-center gap-3">
                 <Typography
                   sx={{
-                    color: "#a0a8b3",
+                    color: "#9fa6bc",
                     fontSize: 12,
                     fontWeight: 500,
                     width: 20,
@@ -462,7 +479,7 @@ export default function BrandAnalytics() {
                 <Box className="flex-1">
                   <Box className="mb-1 flex justify-between">
                     <Typography
-                      sx={{ color: "#20242b", fontSize: 13, fontWeight: 500 }}
+                      sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
                     >
                       {item.category}
                     </Typography>
@@ -471,7 +488,7 @@ export default function BrandAnalytics() {
                       size="small"
                       sx={{
                         backgroundColor: "#eaf1ff",
-                        color: "#3b6fed",
+                        color: "#3874ff",
                         fontWeight: 500,
                         fontSize: 10,
                         borderRadius: "6px",
@@ -484,9 +501,9 @@ export default function BrandAnalytics() {
                     sx={{
                       height: 6,
                       borderRadius: 4,
-                      backgroundColor: "#eef1f4",
+                      backgroundColor: "#eff2f6",
                       "& .MuiLinearProgress-bar": {
-                        backgroundColor: "#4f82f7",
+                        backgroundColor: "#3874ff",
                         borderRadius: 4,
                       },
                     }}

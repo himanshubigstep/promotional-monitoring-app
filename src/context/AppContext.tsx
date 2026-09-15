@@ -65,8 +65,8 @@ export function matchesPromotionFilters(
     (filters.market === "All" || product.market === filters.market) &&
     (filters.retailer === "All" || product.retailer === filters.retailer) &&
     product.competitorDiscount >= minimumDiscount &&
-    (!filters.fromDate || product.fromDate >= filters.fromDate) &&
-    (!filters.toDate || product.toDate <= filters.toDate)
+    (!filters.fromDate || product.toDate >= filters.fromDate) &&
+    (!filters.toDate || product.fromDate <= filters.toDate)
   );
 }
 

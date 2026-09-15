@@ -98,25 +98,25 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="rounded-lg transition-all"
             sx={{
-              color: selected ? "#ffffff" : "#a1a1aa",
-              backgroundColor: selected ? "#1e2c31 !important" : "transparent",
+              color: selected ? "#3874ff" : "#525b75",
+              backgroundColor: selected ? "#eaf1ff !important" : "transparent",
               "&.Mui-selected": {
-                backgroundColor: "#1e2c31",
-                color: "#ffffff",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
+                backgroundColor: "#eaf1ff",
+                color: "#3874ff",
+                boxShadow: "none",
               },
               "&.Mui-selected:hover": {
-                backgroundColor: "#3f3f46",
+                backgroundColor: "#eaf1ff",
               },
               "&:hover": {
-                backgroundColor: "#0a0a0a",
+                backgroundColor: "#f5f7fa",
               },
             }}
           >
             <ListItemIcon
               sx={{
                 minWidth: 36,
-                color: selected ? "#c1fbd4" : "inherit",
+                color: selected ? "#3874ff" : "inherit",
               }}
             >
               {item.icon}
@@ -148,17 +148,18 @@ function AppLayout() {
   const currentPage =
     navigation.find((item) => item.path === location.pathname) ?? navigation[0];
   const drawer = (
-    <Box className="flex h-full flex-col bg-[#000000]">
-      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#1e2c31]">
+    <Box className="flex h-full flex-col bg-white">
+      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#e3e6ed]">
         <Box>
           <Box className="flex items-center gap-2">
             <Typography
               className="!tracking-widest"
               sx={{
-                color: "#ffffff",
+                color: "#141824",
                 fontSize: 20,
                 letterSpacing: "0.18em",
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "Nunito Sans, sans-serif",
+                fontWeight: 800,
                 textTransform: "uppercase",
               }}
             >
@@ -166,10 +167,10 @@ function AppLayout() {
             </Typography>
             <Box
               sx={{
-                backgroundColor: "#c1fbd4",
-                color: "#000000",
+                backgroundColor: "#3874ff",
+                color: "#ffffff",
                 fontSize: 9,
-                fontWeight: 600,
+                fontWeight: 700,
                 px: 0.8,
                 py: 0.2,
                 borderRadius: 0.5,
@@ -182,7 +183,7 @@ function AppLayout() {
           </Box>
           <Typography
             sx={{
-                color: "#a1a1aa",
+                color: "#9fa6bc",
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: 1.5,
@@ -203,12 +204,12 @@ function AppLayout() {
         )}
       </Box>
 
-        <Box className="mx-3.5 my-3 rounded-xl bg-[#0a0a0a] p-3 text-white">
+        <Box className="mx-3.5 my-3 rounded-xl bg-[#f5f7fa] p-3">
         <Typography
           sx={{
-            color: "#c1fbd4",
+            color: "#3874ff",
             fontSize: 10,
-            fontWeight: 500,
+            fontWeight: 700,
             letterSpacing: 1.2,
             textTransform: "uppercase",
           }}
@@ -217,7 +218,7 @@ function AppLayout() {
         </Typography>
         <Typography
           sx={{
-            color: "#ffffff",
+            color: "#141824",
             fontSize: 13,
             fontWeight: 600,
             mt: 0.25,
@@ -230,17 +231,17 @@ function AppLayout() {
 
       <Navigation onNavigate={() => setMobileOpen(false)} />
 
-      <Box className="mt-auto border-t border-[#1e2c31] p-4 bg-[#0a0a0a]">
+      <Box className="mt-auto border-t border-[#e3e6ed] p-4">
         <Box className="flex items-center gap-2">
           <Box
             sx={{
               width: 8,
               height: 8,
               borderRadius: "50%",
-              backgroundColor: "#10b981",
+              backgroundColor: "#25b003",
             }}
           />
-            <Typography sx={{ color: "#a1a1aa", fontSize: 11, fontWeight: 500 }}>
+            <Typography sx={{ color: "#525b75", fontSize: 11, fontWeight: 500 }}>
             Catalog synced live • 2026
           </Typography>
         </Box>
@@ -249,15 +250,15 @@ function AppLayout() {
   );
 
   return (
-    <Box className="min-h-screen bg-[#f4f6f8]">
+    <Box className="min-h-screen bg-[#f5f7fa]">
       <AppBar
         position="fixed"
         elevation={0}
         sx={{
           display: { md: "none" },
-          backgroundColor: "#000000",
-          color: "#ffffff",
-          borderBottom: "1px solid #1e2c31",
+          backgroundColor: "#ffffff",
+          color: "#141824",
+          borderBottom: "1px solid #e3e6ed",
         }}
       >
         <Toolbar className="justify-between">
@@ -265,7 +266,7 @@ function AppLayout() {
             <IconButton
               onClick={() => setMobileOpen(true)}
               aria-label="Open navigation"
-              sx={{ color: "#ffffff" }}
+              sx={{ color: "#141824" }}
             >
               <MenuRounded />
             </IconButton>
@@ -274,7 +275,7 @@ function AppLayout() {
               sx={{
                 fontSize: 18,
                 letterSpacing: "0.15em",
-                fontFamily: "Inter, sans-serif",
+                fontFamily: "Nunito Sans, sans-serif",
               }}
             >
               SEPHORA
@@ -282,8 +283,8 @@ function AppLayout() {
           </Box>
           <Box
             sx={{
-              backgroundColor: "#c1fbd4",
-              color: "#000000",
+              backgroundColor: "#3874ff",
+              color: "#ffffff",
               fontSize: 10,
               fontWeight: 800,
               px: 1,
@@ -310,7 +311,7 @@ function AppLayout() {
             "& .MuiDrawer-paper": {
               boxSizing: "border-box",
               width: drawerWidth,
-              borderRight: "1px solid #e7eaee",
+              borderRight: "1px solid #e3e6ed",
             },
           }}
         >
@@ -324,16 +325,16 @@ function AppLayout() {
             <Box>
               <Typography
                 sx={{
-                  color: "#20242b",
+                  color: "#141824",
                   fontSize: { xs: 24, md: 30 },
-                  fontWeight: 500,
+                  fontWeight: 700,
                   letterSpacing: "-0.02em",
-                  fontFamily: "Inter, sans-serif",
+                  fontFamily: "Nunito Sans, sans-serif",
                 }}
               >
                 {currentPage.label}
               </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
+              <Typography sx={{ color: "#525b75", fontSize: 13, mt: 0.5 }}>
                 {location.pathname === "/"
                   ? `${getTimeGreeting()}, ${role} • Sephora Promotional Monitor`
                   : "Track competitor promotions, pricing trends, and market campaign analytics."}
@@ -344,20 +345,20 @@ function AppLayout() {
               <Button
                 variant="outlined"
                 size="small"
-                startIcon={<FilterAltRounded sx={{ color: "#000000" }} />}
+                startIcon={<FilterAltRounded sx={{ color: "#3874ff" }} />}
                 onClick={() => setFilterOpen(true)}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
-                  borderColor: "#000000",
-                  color: "#000000",
+                  borderColor: "#cbd0dd",
+                  color: "#31374a",
                   backgroundColor: "#ffffff",
                   fontSize: 13,
                   fontWeight: 500,
                   px: 2,
                   py: 0.8,
                   "&:hover": {
-                    borderColor: "#000000",
-                    backgroundColor: "#d4f9e0",
+                    borderColor: "#3874ff",
+                    backgroundColor: "#eaf1ff",
                   },
                 }}
               >
@@ -369,11 +370,17 @@ function AppLayout() {
                 value={role}
                 onChange={(event) => setRole(event.target.value as UserRole)}
                 sx={{
-                  minWidth: 145,
+                  display: { xs: "none", sm: "inline-flex" },
+                  borderColor: "#cbd0dd",
+                  color: "#31374a",
                   backgroundColor: "#ffffff",
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: 500,
-                  borderColor: "#e7eaee",
+                  minWidth: 120,
+                  "&:hover": {
+                    borderColor: "#3874ff",
+                    backgroundColor: "#eaf1ff",
+                  },
                 }}
               >
                 <MenuItem value="Admin">Admin</MenuItem>

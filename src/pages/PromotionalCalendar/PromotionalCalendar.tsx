@@ -20,12 +20,23 @@ const months = [
 ];
 
 const brandColors: Record<string, string> = {
-  "L'Oréal": "#000000",
-  Nivea: "#c59a3f",
-  Dove: "#e50043",
-  Garnier: "#333333",
-  "Sephora Collection": "#000000",
+  "L'Oréal": "#31374a",
+  Nivea: "#e5780b",
+  Dove: "#fa3b1d",
+  Garnier: "#0097eb",
+  "Sephora Collection": "#3874ff",
 };
+
+const brandTints: Record<string, { bg: string; fg: string }> = {
+  "L'Oréal": { bg: "#eceef1", fg: "#31374a" },
+  Nivea: { bg: "#fdf1e3", fg: "#e5780b" },
+  Dove: { bg: "#ffe2dc", fg: "#c92e13" },
+  Garnier: { bg: "#e3f4fd", fg: "#0097eb" },
+  "Sephora Collection": { bg: "#eaf1ff", fg: "#3874ff" },
+};
+
+const defaultTint = { bg: "#eff2f6", fg: "#525b75" };
+const defaultBarColor = "#9fa6bc";
 
 export default function PromotionalCalendar() {
   const { filters, products } = useAppContext();
@@ -59,6 +70,19 @@ export default function PromotionalCalendar() {
     });
   }, [filteredCatalog]);
 
+  // Group campaigns by brand so brands form the left-hand axis of the calendar
+  const brandRows = useMemo(() => {
+    const groups = new Map<string, typeof ganttRows>();
+    ganttRows.forEach((item) => {
+      const list = groups.get(item.brand) ?? [];
+      list.push(item);
+      groups.set(item.brand, list);
+    });
+    return Array.from(groups.entries())
+      .map(([brand, campaigns]) => ({ brand, campaigns }))
+      .sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [ganttRows]);
+
   const downloadUpdatedProducts = () => {
     if (!products.length) return;
     const headers = Object.keys(products[0]) as Array<keyof Product>;
@@ -89,69 +113,78 @@ export default function PromotionalCalendar() {
 
   return (
     <Box className="flex flex-col gap-4">
-      {/* Header */}
-      <Box className="flex flex-wrap items-center justify-between gap-3">
-        <Box>
-          <Box className="flex items-center gap-2">
-            <CalendarMonthRounded sx={{ color: "#4f82f7" }} />
-            <Typography
-              sx={{
-                color: "#20242b",
-                fontSize: 16,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-              }}
-            >
-              Promotional Campaign Timeline
-            </Typography>
-          </Box>
-          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
-            Gantt chart view of store campaigns, durations, and offer intensity.
-          </Typography>
-        </Box>
-        <Button
-          variant="outlined"
-          size="small"
-          startIcon={<DownloadRounded />}
-          onClick={downloadUpdatedProducts}
-          sx={{
-            borderColor: "#dce1e8",
-            color: "#20242b",
-            fontWeight: 700,
-            fontSize: 12.5,
-            textTransform: "none",
-            "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
-          }}
-        >
-          Export Timeline
-        </Button>
-      </Box>
-
-      {/* Main Gantt Chart Card */}
+      {/* Main Calendar Card */}
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#e7eaee] bg-white"
+        className="rounded-2xl border border-[#e3e6ed] bg-white overflow-hidden"
       >
-        <Box className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-          <Box className="p-4" sx={{ minWidth: 1000 }}>
-            {/* Timeline Header (Months) */}
-            <Box className="grid grid-cols-[220px_1fr] border-b border-[#e7eaee] pb-3">
+        {/* Toolbar */}
+        <Box className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e3e6ed] p-4">
+          <Box className="flex items-center gap-3">
+            <Box
+              className="flex flex-col items-center justify-center rounded-lg border border-[#e3e6ed]"
+              sx={{ width: 44, height: 44, backgroundColor: "#f5f7fa" }}
+            >
+              <CalendarMonthRounded sx={{ color: "#3874ff", fontSize: 20 }} />
+            </Box>
+            <Box>
               <Typography
                 sx={{
-                  color: "#737b88",
+                  color: "#141824",
+                  fontSize: 16,
+                  fontWeight: 700,
+                  letterSpacing: "-0.01em",
+                }}
+              >
+                Promotional Campaign Calendar
+              </Typography>
+              <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.25 }}>
+                Brands across the year, with campaign duration and offer intensity.
+              </Typography>
+            </Box>
+          </Box>
+          <Button
+            variant="contained"
+            size="small"
+            startIcon={<DownloadRounded sx={{ fontSize: 16 }} />}
+            onClick={downloadUpdatedProducts}
+            sx={{
+              backgroundColor: "#3874ff",
+              color: "#ffffff",
+              fontWeight: 700,
+              fontSize: 12.5,
+              textTransform: "none",
+              borderRadius: "8px",
+              "&:hover": { backgroundColor: "#2c5fd6" },
+            }}
+          >
+            Export Timeline
+          </Button>
+        </Box>
+
+        <Box className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          <Box sx={{ minWidth: 1000 }}>
+            {/* Timeline Header (Months) */}
+            <Box className="grid grid-cols-[200px_1fr] border-b border-[#e3e6ed] bg-[#f5f7fa]">
+              <Typography
+                sx={{
+                  color: "#525b75",
                   fontSize: 11,
                   fontWeight: 800,
                   letterSpacing: "0.05em",
                   textTransform: "uppercase",
+                  px: 2,
+                  py: 1.5,
                 }}
               >
-                CAMPAIGN / STORE
+                Brand
               </Typography>
               <Box className="grid grid-cols-12 text-center">
-                {months.map((month) => (
+                {months.map((month, idx) => (
                   <Typography
                     key={month}
-                    sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
+                    className={idx > 0 ? "border-l border-[#e3e6ed]" : ""}
+                    sx={{ color: "#141824", fontSize: 11.5, fontWeight: 800, py: 1.5 }}
                   >
                     {month}
                   </Typography>
@@ -159,117 +192,119 @@ export default function PromotionalCalendar() {
               </Box>
             </Box>
 
-            {/* Gantt Rows */}
-            <Box className="divide-y divide-[#e7eaee]">
-              {ganttRows.length === 0 ? (
-                <Box className="py-8 text-center">
-                  <Typography sx={{ color: "#737b88", fontSize: 13 }}>
+            {/* Brand rows */}
+            <Box className="divide-y divide-[#e3e6ed]">
+              {brandRows.length === 0 ? (
+                <Box className="py-10 text-center">
+                  <Typography sx={{ color: "#525b75", fontSize: 13 }}>
                     No campaigns found for the selected year and filters.
                   </Typography>
                 </Box>
               ) : (
-                ganttRows.map((item) => {
-                  const barColor = brandColors[item.brand] || "#000000";
+                brandRows.map(({ brand, campaigns }) => {
+                  const tint = brandTints[brand] || defaultTint;
+                  const barColor = brandColors[brand] || defaultBarColor;
+                  const laneHeight = 52;
+
                   return (
                     <Box
-                      key={item.id}
-                      className="grid grid-cols-[220px_1fr] items-center py-2.5"
+                      key={brand}
+                      className="grid grid-cols-[200px_1fr] hover:bg-[#f5f7fa]/60 transition-colors"
                     >
                       {/* Left Sidebar Label */}
-                      <Box className="pr-3">
+                      <Box className="flex flex-col justify-center gap-1 px-4 py-3 border-r border-[#e3e6ed]">
                         <Typography
-                          sx={{
-                            color: "#20242b",
-                            fontSize: 13,
-                            fontWeight: 700,
-                            lineHeight: 1.2,
-                          }}
+                          sx={{ color: "#141824", fontSize: 13, fontWeight: 700 }}
                         >
-                          {item.name}
+                          {brand}
                         </Typography>
-                        <Box className="mt-1 flex items-center gap-1.5">
-                          <Chip
-                            label={item.retailer}
-                            size="small"
-                            sx={{
-                              height: 18,
-                              fontSize: 10,
-                              bgcolor: "#eef1f4",
-                              color: "#20242b",
-                              fontWeight: 700,
-                              borderRadius: "4px",
-                            }}
-                          />
-                          <Typography sx={{ color: "#737b88", fontSize: 11 }}>
-                            {item.brand}
-                          </Typography>
-                        </Box>
+                        <Chip
+                          label={`${campaigns.length} campaign${campaigns.length === 1 ? "" : "s"}`}
+                          size="small"
+                          sx={{
+                            height: 18,
+                            fontSize: 10,
+                            width: "fit-content",
+                            bgcolor: tint.bg,
+                            color: tint.fg,
+                            fontWeight: 700,
+                            borderRadius: "4px",
+                          }}
+                        />
                       </Box>
 
                       {/* Right Timeline Grid Canvas */}
-                      <Box className="relative flex h-9 items-center rounded-lg bg-[#f4f6f8] px-1">
+                      <Box
+                        className="relative"
+                        sx={{ height: campaigns.length * laneHeight, py: 0.5 }}
+                      >
                         {/* Month Grid Lines */}
                         <Box className="absolute inset-0 grid grid-cols-12 pointer-events-none">
                           {months.map((m, idx) => (
                             <Box
                               key={m}
-                              className={`h-full ${idx < 11 ? "border-r border-[#e7eaee]" : ""}`}
+                              className={idx > 0 ? "border-l border-[#eff2f6]" : ""}
                             />
                           ))}
                         </Box>
 
-                        {/* Gantt Bar */}
-                        <Tooltip
-                          arrow
-                          placement="top"
-                          title={
-                            <Box className="p-1">
+                        {campaigns.map((item, laneIndex) => (
+                          <Tooltip
+                            key={item.id}
+                            arrow
+                            placement="top"
+                            title={
+                              <Box className="p-1">
+                                <Typography sx={{ fontSize: 12, fontWeight: 800 }}>
+                                  {item.name}
+                                </Typography>
+                                <Typography sx={{ fontSize: 11 }}>
+                                  Discount: {item.competitorDiscount}%
+                                </Typography>
+                                <Typography sx={{ fontSize: 11 }}>
+                                  Duration: {item.fromDate} to {item.toDate}
+                                </Typography>
+                              </Box>
+                            }
+                          >
+                            <Box
+                              className="absolute flex flex-col justify-center rounded-lg px-3 transition-all hover:brightness-95 cursor-pointer"
+                              sx={{
+                                left: `${item.leftPercent}%`,
+                                width: `${item.widthPercent}%`,
+                                top: laneIndex * laneHeight + 4,
+                                height: laneHeight - 8,
+                                backgroundColor: tint.bg,
+                                borderLeft: `3px solid ${barColor}`,
+                              }}
+                            >
                               <Typography
-                                sx={{ fontSize: 12, fontWeight: 800 }}
+                                sx={{
+                                  fontSize: 11.5,
+                                  fontWeight: 800,
+                                  color: tint.fg,
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
                               >
                                 {item.name}
                               </Typography>
-                              <Typography sx={{ fontSize: 11 }}>
-                                Discount: {item.competitorDiscount}%
-                              </Typography>
-                              <Typography sx={{ fontSize: 11 }}>
-                                Duration: {item.fromDate} to {item.toDate}
+                              <Typography
+                                sx={{
+                                  fontSize: 10.5,
+                                  fontWeight: 600,
+                                  color: "#525b75",
+                                  whiteSpace: "nowrap",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                }}
+                              >
+                                -{item.competitorDiscount}% • {item.durationMonths}m • {item.retailer}
                               </Typography>
                             </Box>
-                          }
-                        >
-                          <Box
-                            className="absolute flex h-7 items-center justify-between rounded px-2.5 transition-all hover:brightness-110 shadow-sm cursor-pointer"
-                            sx={{
-                              left: `${item.leftPercent}%`,
-                              width: `${item.widthPercent}%`,
-                              backgroundColor: barColor,
-                              color: "#fff",
-                            }}
-                          >
-                            <Typography
-                              sx={{
-                                fontSize: 11,
-                                fontWeight: 800,
-                                whiteSpace: "nowrap",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                              }}
-                            >
-                              -{item.competitorDiscount}%
-                            </Typography>
-                            <Typography
-                              sx={{
-                                fontSize: 10,
-                                opacity: 0.9,
-                                fontWeight: 700,
-                                display: { xs: "none", sm: "block" },
-                              }}
-                            >
-                              {item.durationMonths}m
-                            </Typography>
-                          </Box>
-                        </Tooltip>
+                          </Tooltip>
+                        ))}
                       </Box>
                     </Box>
                   );
@@ -278,7 +313,6 @@ export default function PromotionalCalendar() {
             </Box>
           </Box>
         </Box>
-
       </Card>
     </Box>
   );

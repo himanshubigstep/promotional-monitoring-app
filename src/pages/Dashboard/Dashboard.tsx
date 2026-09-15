@@ -42,18 +42,9 @@ const months = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  if (hour < 21) return "Good evening";
-  return "Good night";
-}
-
 const Dashboard = () => {
   const {
     filters,
-    role,
     products: catalog,
     addPromotion,
     addBrand,
@@ -321,6 +312,23 @@ const Dashboard = () => {
     };
   }, [chartProducts]);
 
+  const monthlyLine = useMemo(() => {
+    const topPad = 15;
+    const innerHeight = 85;
+    const maxVal = Math.max(analytics.peak, 1);
+    const points = analytics.monthValues.map((value, index) => {
+      const xPct = (index / (analytics.monthValues.length - 1)) * 100;
+      const heightFraction = value / maxVal;
+      const yPct = topPad + (1 - heightFraction) * innerHeight;
+      return { value, xPct, yPct, isPeak: value === analytics.peak && value > 0 };
+    });
+    const linePath = points
+      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.xPct.toFixed(2)} ${p.yPct.toFixed(2)}`)
+      .join(" ");
+    const areaPath = `${linePath} L 100 100 L 0 100 Z`;
+    return { points, linePath, areaPath };
+  }, [analytics]);
+
   const yearlyTrend = useMemo(
     () =>
       Array.from(
@@ -431,193 +439,122 @@ const Dashboard = () => {
 
   return (
     <Box className="flex flex-col gap-4">
-      <Card
-        elevation={0}
-        className="rounded-2xl border border-[#e7eaee] text-white relative overflow-hidden"
-        sx={{ backgroundColor: "#1a1d23 !important" }}
-      >
-        <CardContent className="!p-5">
-          <Box className="flex items-center justify-between mb-1 flex-wrap gap-3">
-            <Box className="flex items-center gap-4">
-              <Typography
-                sx={{
-                  color: "#78a1ff",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                }}
-              >
-                Sephora Intelligence Hub
-              </Typography>
-              <Typography sx={{ color: "#4b5160", fontSize: 11 }}>•</Typography>
-              <Typography
-                sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}
-              >
-                {getGreeting()}, {role}
-              </Typography>
-            </Box>
-            <Box className="flex items-center gap-2">
-              {canEdit && (
-                <>
-                  <Button
-                    variant="contained"
-                    size="small"
-                    startIcon={<AddRounded />}
-                    onClick={() => setFormOpen(true)}
-                    sx={{
-                      backgroundColor: "#4f82f7",
-                      color: "#ffffff",
-                      textTransform: "none",
-                      fontWeight: 500,
-                      borderRadius: "8px",
-                      "&:hover": { backgroundColor: "#2e63d4" },
-                    }}
-                  >
-                    Add promotion
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    size="small"
-                    onClick={() => {
-                      resetBulkRows();
-                      setBulkModalOpen(true);
-                    }}
-                    sx={{
-                      borderColor: "#3a3f4a",
-                      color: "#ffffff",
-                      textTransform: "none",
-                      fontWeight: 500,
-                      borderRadius: "8px",
-                      "&:hover": {
-                        borderColor: "#4f82f7",
-                        backgroundColor: "#22252e",
-                      },
-                    }}
-                  >
-                    Bulk upload brands
-                  </Button>
-                </>
-              )}
-            </Box>
-          </Box>
-          <Typography
-            sx={{
-              color: "#ffffff",
-              fontSize: { xs: 22, md: 28 },
-              fontWeight: 500,
-              letterSpacing: "-0.02em",
-              mt: 0.5,
-            }}
-          >
-            Promotional & Competitor Monitor
-          </Typography>
-          <Typography
-            sx={{ color: "#aeb5c0", fontSize: 13.5, mt: 0.8, maxWidth: "500px" }}
-          >
-            Track Poland & international retail promotions, analyze discount
-            depth across competitors, and optimize campaign timings.
-          </Typography>
-        </CardContent>
-      </Card>
-
-      <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[
-          {
-            label: "Offers tracked",
-            value: filteredProducts.length,
-            detail: "Active catalog",
-            icon: <LocalOfferRounded sx={{ fontSize: 20 }} />,
-            tint: accentTints[0],
-          },
-          {
-            label: "Active today",
-            value: analytics.active,
-            detail: "across monitored retailers",
-            icon: <StorefrontRounded sx={{ fontSize: 20 }} />,
-            tint: accentTints[1],
-          },
-          {
-            label: "Average discount",
-            value: `${analytics.average}%`,
-            detail: "across active campaigns",
-            icon: <TrendingUpRounded sx={{ fontSize: 20 }} />,
-            tint: accentTints[2],
-          },
-          {
-            label: "Peak month",
-            value: analytics.peakMonth || "No data",
-            detail: `${analytics.peak}% max monthly avg`,
-            icon: <TrendingDownRounded sx={{ fontSize: 20 }} />,
-            tint: accentTints[3],
-          },
-        ].map(({ label, value, detail, icon, tint }) => (
-          <Card
-            key={label}
-            elevation={0}
-            className="rounded-2xl border border-[#e7eaee] bg-white transition-all hover:border-[#c8d0da]"
-          >
-            <CardContent className="!p-5">
-              <Box className="flex items-center justify-between">
-                <Typography
-                  sx={{
-                    color: "#737b88",
-                    fontSize: 11.5,
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  {label}
-                </Typography>
-                <Box
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: "10px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: tint.bg,
-                    color: tint.fg,
-                  }}
-                >
-                  {icon}
-                </Box>
-              </Box>
-              <Typography
-                sx={{
-                  color: "#20242b",
-                  fontSize: 26,
-                  fontWeight: 500,
-                  letterSpacing: "-0.02em",
-                }}
-              >
-                {value}
-              </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12 }}>
-                {detail}
-              </Typography>
-            </CardContent>
-          </Card>
-        ))}
-      </Box>
-
-      <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
+      <Box className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+        <Card
+          elevation={0}
+          className="rounded-2xl border border-[#e3e6ed] bg-white lg:col-span-3"
+        >
           <CardContent className="!p-6">
-            <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
+            {canEdit && (
+              <Box className="mb-5 flex items-center justify-end gap-2">
+                <Button
+                  variant="contained"
+                  size="small"
+                  startIcon={<AddRounded />}
+                  onClick={() => setFormOpen(true)}
+                  sx={{
+                    backgroundColor: "#3874ff",
+                    color: "#ffffff",
+                    textTransform: "none",
+                    fontWeight: 700,
+                    borderRadius: "8px",
+                    "&:hover": { backgroundColor: "#2c5fd6" },
+                  }}
+                >
+                  Add promotion
+                </Button>
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => {
+                    resetBulkRows();
+                    setBulkModalOpen(true);
+                  }}
+                  sx={{
+                    borderColor: "#cbd0dd",
+                    color: "#31374a",
+                    textTransform: "none",
+                    fontWeight: 500,
+                    borderRadius: "8px",
+                    "&:hover": {
+                      borderColor: "#3874ff",
+                      backgroundColor: "#eaf1ff",
+                    },
+                  }}
+                >
+                  Bulk upload brands
+                </Button>
+              </Box>
+            )}
+
+            {/* Mini-stat row */}
+            <Box className="flex flex-wrap items-center gap-x-8 gap-y-4">
+              {[
+                {
+                  value: `${filteredProducts.length} offers tracked`,
+                  detail: "Active catalog",
+                  icon: <LocalOfferRounded sx={{ fontSize: 18 }} />,
+                  bg: "#d9fbd0",
+                  fg: "#1c6c09",
+                },
+                {
+                  value: `${analytics.active} active today`,
+                  detail: "across monitored retailers",
+                  icon: <StorefrontRounded sx={{ fontSize: 18 }} />,
+                  bg: "#eaf1ff",
+                  fg: "#3874ff",
+                },
+                {
+                  value: `${analytics.average}% avg discount`,
+                  detail: "across active campaigns",
+                  icon: <TrendingUpRounded sx={{ fontSize: 18 }} />,
+                  bg: "#ffe2dc",
+                  fg: "#c92e13",
+                },
+              ].map((stat) => (
+                <Box key={stat.value} className="flex items-center gap-3">
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: stat.bg,
+                      color: stat.fg,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {stat.icon}
+                  </Box>
+                  <Box>
+                    <Typography sx={{ color: "#141824", fontSize: 14, fontWeight: 800 }}>
+                      {stat.value}
+                    </Typography>
+                    <Typography sx={{ color: "#525b75", fontSize: 11.5 }}>
+                      {stat.detail}
+                    </Typography>
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+
+            <Box className="my-5 border-t border-[#e3e6ed]" />
+
+            <Box className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
-                    color: "#20242b",
+                    color: "#141824",
                     fontSize: 16,
-                    fontWeight: 500,
+                    fontWeight: 700,
                     letterSpacing: "-0.01em",
                   }}
                 >
                   Poland Promotion Trend
                 </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
+                <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
                   Monthly discount movement for the selected year.
                 </Typography>
               </Box>
@@ -626,162 +563,167 @@ const Dashboard = () => {
                 size="small"
                 sx={{
                   backgroundColor: "#eaf1ff",
-                  color: "#3b6fed",
+                  color: "#3874ff",
                   fontWeight: 500,
                   fontSize: 11,
                   borderRadius: "6px",
                 }}
               />
             </Box>
-            <Box className="flex h-48 items-end gap-2 border-b border-l border-[#e7eaee] px-3 pb-2 sm:gap-4">
-              {analytics.monthValues.map((value, index) => (
+
+            {/* Line chart */}
+            <Box className="relative h-44">
+              {monthlyLine.points.map((p, index) => (
                 <Box
                   key={months[index]}
-                  className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+                  className="absolute -translate-x-1/2"
+                  sx={{ left: `${p.xPct}%`, top: 0 }}
                 >
                   <Typography
                     sx={{
-                      color:
-                        value === analytics.peak
-                          ? "#4f82f7"
-                          : value
-                            ? "#20242b"
-                            : "#c8d0da",
+                      color: p.isPeak ? "#3874ff" : p.value ? "#525b75" : "#cbd0dd",
                       fontSize: 10,
                       fontWeight: 800,
+                      whiteSpace: "nowrap",
                     }}
                   >
-                    {value ? `${value}%` : "-"}
+                    {p.value ? `${p.value}%` : "-"}
                   </Typography>
+                </Box>
+              ))}
+
+              {/* Plot area: percentage coordinates line up 1:1 with the SVG viewBox and the dot markers */}
+              <Box className="absolute inset-x-0" sx={{ top: 20, bottom: 20 }}>
+                <Box className="absolute inset-0 flex justify-between">
+                  {months.map((month) => (
+                    <Box
+                      key={month}
+                      className="h-full border-l border-[#eff2f6] first:border-l-0"
+                    />
+                  ))}
+                </Box>
+                <svg
+                  viewBox="0 0 100 100"
+                  preserveAspectRatio="none"
+                  className="absolute inset-0 h-full w-full"
+                >
+                  <path d={monthlyLine.areaPath} fill="#eaf1ff" stroke="none" />
+                  <path
+                    d={monthlyLine.linePath}
+                    fill="none"
+                    stroke="#3874ff"
+                    strokeWidth={2.5}
+                    vectorEffect="non-scaling-stroke"
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {monthlyLine.points.map((p, index) => (
                   <Box
-                    className="w-full max-w-10 rounded-t-sm transition-all"
+                    key={months[index]}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
                     sx={{
-                      height: `${Math.max(
-                        (value / Math.max(analytics.peak, 1)) * 125,
-                        value ? 10 : 2,
-                      )}px`,
-                      backgroundColor:
-                        value === analytics.peak
-                          ? "#4f82f7"
-                          : value
-                            ? "#20242b"
-                            : "#eef1f4",
+                      left: `${p.xPct}%`,
+                      top: `${p.yPct}%`,
+                      width: p.isPeak ? 9 : 6,
+                      height: p.isPeak ? 9 : 6,
+                      backgroundColor: p.isPeak ? "#3874ff" : "#ffffff",
+                      border: "2px solid #3874ff",
                     }}
                   />
+                ))}
+              </Box>
+
+              <Box className="absolute inset-x-0 bottom-0 flex justify-between">
+                {months.map((month) => (
                   <Typography
-                    sx={{ color: "#737b88", fontSize: 10, fontWeight: 500 }}
+                    key={month}
+                    sx={{ color: "#525b75", fontSize: 10, fontWeight: 500 }}
                   >
-                    {months[index]}
+                    {month}
                   </Typography>
-                </Box>
-              ))}
+                ))}
+              </Box>
             </Box>
           </CardContent>
         </Card>
 
-        <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
-          <CardContent className="!p-6">
-            <Typography
-              sx={{
-                color: "#20242b",
-                fontSize: 16,
-                fontWeight: 500,
-                letterSpacing: "-0.01em",
-              }}
+        <Box className="grid grid-cols-2 gap-4 lg:col-span-2">
+          {[
+            {
+              label: "Peak month",
+              value: analytics.peakMonth || "No data",
+              detail: `${analytics.peak}% max monthly avg`,
+              icon: <TrendingDownRounded sx={{ fontSize: 18 }} />,
+              tint: { bg: "#ffe2dc", fg: "#c92e13" },
+            },
+            ...yearlyTrend.map((item, index) => ({
+              label: item.year,
+              value: `${item.offers} offers`,
+              detail: `${item.low}-${item.high}% range`,
+              icon: <TrendingUpRounded sx={{ fontSize: 18 }} />,
+              tint: accentTints[index % 3],
+            })),
+          ].map((stat) => (
+            <Card
+              key={stat.label}
+              elevation={0}
+              className="rounded-2xl border border-[#e3e6ed] bg-white transition-all hover:border-[#cbd0dd]"
             >
-              Promotion Pulse by Year
-            </Typography>
-            <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
-              All available years, with filtered offer volume.
-            </Typography>
-            <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
-              {dashboardText.pulseSubtitle}
-            </Typography>
-            <Box className="relative mt-5 flex h-52 items-end justify-around border-b border-l border-[#e7eaee] px-3 pb-2">
-              <Box className="absolute inset-x-3 top-0 border-t border-dashed border-[#e7eaee]" />
-              <Box className="absolute inset-x-3 top-1/2 border-t border-dashed border-[#e7eaee]" />
-              {yearlyTrend.map((item) => {
-                const chartMax = Math.max(
-                  ...yearlyTrend.map((trend) => trend.high),
-                  1,
-                );
-                const scale = (value: number) =>
-                  `${Math.max(5, (value / chartMax) * 145)}px`;
-                const rising = item.close >= item.open;
-                return (
+              <CardContent className="!p-4">
+                <Box className="flex items-center justify-between mb-2">
+                  <Typography
+                    sx={{
+                      color: "#525b75",
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    {stat.label}
+                  </Typography>
                   <Box
-                    key={item.year}
-                    className="flex h-full min-w-12 flex-col items-center justify-end gap-1"
+                    sx={{
+                      width: 28,
+                      height: 28,
+                      borderRadius: "8px",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: stat.tint.bg,
+                      color: stat.tint.fg,
+                    }}
                   >
-                    <Typography
-                      sx={{
-                        color: rising ? "#4f82f7" : "#737b88",
-                        fontSize: 10,
-                        fontWeight: 800,
-                      }}
-                    >
-                      {item.close}%
-                    </Typography>
-                    <Box
-                      className="relative flex h-36 items-center justify-center"
-                      title={`${item.year}: low ${item.low}%, open ${item.open}%, close ${item.close}%, high ${item.high}%`}
-                    >
-                      <Box
-                        className="absolute w-px bg-[#c8d0da]"
-                        sx={{ height: scale(item.high) }}
-                      />
-                      <Box
-                        className="relative w-6 rounded-sm"
-                        sx={{
-                          height: scale(Math.abs(item.close - item.open)),
-                          minHeight: 8,
-                          backgroundColor: rising ? "#4f82f7" : "#3a3f48",
-                          border: `1px solid ${rising ? "#2e63d4" : "#20242b"}`,
-                        }}
-                      />
-                    </Box>
-                    <Typography
-                      sx={{ color: "#20242b", fontSize: 11, fontWeight: 500 }}
-                    >
-                      {item.year}
-                    </Typography>
-                    <Typography sx={{ color: "#737b88", fontSize: 10 }}>
-                      {item.offers} offers
-                    </Typography>
+                    {stat.icon}
                   </Box>
-                );
-              })}
-            </Box>
-            <Box className="grid grid-cols-3 gap-2 mt-4">
-              {yearlyTrend.map((item) => (
-                <Box
-                  key={item.year}
-                  className="rounded-lg bg-[#f4f6f8] border border-[#e7eaee] px-2 py-1.5 text-center"
-                >
-                  <Typography
-                    sx={{ color: "#737b88", fontSize: 10, fontWeight: 500 }}
-                  >
-                    {item.year}
-                  </Typography>
-                  <Typography
-                    sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
-                  >
-                    {item.low}-{item.high}% range
-                  </Typography>
                 </Box>
-              ))}
-            </Box>
-          </CardContent>
-        </Card>
+                <Typography
+                  sx={{
+                    color: "#141824",
+                    fontSize: 18,
+                    fontWeight: 700,
+                    letterSpacing: "-0.01em",
+                  }}
+                >
+                  {stat.value}
+                </Typography>
+                <Typography sx={{ color: "#525b75", fontSize: 11 }}>
+                  {stat.detail}
+                </Typography>
+              </CardContent>
+            </Card>
+          ))}
+        </Box>
       </Box>
 
-      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
+      <Card elevation={0} className="rounded-2xl border border-[#e3e6ed] bg-white">
         <CardContent className="!p-6">
           <Box className="mb-5 flex items-center justify-between">
             <Box>
               <Typography
                 sx={{
-                  color: "#20242b",
+                  color: "#141824",
                   fontSize: 16,
                   fontWeight: 500,
                   letterSpacing: "-0.01em",
@@ -789,7 +731,7 @@ const Dashboard = () => {
               >
                 Product Promotion Catalog
               </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
+              <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
                 Monitored products, competitor offers, and promotion end dates
               </Typography>
             </Box>
@@ -800,10 +742,10 @@ const Dashboard = () => {
                 size="small"
                 endIcon={<ChevronRightRounded />}
                 sx={{
-                  color: "#20242b",
+                  color: "#141824",
                   textTransform: "none",
                   fontWeight: 500,
-                  "&:hover": { color: "#4f82f7" },
+                  "&:hover": { color: "#3874ff" },
                 }}
               >
                 Manage promotions
@@ -821,7 +763,7 @@ const Dashboard = () => {
             slotProps={{
               input: {
                 startAdornment: (
-                  <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} />
+                  <SearchRounded sx={{ color: "#9fa6bc", mr: 1 }} />
                 ),
               },
             }}
@@ -833,9 +775,9 @@ const Dashboard = () => {
                 component={Link}
                 to={`/products/${product.id}`}
                 key={product.id}
-                className="overflow-hidden rounded-2xl border border-[#e7eaee] no-underline bg-white transition-all hover:border-[#4f82f7] hover:shadow-md"
+                className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#3874ff] hover:shadow-md"
               >
-                <Box className="relative h-36 bg-[#f4f6f8]">
+                <Box className="relative h-36 bg-[#f5f7fa]">
                   <img
                     src={product.image || fallbackImage}
                     alt={product.name}
@@ -853,8 +795,8 @@ const Dashboard = () => {
                       left: 8,
                       top: 8,
                       backgroundColor:
-                        product.toDate >= today ? "#22252b" : "#eef1f4",
-                      color: product.toDate >= today ? "#ffffff" : "#737b88",
+                        product.toDate >= today ? "#141824" : "#eff2f6",
+                      color: product.toDate >= today ? "#ffffff" : "#525b75",
                       fontSize: 10,
                       fontWeight: 500,
                       letterSpacing: "0.04em",
@@ -876,11 +818,11 @@ const Dashboard = () => {
                         right: 6,
                         top: 6,
                         backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        color: "#20242b",
+                        color: "#141824",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#f5f8ff",
-                          color: "#4f82f7",
+                          backgroundColor: "#eaf1ff",
+                          color: "#3874ff",
                         },
                       }}
                     >
@@ -901,18 +843,18 @@ const Dashboard = () => {
                         right: 6,
                         top: 6,
                         backgroundColor: "rgba(255, 255, 255, 0.95)",
-                        color: "#e5484d",
+                        color: "#fa3b1d",
                         padding: "3px",
                         "&:hover": {
-                          backgroundColor: "#fdecec",
-                          color: "#c9302c",
+                          backgroundColor: "#ffe2dc",
+                          color: "#c92e13",
                         },
                       }}
                     >
                       <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                     </IconButton>
                   )}
-                  <Box className="absolute bottom-2 right-2 rounded-md bg-[#f3873a] px-2 py-0.5 shadow-sm">
+                  <Box className="absolute bottom-2 right-2 rounded-md bg-[#e5780b] px-2 py-0.5 shadow-sm">
                     <Typography
                       sx={{
                         color: "#ffffff",
@@ -928,7 +870,7 @@ const Dashboard = () => {
                 <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#737b88",
+                      color: "#525b75",
                       display: "block",
                       fontSize: 10,
                       fontWeight: 500,
@@ -940,7 +882,7 @@ const Dashboard = () => {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#20242b",
+                      color: "#141824",
                       display: "block",
                       fontSize: 12.5,
                       fontWeight: 500,
@@ -952,7 +894,7 @@ const Dashboard = () => {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#737b88",
+                      color: "#525b75",
                       display: "block",
                       fontSize: 11,
                       fontWeight: 500,
@@ -980,7 +922,7 @@ const Dashboard = () => {
 
       <Modal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)}>
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[700px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative border border-[#e7eaee] overflow-hidden"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[700px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative border border-[#e3e6ed] overflow-hidden"
           sx={{ p: 4 }}
         >
           <Box
@@ -1010,14 +952,14 @@ const Dashboard = () => {
                 />
               </Box>
 
-              <Box className="rounded-lg border border-[#e7eaee] bg-[#f4f6f8] p-3">
+              <Box className="rounded-lg border border-[#e3e6ed] bg-[#f5f7fa] p-3">
                 <Typography
-                  sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
+                  sx={{ color: "#141824", fontSize: 12, fontWeight: 800 }}
                 >
                   {bulkText.excelTemplate}
                 </Typography>
                 <Typography
-                  sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}
+                  sx={{ color: "#525b75", fontSize: 11.5, mt: 0.5 }}
                 >
                   {bulkText.brand}
                 </Typography>
@@ -1028,12 +970,12 @@ const Dashboard = () => {
                       component="label"
                       sx={{
                         textTransform: "none",
-                        borderColor: "#dce1e8",
-                        color: "#20242b",
+                        borderColor: "#cbd0dd",
+                        color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#4f82f7",
-                          backgroundColor: "#f5f8ff",
+                          borderColor: "#3874ff",
+                          backgroundColor: "#eaf1ff",
                         },
                       }}
                     >
@@ -1046,7 +988,7 @@ const Dashboard = () => {
                         onChange={parseBulkFile}
                       />
                     </Button>
-                    <Typography sx={{ color: "#737b88", fontSize: 11.5 }}>
+                    <Typography sx={{ color: "#525b75", fontSize: 11.5 }}>
                       {bulkText.fileHint}
                     </Typography>
                   </Box>
@@ -1057,12 +999,12 @@ const Dashboard = () => {
                       onClick={() => downloadBulkTemplate("xlsx")}
                       sx={{
                         textTransform: "none",
-                        borderColor: "#dce1e8",
-                        color: "#20242b",
+                        borderColor: "#cbd0dd",
+                        color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#4f82f7",
-                          backgroundColor: "#f5f8ff",
+                          borderColor: "#3874ff",
+                          backgroundColor: "#eaf1ff",
                         },
                       }}
                     >
@@ -1074,12 +1016,12 @@ const Dashboard = () => {
                       onClick={() => downloadBulkTemplate("csv")}
                       sx={{
                         textTransform: "none",
-                        borderColor: "#dce1e8",
-                        color: "#20242b",
+                        borderColor: "#cbd0dd",
+                        color: "#141824",
                         fontWeight: 500,
                         "&:hover": {
-                          borderColor: "#4f82f7",
-                          backgroundColor: "#f5f8ff",
+                          borderColor: "#3874ff",
+                          backgroundColor: "#eaf1ff",
                         },
                       }}
                     >
@@ -1122,8 +1064,8 @@ const Dashboard = () => {
                     fontWeight: 500,
                     color: "#ffffff",
                     maxWidth: "fit-content",
-                    backgroundColor: "#22252b",
-                    "&:hover": { backgroundColor: "#343942" },
+                    backgroundColor: "#141824",
+                    "&:hover": { backgroundColor: "#31374a" },
                   }}
                 >
                   {bulkText.addBrandRow}
@@ -1147,9 +1089,9 @@ const Dashboard = () => {
                   sx={{
                     textTransform: "none",
                     fontWeight: 500,
-                    backgroundColor: "#22252b",
+                    backgroundColor: "#141824",
                     color: "#ffffff",
-                    "&:hover": { backgroundColor: "#343942" },
+                    "&:hover": { backgroundColor: "#31374a" },
                   }}
                 >
                   {bulkSaving ? "Saving…" : bulkText.saveRows}
@@ -1187,13 +1129,13 @@ const Dashboard = () => {
         }}
       />
 
-      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
+      <Card elevation={0} className="rounded-2xl border border-[#e3e6ed] bg-white">
         <CardContent className="!p-6">
           <Box className="mb-4 flex items-center justify-between">
             <Box>
               <Typography
                 sx={{
-                  color: "#20242b",
+                  color: "#141824",
                   fontSize: 16,
                   fontWeight: 500,
                   letterSpacing: "-0.01em",
@@ -1201,7 +1143,7 @@ const Dashboard = () => {
               >
                 Expired Promotions
               </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
+              <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
                 Historical discounts that are no longer active.
               </Typography>
             </Box>
@@ -1209,8 +1151,8 @@ const Dashboard = () => {
               label={`${expiredProducts.length} archived`}
               size="small"
               sx={{
-                backgroundColor: "#eef1f4",
-                color: "#737b88",
+                backgroundColor: "#eff2f6",
+                color: "#525b75",
                 fontWeight: 500,
                 borderRadius: "6px",
               }}
@@ -1219,7 +1161,7 @@ const Dashboard = () => {
           {expiredProducts.length === 0 ? (
             <Typography
               sx={{
-                color: "#737b88",
+                color: "#525b75",
                 fontSize: 13,
                 py: 4,
                 textAlign: "center",
@@ -1234,9 +1176,9 @@ const Dashboard = () => {
                   key={product.id}
                   component={Link}
                   to={`/products/${product.id}`}
-                  className="group relative overflow-hidden rounded-2xl border border-[#e7eaee] no-underline bg-white transition-all hover:border-[#4f82f7]"
+                  className="group relative overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline bg-white transition-all hover:border-[#3874ff]"
                 >
-                  <Box className="relative h-32 bg-[#f4f6f8]">
+                  <Box className="relative h-32 bg-[#f5f7fa]">
                     <img
                       src={product.image}
                       alt={product.name}
@@ -1253,8 +1195,8 @@ const Dashboard = () => {
                         position: "absolute",
                         left: 8,
                         top: 8,
-                        backgroundColor: "#eef1f4",
-                        color: "#737b88",
+                        backgroundColor: "#eff2f6",
+                        color: "#525b75",
                         fontSize: 10,
                         fontWeight: 800,
                         borderRadius: "6px",
@@ -1274,11 +1216,11 @@ const Dashboard = () => {
                           right: 8,
                           top: 8,
                           backgroundColor: "rgba(255, 255, 255, 0.95)",
-                          color: "#e5484d",
+                          color: "#fa3b1d",
                           padding: "4px",
                           "&:hover": {
-                            backgroundColor: "#fdecec",
-                            color: "#c9302c",
+                            backgroundColor: "#ffe2dc",
+                            color: "#c92e13",
                           },
                         }}
                       >
@@ -1288,18 +1230,18 @@ const Dashboard = () => {
                   </Box>
                   <Box className="p-3">
                     <Typography
-                      sx={{ color: "#20242b", fontSize: 12, fontWeight: 500 }}
+                      sx={{ color: "#141824", fontSize: 12, fontWeight: 500 }}
                     >
                       {product.name}
                     </Typography>
                     <Typography
-                      sx={{ color: "#737b88", fontSize: 11, mt: 0.5 }}
+                      sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}
                     >
                       {product.fromDate} - {product.toDate}
                     </Typography>
                     <Typography
                       sx={{
-                        color: "#f3873a",
+                        color: "#e5780b",
                         fontSize: 11,
                         fontWeight: 800,
                         mt: 1,

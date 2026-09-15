@@ -3,41 +3,41 @@ import { createTheme } from "@mui/material/styles";
 // Soft, pastel icon-badge tints used for stat/feature cards (dashboard KPIs,
 // brand analytics summaries) — cycle through these instead of one flat color.
 export const accentTints = [
-  { bg: "#c1fbd4", fg: "#000000" },
-  { bg: "#d4f9e0", fg: "#000000" },
-  { bg: "#d4d4d8", fg: "#000000" },
-  { bg: "#ffffff", fg: "#000000" },
+  { bg: "#eaf1ff", fg: "#3874ff" },
+  { bg: "#d9fbd0", fg: "#1c6c09" },
+  { bg: "#e3e6ed", fg: "#31374a" },
+  { bg: "#ffffff", fg: "#141824" },
 ];
 
-export const dangerColor = { main: "#52525b", dark: "#3f3f46", light: "#d4d4d8" };
+export const dangerColor = { main: "#fa3b1d", dark: "#c92e13", light: "#ffe2dc" };
 
 export const sephoraTheme = createTheme({
   palette: {
     primary: {
-      main: "#000000",
-      light: "#3f3f46",
-      dark: "#000000",
+      main: "#3874ff",
+      light: "#78a1ff",
+      dark: "#2c5fd6",
       contrastText: "#ffffff",
     },
     secondary: {
-      main: "#c1fbd4",
-      light: "#d4f9e0",
-      dark: "#99d9ad",
-      contrastText: "#ffffff",
+      main: "#eaf1ff",
+      light: "#f5f8ff",
+      dark: "#cbd8f5",
+      contrastText: "#3874ff",
     },
     text: {
-      primary: "#000000",
-      secondary: "#71717a",
+      primary: "#141824",
+      secondary: "#525b75",
     },
     background: {
-      default: "#fbfbf5",
+      default: "#f5f7fa",
       paper: "#ffffff",
     },
-    divider: "#e4e4e7",
+    divider: "#e3e6ed",
   },
   typography: {
     fontFamily: [
-      "Inter",
+      "Nunito Sans",
       "-apple-system",
       "BlinkMacSystemFont",
       '"Segoe UI"',
@@ -47,23 +47,23 @@ export const sephoraTheme = createTheme({
       "sans-serif",
     ].join(","),
     h1: {
-      fontWeight: 500,
+      fontWeight: 700,
       letterSpacing: 0,
     },
     h2: {
-      fontWeight: 500,
+      fontWeight: 700,
       letterSpacing: 0,
     },
     h3: {
-      fontWeight: 500,
+      fontWeight: 700,
       letterSpacing: 0,
     },
     h4: {
-      fontWeight: 500,
+      fontWeight: 700,
       letterSpacing: 0,
     },
     h5: {
-      fontWeight: 500,
+      fontWeight: 700,
     },
     h6: {
       fontWeight: 700,
@@ -87,14 +87,14 @@ export const sephoraTheme = createTheme({
     },
   },
   shape: {
-    borderRadius: 12,
+    borderRadius: 8,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 9999,
-            fontWeight: 700,
+          borderRadius: 6,
+          fontWeight: 700,
           textTransform: "none",
           boxShadow: "none",
           "&:hover": {
@@ -102,18 +102,18 @@ export const sephoraTheme = createTheme({
           },
         },
         contained: {
-            backgroundColor: "#000000",
+          backgroundColor: "#3874ff",
           color: "#ffffff",
           "&:hover": {
-              backgroundColor: "#3f3f46",
+            backgroundColor: "#2c5fd6",
           },
         },
         outlined: {
-            borderColor: "#000000",
-              color: "#000000",
+          borderColor: "#cbd0dd",
+          color: "#31374a",
           "&:hover": {
-              borderColor: "#000000",
-              backgroundColor: "#d4f9e0",
+            borderColor: "#3874ff",
+            backgroundColor: "#eaf1ff",
           },
         },
       },
@@ -121,9 +121,9 @@ export const sephoraTheme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-            borderRadius: 12,
-            border: "1px solid #e4e4e7",
-            boxShadow: "0 8px 8px rgba(0,0,0,0.1), 0 4px 4px rgba(0,0,0,0.06)",
+          borderRadius: 8,
+          border: "1px solid #e3e6ed",
+          boxShadow: "0 1px 3px rgba(20,24,36,0.06), 0 1px 2px rgba(20,24,36,0.04)",
         },
       },
     },
@@ -141,7 +141,7 @@ export const sephoraTheme = createTheme({
         root: {
           borderRadius: 8,
           "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: "#000000",
+            borderColor: "#3874ff",
             borderWidth: "1.5px",
           },
         },
@@ -157,8 +157,8 @@ export const sephoraTheme = createTheme({
           fontSize: "0.75rem",
           letterSpacing: "0.05em",
           textTransform: "uppercase",
-          color: "#71717a",
-          backgroundColor: "#fbfbf5",
+          color: "#525b75",
+          backgroundColor: "#f5f7fa",
         },
       },
     },

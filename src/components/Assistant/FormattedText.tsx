@@ -130,7 +130,7 @@ const HEADING_SIZE: Record<2 | 3 | 4, number> = { 2: 15, 3: 13.5, 4: 12.5 };
 
 export default function FormattedText({
   text,
-  color = "#20242b",
+  color = "#141824",
 }: {
   text: string;
   color?: string;
