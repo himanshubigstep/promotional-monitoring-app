@@ -38,9 +38,7 @@ export default function Promotions() {
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [savedPage, setSavedPage] = useState(1);
   const pageSize = 10;
-  const savedPageSize = 10;
 
   async function handleDelete(id: string) {
     try {
@@ -76,39 +74,9 @@ export default function Promotions() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const savedPromotions = promotions
-    .filter(
-      (promotion) => {
-        const searchValue = filters.search.trim().toLowerCase();
-        const minimumDiscount =
-          filters.discount === "All"
-            ? 0
-            : Number(filters.discount.replace("%+", ""));
-        const discount = Number(promotion.discount.match(/\d+(?:\.\d+)?/)?.[0] || 0);
-        return (
-          (!searchValue ||
-            promotion.name.toLowerCase().includes(searchValue) ||
-            promotion.brands.toLowerCase().includes(searchValue)) &&
-          (filters.market === "All" || promotion.market === filters.market) &&
-          (filters.category === "All" || promotion.category === filters.category) &&
-          (filters.retailer === "All" || promotion.retailer === filters.retailer) &&
-          discount >= minimumDiscount &&
-          (!filters.fromDate || promotion.from >= filters.fromDate) &&
-          (!filters.toDate || promotion.to <= filters.toDate)
-        );
-      },
-    )
-    .sort((a, b) => {
-      const aActive = a.to >= today;
-      const bActive = b.to >= today;
-      if (aActive !== bActive) {
-        return aActive ? -1 : 1;
-      }
-      return b.to.localeCompare(a.to);
-    });
+
   useEffect(() => {
     setPage(1);
-    setSavedPage(1);
   }, [filters]);
 
   return (
