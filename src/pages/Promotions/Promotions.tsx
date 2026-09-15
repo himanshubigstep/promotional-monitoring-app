@@ -1,7 +1,6 @@
 import {
   AddRounded,
   DeleteOutlineRounded,
-  DownloadRounded,
   EditRounded,
   SearchRounded,
 } from "@mui/icons-material";
@@ -31,7 +30,6 @@ export default function Promotions() {
     deletePromotion,
     canEdit,
     filters,
-    lastAddedProduct,
     products: catalog,
     promotions,
     showToast,
@@ -108,26 +106,6 @@ export default function Promotions() {
       }
       return b.to.localeCompare(a.to);
     });
-  const visibleSavedPromotions = savedPromotions.slice(
-    (savedPage - 1) * savedPageSize,
-    savedPage * savedPageSize,
-  );
-  const downloadUpdatedProducts = () => {
-    if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
-      return;
-    }
-    const headers = Object.keys(catalog[0]);
-    const table = ` <table border="1"> <thead> <tr> ${headers.map((header) => `<th>${String(header)}</th>`).join("")} </tr> </thead> <tbody> ${catalog.map((product) => ` <tr> ${headers.map((header) => `<td>${String(product[header as keyof typeof product] ?? "")}</td>`).join("")} </tr> `).join("")} </tbody> </table> `;
-    const blob = new Blob([table], { type: "application/vnd.ms-excel" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "products.updated.xls";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
   useEffect(() => {
     setPage(1);
     setSavedPage(1);
@@ -360,166 +338,6 @@ export default function Promotions() {
           itemLabel="products"
         />
       </Card>
-      {/* {promotions.length > 0 && (
-        <Card
-          elevation={0}
-          className="rounded-2xl border border-[#e3e6ed] bg-white"
-        >
-          <Box className="p-4 border-b border-[#e3e6ed]">
-            <Box className="flex flex-wrap items-start justify-between gap-3">
-              <Box>
-                <Typography
-                  sx={{ color: "#141824", fontSize: 16, fontWeight: 500 }}
-                >
-                  Saved Promotions
-                </Typography>
-                <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
-                  Campaigns added via the form, saved in Polish.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<DownloadRounded />}
-                onClick={downloadUpdatedProducts}
-                sx={{
-                  borderColor: "#cbd0dd",
-                  color: "#141824",
-                  fontWeight: 700,
-                  fontSize: 12.5,
-                  textTransform: "none",
-                  "&:hover": {
-                    borderColor: "#3874ff",
-                    backgroundColor: "#eaf1ff",
-                  },
-                }}
-              >
-                Download
-              </Button>
-            </Box>
-          </Box>
-          {lastAddedProduct && (
-            <Box className="m-4 rounded-xl border border-[#e3e6ed] bg-[#eaf1ff] p-4">
-              <Typography
-                sx={{
-                  color: "#3874ff",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Ostatnio zaktualizowany rekord
-              </Typography>
-              <Typography
-                sx={{
-                  color: "#141824",
-                  fontSize: 14,
-                  fontWeight: 800,
-                  mt: 0.5,
-                }}
-              >
-                {lastAddedProduct.id} · {lastAddedProduct.name}
-              </Typography>
-              <Typography sx={{ color: "#525b75", fontSize: 12, mt: 0.5 }}>
-                {lastAddedProduct.market} · {lastAddedProduct.brand} ·{" "}
-                {lastAddedProduct.retailer} · {lastAddedProduct.fromDate} -{" "}
-                {lastAddedProduct.toDate} · -
-                {lastAddedProduct.competitorDiscount}%
-              </Typography>
-            </Box>
-          )}
-          <Box className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-            {visibleSavedPromotions.map((promotion) => {
-              const isExpired = promotion.to < today;
-              return (
-                <Box
-                  key={promotion.id}
-                  className="rounded-xl border border-[#e3e6ed] p-4 bg-white hover:border-[#3874ff] transition-all"
-                >
-                  <Box className="flex items-start justify-between gap-3">
-                    <Box>
-                      <Typography
-                        sx={{ color: "#141824", fontSize: 13.5, fontWeight: 500 }}
-                      >
-                        {promotion.name}
-                      </Typography>
-                      <Typography
-                        sx={{ color: "#525b75", fontSize: 11.5, mt: 0.5 }}
-                      >
-                        {promotion.brands} · {promotion.retailer}
-                      </Typography>
-                    </Box>
-                    <Box className="flex items-center gap-1">
-                      {!isExpired && canEdit && (
-                        <IconButton
-                          size="small"
-                          title="Edit promotion"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            setEditingPromotion(promotion);
-                            setFormOpen(true);
-                          }}
-                          sx={{
-                            color: "#141824",
-                            backgroundColor: "#eff2f6",
-                            borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#e3e6ed" },
-                          }}
-                        >
-                          <EditRounded sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      )}
-                      {isExpired && canEdit && (
-                        <IconButton
-                          size="small"
-                          title="Delete expired promotion"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            handleDelete(promotion.id);
-                          }}
-                          sx={{
-                            color: "#fa3b1d",
-                            backgroundColor: "#ffe2dc",
-                            borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#fbdada" },
-                          }}
-                        >
-                          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  <Typography sx={{ color: "#525b75", fontSize: 12, mt: 1 }}>
-                    {promotion.from} - {promotion.to} · {promotion.category}
-                  </Typography>
-                  <Chip
-                    label={promotion.discount}
-                    size="small"
-                    sx={{
-                      mt: 1.5,
-                      backgroundColor: "#e5780b",
-                      color: "#ffffff",
-                      fontWeight: 800,
-                      borderRadius: "6px",
-                    }}
-                  />
-                </Box>
-              );
-            })}
-          </Box>
-          <AppPagination
-            count={Math.ceil(savedPromotions.length / savedPageSize)}
-            page={savedPage}
-            onChange={setSavedPage}
-            total={savedPromotions.length}
-            pageSize={savedPageSize}
-            itemLabel="saved promotions"
-          />
-        </Card>
-      )} */}
       <PromotionFormModal
         open={formOpen}
         editingPromotion={editingPromotion}
