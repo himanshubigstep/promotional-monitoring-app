@@ -1,17 +1,36 @@
-name: Daily promotion scrape
+name: Promotion scrape
 
 on:
   schedule:
-    # 05:00 UTC daily — after most PL retailers refresh overnight offers.
+    # Promo scrape, every 12 hours (05:00 and 17:00 UTC) — was daily-only;
+    # widened so a live promo that appears/changes mid-day is caught sooner.
     - cron: "0 5 * * *"
+    - cron: "0 17 * * *"
     # 06:00 UTC every Monday — the product catalog crawl visits far more
     # pages per retailer than the promo scrape, so it runs weekly, not daily.
     - cron: "0 6 * * 1"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      retailer:
+        description: "Retailer to scrape, or 'all'"
+        type: choice
+        default: "all"
+        options:
+          - all
+          - Notino
+          - superpharm
+          - drogerienatura
+          - flaconi
 
 jobs:
+  # A manual run (the frontend's "Check for Promotions" button, or a manual
+  # workflow_dispatch from the Actions UI) always means "run the promo
+  # scrape" — never the weekly catalog crawl below, which previously also
+  # fired on any manual dispatch as an unintended side effect of the old
+  # `github.event_name != 'schedule'` condition matching workflow_dispatch
+  # too. Scoping each job to its own explicit event/schedule match fixes that.
   scrape:
-    if: github.event_name != 'schedule' || github.event.schedule == '0 5 * * *'
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 5 * * *' || github.event.schedule == '0 17 * * *'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -34,10 +53,13 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # Empty on a scheduled run (workflow_dispatch-only input) — scrape.ts
+          # treats empty/"all" identically, scraping every retailer.
+          RETAILER_FILTER: ${{ github.event.inputs.retailer }}
         run: npm run scrape
 
   scrape-products:
-    if: github.event_name != 'schedule' || github.event.schedule == '0 6 * * 1'
+    if: github.event.schedule == '0 6 * * 1'
     runs-on: ubuntu-latest
     defaults:
       run:

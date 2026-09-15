@@ -50,6 +50,7 @@ import Promotions from "./pages/Promotions/Promotions";
 import Products from "./pages/Products/Products";
 import PromotionalCalendar from "./pages/PromotionalCalendar/PromotionalCalendar";
 import PromotionFilterModal from "./components/PromotionFilterModal";
+import CheckForPromotionsButton from "./components/CheckForPromotionsButton";
 import AssistantWidget from "./components/Assistant/AssistantWidget";
 import ReviewQueue from "./pages/ReviewQueue/ReviewQueue";
 import Login from "./pages/Auth/Login";
@@ -364,6 +365,8 @@ function AppLayout() {
               >
                 Filters
               </Button>
+
+              <CheckForPromotionsButton />
 
               {user ? (
                 <Box className="flex items-center gap-2">

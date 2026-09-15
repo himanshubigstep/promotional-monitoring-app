@@ -177,6 +177,26 @@ async function scrapeRetailer(
   }
 }
 
+// Set by the GH Actions workflow_dispatch "retailer" input (see
+// .github/workflows/scrape.yml) when triggered manually — either from the
+// Actions UI or the frontend's "Check for Promotions" button via
+// api/trigger-scrape.ts. Unset (undefined/empty) on every scheduled run,
+// which keeps scraping every retailer exactly as before this existed.
+function resolveTargets(): typeof retailerTargets {
+  const filter = process.env.RETAILER_FILTER?.trim();
+  if (!filter || filter === "all") return retailerTargets;
+
+  const matched = retailerTargets.filter((t) => t.name === filter);
+  if (matched.length === 0) {
+    console.warn(
+      `RETAILER_FILTER="${filter}" matched no known retailer (expected one of: ${retailerTargets
+        .map((t) => t.name)
+        .join(", ")}, or "all") — scraping nothing this run.`,
+    );
+  }
+  return matched;
+}
+
 async function main() {
   const { data: categories, error: categoriesError } = await supabaseAdmin
     .from("categories")
@@ -186,11 +206,12 @@ async function main() {
     throw new Error(`Failed to load categories: ${categoriesError?.message}`);
   }
 
+  const targets = resolveTargets();
   const browser = await chromium.launch({ headless: true });
   const results = [];
 
   try {
-    for (const target of retailerTargets) {
+    for (const target of targets) {
       results.push(await scrapeRetailer(browser, target, categories));
     }
   } finally {
