@@ -8,9 +8,7 @@ import {
 import { Box, Button, Card, Chip, Divider, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+import { noImagePlaceholder as fallbackImage } from "../../lib/media";
 
 function CatalogProductDetail({
   product,

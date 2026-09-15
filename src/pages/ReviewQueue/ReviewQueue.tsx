@@ -22,9 +22,7 @@ import {
 } from "../../lib/reviewQueue";
 import ReviewEditModal from "./ReviewEditModal";
 import { useAppContext } from "../../context/AppContext";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+import { noImagePlaceholder as fallbackImage } from "../../lib/media";
 
 // Color-codes Gemini's self-reported extraction confidence so the sketchiest
 // scraped rows are visually obvious before a reviewer reads a single field.

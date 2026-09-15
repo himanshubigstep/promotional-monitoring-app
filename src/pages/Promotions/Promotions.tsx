@@ -20,10 +20,9 @@ import { matchesPromotionFilters, useAppContext } from "../../context/AppContext
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import { isBenchmarkProduct } from "../../data/marketProducts";
+import { noImagePlaceholder as fallbackImage } from "../../lib/media";
 
 const today = new Date().toISOString().slice(0, 10);
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
 function PromotionCardSkeleton() {
   return (

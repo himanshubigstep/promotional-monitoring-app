@@ -33,9 +33,8 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import BrandComparisonTable from "../../components/BrandComparisonTable";
 import { isBenchmarkProduct } from "../../data/marketProducts";
 import { BarChart } from "@mui/x-charts";
+import { noImagePlaceholder as fallbackImage } from "../../lib/media";
 
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 const today = new Date().toISOString().slice(0, 10);
 const months = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",

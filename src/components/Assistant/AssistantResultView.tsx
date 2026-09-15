@@ -25,9 +25,7 @@ import type {
   PromotionCardItem,
 } from "../../types/assistant";
 import { renderInline } from "./FormattedText";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+import { noImagePlaceholder as fallbackImage } from "../../lib/media";
 
 // A large table/card list is now shown 5-at-a-time with a "View More"
 // expander (see ExpandableSection below) instead of dumping 30+ rows into

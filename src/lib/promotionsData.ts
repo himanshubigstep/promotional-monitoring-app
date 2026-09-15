@@ -1,10 +1,9 @@
 import { supabase } from "./supabaseClient";
+import { noImagePlaceholder as fallbackImage } from "./media";
 import type { CatalogProduct, Product, ProductCategory, PromotionType } from "../data/productTypes";
 import type { Promotion } from "../context/AppContext";
 
 const CREATIVES_BUCKET = "promotion-creatives";
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
 export type RetailerOption = { id: string; name: string; market: "PL" | "CZ"; isClient: boolean };
 export type CategoryOption = { id: string; name: string };
