@@ -24,9 +24,7 @@ import {
   translateToEnglishWithGemini,
 } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
-
-const fallbackImage =
-  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+import { noImagePlaceholder as fallbackImage } from "../lib/media";
 
 const categories = [
   "Pielęgnacja",

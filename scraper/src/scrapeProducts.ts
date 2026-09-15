@@ -35,6 +35,37 @@ function resolveUrl(value: string | null, base: string): string | null {
   }
 }
 
+// Sites that lazy-load images keep a shared placeholder/spinner in `src`
+// until the real <img> scrolls into view, at which point their lazy-load
+// library swaps it in (often reading from `data-src`, which typically holds
+// the correct real URL the whole time regardless of whether that swap has
+// happened yet). A listing page is usually 20-60+ cards tall, and this crawl
+// never scrolled before reading each card's image — so every card below the
+// fold ended up recording the same placeholder as its photo. Scrolling
+// through the full page before reading gives lazy-load libraries a chance to
+// swap in the real image everywhere, and preferring `data-src` (when present)
+// over `src` covers the sites that never bother updating `src` at all.
+async function scrollThroughPage(page: Page): Promise<void> {
+  await page.evaluate(async () => {
+    await new Promise<void>((resolve) => {
+      const step = 600;
+      let scrolled = 0;
+      const timer = setInterval(() => {
+        window.scrollBy(0, step);
+        scrolled += step;
+        if (scrolled >= document.body.scrollHeight) {
+          clearInterval(timer);
+          resolve();
+        }
+      }, 150);
+    });
+  });
+  // Scroll back to top so the extraction step below doesn't depend on
+  // wherever the loop above happened to land.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(500);
+}
+
 async function extractPageItems(
   page: Page,
   selectors: CatalogTarget["selectors"],
@@ -66,9 +97,12 @@ async function extractPageItems(
           priceText: sel.priceIsText
             ? priceEl?.textContent?.trim() || null
             : priceEl?.getAttribute("content") || null,
+          // data-src (where present) is checked first, not just as a
+          // fallback — see scrollThroughPage's comment for why `src` alone
+          // is unreliable on lazy-loading listing pages.
           image:
-            imageEl?.getAttribute("src") ||
             imageEl?.getAttribute("data-src") ||
+            imageEl?.getAttribute("src") ||
             null,
           href: linkEl?.getAttribute("href") || null,
         };
@@ -120,6 +154,7 @@ async function crawlCategory(
         break;
       }
 
+      await scrollThroughPage(page);
       const pageItems = await extractPageItems(page, target.selectors, currentUrl);
       if (pageItems.length === 0) {
         console.warn(

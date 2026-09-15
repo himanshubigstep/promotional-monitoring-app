@@ -50,6 +50,43 @@ function sanitizeDiscountPercent(value: number | null | undefined): number | nul
   return value;
 }
 
+// promotions has no unique constraint beyond its id, and this scraper now
+// runs every 12 hours — without this check, a campaign that's still live
+// gets a brand-new duplicate row every single run. Approving one duplicate
+// in the review queue doesn't clear its siblings, so these pile up as
+// permanent unreviewed clutter, and if multiple get approved they show up as
+// separate duplicate cards on the Dashboard/analytics.
+//
+// Matching is deliberately conservative: same retailer + market, a
+// case-insensitive exact name match, AND an overlapping date range (not
+// just "starts on the same day"). This trades recall for safety — a
+// genuinely new promotion that happens to reuse an old name and land in an
+// overlapping window would be wrongly skipped, but that's a much rarer and
+// more tolerable failure than the guaranteed daily duplication this
+// prevents. Skips are logged, never silent, so a wrongly-skipped promotion
+// is at least visible in the run output rather than just vanishing.
+async function findExistingPromotionId(
+  retailerId: string,
+  market: "PL",
+  name: string,
+  dateFrom: string,
+  dateTo: string,
+): Promise<string | null> {
+  const { data } = await supabaseAdmin
+    .from("promotions")
+    .select("id")
+    .eq("retailer_id", retailerId)
+    .eq("market", market)
+    .ilike("name", name)
+    .in("status", ["pending_review", "approved"])
+    .lte("date_from", dateTo)
+    .gte("date_to", dateFrom)
+    .limit(1)
+    .maybeSingle();
+
+  return data?.id ?? null;
+}
+
 async function findCategoryId(categories: { id: string; name: string }[], raw: string | undefined) {
   if (!raw) return null;
   const needle = raw.trim().toLowerCase();
@@ -178,10 +215,21 @@ async function scrapeRetailer(
     }
 
     let inserted = 0;
+    let skipped = 0;
     for (const item of extracted) {
       const dateFrom = isIsoDate(item.dateFrom) ? item.dateFrom : todayIso();
       const dateTo = isIsoDate(item.dateTo) ? item.dateTo : inOneWeekIso();
       const categoryId = await findCategoryId(categories, item.category);
+      const name = item.name || `${target.name} promotion (scraped ${todayIso()})`;
+
+      const existingId = await findExistingPromotionId(retailer.id, target.market, name, dateFrom, dateTo);
+      if (existingId) {
+        console.log(
+          `[${target.name}] skipping "${name}" — matches existing promotion ${existingId} (same retailer/name, overlapping dates)`,
+        );
+        skipped += 1;
+        continue;
+      }
 
       const { data: promotion, error } = await supabaseAdmin
         .from("promotions")
@@ -189,7 +237,7 @@ async function scrapeRetailer(
           market: target.market,
           retailer_id: retailer.id,
           category_id: categoryId,
-          name: item.name || `${target.name} promotion (scraped ${todayIso()})`,
+          name,
           date_from: dateFrom,
           date_to: dateTo,
           discount_text: item.discount || null,
@@ -234,8 +282,10 @@ async function scrapeRetailer(
       inserted += 1;
     }
 
-    console.log(`[${target.name}] done — ${inserted} promotion(s) created as pending_review`);
-    return { retailer: target.name, status: "ok" as const, inserted };
+    console.log(
+      `[${target.name}] done — ${inserted} promotion(s) created as pending_review, ${skipped} skipped as duplicates`,
+    );
+    return { retailer: target.name, status: "ok" as const, inserted, skipped };
   } catch (err) {
     console.warn(`[${target.name}] navigation/scrape error:`, err);
     return { retailer: target.name, status: "error" as const };
