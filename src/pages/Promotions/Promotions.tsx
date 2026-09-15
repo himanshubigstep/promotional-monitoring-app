@@ -31,7 +31,6 @@ export default function Promotions() {
     canEdit,
     filters,
     products: catalog,
-    promotions,
     showToast,
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
