@@ -21,11 +21,13 @@ import {
   type ReviewEditFields,
 } from "../../lib/reviewQueue";
 import ReviewEditModal from "./ReviewEditModal";
+import { useAppContext } from "../../context/AppContext";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
 export default function ReviewQueue() {
+  const { canEdit } = useAppContext();
   const [items, setItems] = useState<PendingPromotion[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -150,33 +152,42 @@ export default function ReviewQueue() {
               {item.notes && (
                 <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>{item.notes}</Typography>
               )}
-              <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
-                <Button
-                  size="small"
-                  variant="contained"
-                  disabled={busyId === item.id}
-                  onClick={() => handleApprove(item)}
-                >
-                  Approve
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  disabled={busyId === item.id}
-                  onClick={() => setEditingPromotion(item)}
-                >
-                  Edit
-                </Button>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  color="error"
-                  disabled={busyId === item.id}
-                  onClick={() => setRejectingPromotion(item)}
-                >
-                  Reject
-                </Button>
-              </Stack>
+              {canEdit ? (
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    disabled={busyId === item.id}
+                    onClick={() => handleApprove(item)}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    disabled={busyId === item.id}
+                    onClick={() => setEditingPromotion(item)}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    disabled={busyId === item.id}
+                    onClick={() => setRejectingPromotion(item)}
+                  >
+                    Reject
+                  </Button>
+                </Stack>
+              ) : (
+                // RLS already blocks non-editors from writing (promotions_update/
+                // promotions_delete require is_editor()) — this is just an
+                // honest UX hint instead of showing buttons that would 403.
+                <Typography sx={{ color: "#a0a8b3", fontSize: 11.5, mt: 1 }}>
+                  Sign in as an editor to approve, edit, or reject.
+                </Typography>
+              )}
             </Box>
           </Card>
         ))}

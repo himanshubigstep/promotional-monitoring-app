@@ -6,6 +6,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
+import type { Session, User } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabaseClient";
 import { czDummyBrands, sephoraBrands } from "../data/brands";
 import { czDummyRetailers, plRetailers } from "../data/retailers";
 import {
@@ -25,7 +27,10 @@ import {
   type RetailerOption,
 } from "../lib/promotionsData";
 
-export type UserRole = "Admin" | "Data Analytics" | "Viewer";
+// Real editor/analyst role from the profiles table for the signed-in user —
+// null when nobody is signed in (the app still works read-only as anon in
+// that case; see AUTH_LOGIN_PLAN.md for why login doesn't gate the whole app).
+export type AuthRole = "editor" | "analyst" | null;
 
 export type PromotionFilters = {
   search: string;
@@ -126,8 +131,10 @@ export type Promotion = {
 };
 
 type AppContextValue = {
-  role: UserRole;
-  setRole: (role: UserRole) => void;
+  user: User | null;
+  authRole: AuthRole;
+  authLoading: boolean;
+  signOut: () => Promise<void>;
   promotions: Promotion[];
   products: Product[];
   productsList: Product[];
@@ -261,7 +268,9 @@ function toEnglish(value: string) {
 }
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const [role, setRole] = useState<UserRole>("Admin");
+  const [user, setUser] = useState<User | null>(null);
+  const [authRole, setAuthRole] = useState<AuthRole>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [productCatalog, setProductCatalog] = useState<CatalogProduct[]>([]);
@@ -334,6 +343,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  // Real Supabase auth session — separate from the data-loading effect
+  // above, which runs regardless of whether anyone is signed in (anon reads
+  // stay working either way, per AUTH_LOGIN_PLAN.md / CLAUDE.md). This only
+  // adds real editor/analyst capability on top when a session exists.
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRoleFor(session: Session | null) {
+      if (!session?.user) {
+        if (!cancelled) setAuthRole(null);
+        return;
+      }
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      if (error) {
+        console.warn("Failed to load profile role for signed-in user:", error);
+        setAuthRole(null);
+        return;
+      }
+      // profiles.role defaults to 'analyst' at the DB level for new signups;
+      // mirror that default here rather than treating a missing row as "no role".
+      setAuthRole((data?.role as "editor" | "analyst" | undefined) ?? "analyst");
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setUser(data.session?.user ?? null);
+      loadRoleFor(data.session).finally(() => {
+        if (!cancelled) setAuthLoading(false);
+      });
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ?? null);
+        loadRoleFor(session);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
   const assertWritable = useCallback(() => {
@@ -442,8 +504,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo(
     () => ({
-      role,
-      setRole,
+      user,
+      authRole,
+      authLoading,
+      signOut,
       promotions,
       products,
       productsList: products,
@@ -460,7 +524,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addCatalogProduct,
       deleteProduct,
       deletePromotion,
-      canEdit: role !== "Viewer",
+      canEdit: authRole === "editor",
       filters,
       setFilters,
       loading,
@@ -470,7 +534,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       clearToast,
     }),
     [
-      role,
+      user,
+      authRole,
+      authLoading,
+      signOut,
       promotions,
       products,
       productCatalog,
