@@ -38,7 +38,6 @@ export default function Promotions() {
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [savedPage, setSavedPage] = useState(1);

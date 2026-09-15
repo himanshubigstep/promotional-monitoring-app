@@ -61,7 +61,6 @@ const Dashboard = () => {
     updatePromotion,
     showToast,
     canEdit,
-    brandsByMarket,
   } = useAppContext();
 
   const [catalogSearch, setCatalogSearch] = useState("");
