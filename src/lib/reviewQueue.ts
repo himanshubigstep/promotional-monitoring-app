@@ -12,6 +12,11 @@ export type PendingPromotion = {
   promotion_type: string | null;
   status: string;
   created_at: string;
+  // Review-time-only extraction-quality metadata (see
+  // supabase/migrations/0007_extraction_quality.sql) — null for manual/OCR
+  // entries and for rows scraped before this was added.
+  extraction_confidence: number | null;
+  uncertain_fields: string[] | null;
   retailer: { id: string; name: string } | null;
   category: { id: string; name: string } | null;
   brands: { id: string; name: string }[];
@@ -35,6 +40,8 @@ type RawRow = {
   promotion_type: string | null;
   status: string;
   created_at: string;
+  extraction_confidence: number | null;
+  uncertain_fields: string[] | null;
   retailers: { id: string; name: string } | null;
   categories: { id: string; name: string } | null;
   promotion_brands: { brands: { id: string; name: string } | null }[];
@@ -60,7 +67,7 @@ export async function fetchPendingPromotions(): Promise<PendingPromotion[]> {
     .select(
       `
       id, name, market, discount_text, threshold, notes, date_from, date_to,
-      promotion_type, status, created_at,
+      promotion_type, status, created_at, extraction_confidence, uncertain_fields,
       retailers ( id, name ),
       categories ( id, name ),
       promotion_brands ( brands ( id, name ) ),
@@ -74,7 +81,7 @@ export async function fetchPendingPromotions(): Promise<PendingPromotion[]> {
 
   const rows = (data ?? []) as unknown as RawRow[];
 
-  return Promise.all(
+  const pending = await Promise.all(
     rows.map(async (row) => {
       const latestCreative = [...row.promotion_creatives].sort((a, b) =>
         b.created_at.localeCompare(a.created_at),
@@ -93,6 +100,8 @@ export async function fetchPendingPromotions(): Promise<PendingPromotion[]> {
         promotion_type: row.promotion_type,
         status: row.status,
         created_at: row.created_at,
+        extraction_confidence: row.extraction_confidence,
+        uncertain_fields: row.uncertain_fields,
         retailer: row.retailers,
         category: row.categories,
         brands: row.promotion_brands.map((pb) => pb.brands).filter((b): b is { id: string; name: string } => !!b),
@@ -100,6 +109,16 @@ export async function fetchPendingPromotions(): Promise<PendingPromotion[]> {
         screenshotUrl: await resolveScreenshotUrl(screenshotPath),
       };
     }),
+  );
+
+  // Lowest-confidence scraped rows first, so the sketchiest extractions get
+  // a reviewer's attention before the ones Gemini was already sure about.
+  // Rows with no confidence value (manual/OCR entries, or scraped rows from
+  // before this field existed) sort after every scored row, keeping their
+  // relative created_at-desc order via Array#sort's stability rather than
+  // being treated as either best or worst.
+  return pending.sort(
+    (a, b) => (a.extraction_confidence ?? Infinity) - (b.extraction_confidence ?? Infinity),
   );
 }
 

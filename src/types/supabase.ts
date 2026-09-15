@@ -236,7 +236,9 @@ export type Database = {
           currency: string | null
           date_from: string
           date_to: string
+          discount_percent: number | null
           discount_text: string | null
+          extraction_confidence: number | null
           id: string
           is_extended: boolean
           market: string
@@ -258,6 +260,7 @@ export type Database = {
           status: string
           stock: number | null
           threshold: string | null
+          uncertain_fields: string[] | null
           updated_at: string
         }
         Insert: {
@@ -269,7 +272,9 @@ export type Database = {
           currency?: string | null
           date_from: string
           date_to: string
+          discount_percent?: number | null
           discount_text?: string | null
+          extraction_confidence?: number | null
           id?: string
           is_extended?: boolean
           market: string
@@ -291,6 +296,7 @@ export type Database = {
           status?: string
           stock?: number | null
           threshold?: string | null
+          uncertain_fields?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -302,7 +308,9 @@ export type Database = {
           currency?: string | null
           date_from?: string
           date_to?: string
+          discount_percent?: number | null
           discount_text?: string | null
+          extraction_confidence?: number | null
           id?: string
           is_extended?: boolean
           market?: string
@@ -324,6 +332,7 @@ export type Database = {
           status?: string
           stock?: number | null
           threshold?: string | null
+          uncertain_fields?: string[] | null
           updated_at?: string
         }
         Relationships: [
