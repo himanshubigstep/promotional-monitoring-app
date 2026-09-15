@@ -3,9 +3,9 @@ import {
   AutoAwesomeRounded,
   CloseRounded,
   SendRounded,
-  SmartToyRounded,
 } from "@mui/icons-material";
 import {
+  Badge,
   Box,
   Chip,
   CircularProgress,
@@ -186,21 +186,42 @@ export default function AssistantWidget() {
   return (
     <>
       {!open && (
-        <Fab
-          onClick={() => setOpen(true)}
-          sx={{
-            position: "fixed",
-            bottom: 24,
-            right: 24,
-            zIndex: 1300,
-            backgroundColor: "#141824",
-            color: "#ffffff",
-            "&:hover": { backgroundColor: "#31374a" },
-          }}
-          aria-label="Open assistant"
+        // Sparkle glyph (same one used in the drawer header) instead of a
+        // generic robot-toy icon — reads as "AI assistant", not "chatbot toy",
+        // and matches the icon already used to mark AI-generated content
+        // elsewhere in the widget. The small white/red dot is a subtle nod to
+        // the Polish market this product targets: Poland's flag colors
+        // (white #ffffff, red #dc143c — see Flag of Poland) as a tiny locale
+        // accent, not a literal flag or national emblem, so it stays a quiet
+        // detail rather than a loud statement.
+        <Badge
+          overlap="circular"
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          badgeContent={
+            <Box
+              sx={{
+                width: 13,
+                height: 13,
+                borderRadius: "50%",
+                border: "2px solid #ffffff",
+                background: "linear-gradient(to bottom, #ffffff 50%, #dc143c 50%)",
+              }}
+            />
+          }
+          sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1300 }}
         >
-          <SmartToyRounded />
-        </Fab>
+          <Fab
+            onClick={() => setOpen(true)}
+            sx={{
+              backgroundColor: "#141824",
+              color: "#ffffff",
+              "&:hover": { backgroundColor: "#31374a" },
+            }}
+            aria-label="Open assistant"
+          >
+            <AutoAwesomeRounded sx={{ fontSize: 25 }} />
+          </Fab>
+        </Badge>
       )}
 
       <Drawer
