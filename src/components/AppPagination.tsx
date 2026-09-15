@@ -21,7 +21,7 @@ export default function AppPagination({
   const lastItem = Math.min(page * pageSize, total);
 
   return (
-    <Box className="py-3.5 flex flex-wrap items-center justify-between gap-4 border-t border-[#e7eaee] px-4">
+    <Box className="py-3.5 flex flex-wrap items-center justify-between gap-4 border-t border-[#e7eaee] mt-4 px-4">
       <Typography sx={{ color: "#737b88", fontSize: 12, fontWeight: 500 }}>
         Showing {firstItem}-{lastItem} of {total} {itemLabel}
       </Typography>

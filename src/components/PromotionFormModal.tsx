@@ -198,10 +198,10 @@ export default function PromotionFormModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (promotion: FormState) => void;
+  onSave: (promotion: FormState) => void | Promise<void>;
   editingPromotion?: Promotion | null;
 }) {
-  const { brandsByMarket, products, retailers: retailerOptions } = useAppContext();
+  const { brandsByMarket, productCatalog, retailers: retailerOptions } = useAppContext();
   const [previewUrl, setPreviewUrl] = useState<string>("");
   const [form, setForm] = useState<FormState>(emptyForm);
   const promotionFieldConfig = getPromotionTypeFieldConfig(
@@ -573,7 +573,7 @@ export default function PromotionFormModal({
       }
     }
 
-    onSave({
+    await onSave({
       ...{
         ...form,
         promotionType: form.promotionType || "Fixed promotion",
@@ -628,7 +628,7 @@ export default function PromotionFormModal({
     .filter((r) => r.market === form.market)
     .map((r) => r.name);
   const marketBrandOptions = brandsByMarket[form.market];
-  const marketProductOptions = products.filter(
+  const marketProductOptions = productCatalog.filter(
     (item) => item.market === form.market,
   );
   const discountLabel =
@@ -893,21 +893,21 @@ export default function PromotionFormModal({
                         ? categories.find(
                           (item) =>
                             item ===
-                            {
+                            ({
                               Skincare: "Pielęgnacja",
                               Fragrance: "Perfumy",
                               Makeup: "Makijaż",
                               Haircare: "Włosy",
                               "Body Care": "Pielęgnacja ciała",
                               Tools: "Akcesoria",
-                            }[selected.category],
+                            } as Record<string, string>)[selected.category],
                         ) || current.category
                         : current.category,
                       retailer: selected?.retailer || current.retailer,
                     }));
                   }}
                   options={marketProductOptions.map((item) => ({
-                    label: `${item.name} · ${item.brand}`,
+                    label: `${item.name} · ${item.brand} · ${item.retailer}`,
                     value: item.name,
                   }))}
                   required

@@ -34,6 +34,7 @@ export default function Promotions() {
     lastAddedProduct,
     products: catalog,
     promotions,
+    showToast,
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
@@ -45,11 +46,11 @@ export default function Promotions() {
   const savedPageSize = 10;
 
   async function handleDelete(id: string) {
-    setActionError(null);
     try {
       await deletePromotion(id);
+      showToast("Promotion deleted successfully.");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete.");
+      showToast("Unable to delete. The database may be unavailable.", "error");
     }
   }
 
@@ -176,9 +177,6 @@ export default function Promotions() {
           )}
         </Box>
       </Box>
-      {actionError && (
-        <Box sx={{ color: "#e5484d", fontSize: 13 }}>{actionError}</Box>
-      )}
       <Card
         elevation={0}
         className="rounded-2xl border border-[#e7eaee] bg-white"
@@ -531,17 +529,17 @@ export default function Promotions() {
           setEditingPromotion(null);
         }}
         onSave={async (promotion) => {
-          setActionError(null);
           try {
             if (editingPromotion) {
               await updatePromotion(editingPromotion.id, promotion);
             } else {
               await addPromotion(promotion);
             }
+            showToast(editingPromotion ? "Promotion updated successfully." : "Promotion saved successfully.");
             setFormOpen(false);
             setEditingPromotion(null);
           } catch (err) {
-            setActionError(err instanceof Error ? err.message : "Failed to save.");
+            showToast("Unable to save. The database may be unavailable.", "error");
           }
         }}
       />

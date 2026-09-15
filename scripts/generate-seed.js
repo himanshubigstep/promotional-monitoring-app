@@ -135,5 +135,23 @@ for (const p of products) {
   );
 }
 
+lines.push("");
+lines.push("-- Product catalog (seeded from the same static catalog as the sample");
+lines.push("-- promotions above, so local dev has something to pick from in the");
+lines.push("-- promotion form's product picker without needing a live scraper run).");
+for (const p of expandedProducts) {
+  const externalId = `${p.id}-${p.retailer}`;
+  lines.push(
+    `insert into products (retailer_id, market, brand_id, category_id, name, image_url, price, currency, external_id, source) ` +
+      `values (` +
+      `(select id from retailers where name = ${esc(p.retailer)} and market = ${esc(p.market)}), ` +
+      `${esc(p.market)}, ` +
+      `(select id from brands where name = ${esc(p.brand)} and market = ${esc(p.market)}), ` +
+      `(select id from categories where name = ${esc(p.category)}), ` +
+      `${esc(p.name)}, ${esc(p.image)}, ${p.price ?? "null"}, ${esc(p.currency)}, ${esc(externalId)}, 'manual') ` +
+      `on conflict (retailer_id, external_id) do nothing;`,
+  );
+}
+
 fs.writeFileSync(path.join(root, "supabase/seed.sql"), lines.join("\n") + "\n");
-console.log(`Wrote supabase/seed.sql (${plRetailers.length + czRetailers.length} retailers, ${sephoraBrands.length + czBrands.length} brands, ${categories.length} categories, ${expandedProducts.length} promotions)`);
+console.log(`Wrote supabase/seed.sql (${plRetailers.length + czRetailers.length} retailers, ${sephoraBrands.length + czBrands.length} brands, ${categories.length} categories, ${expandedProducts.length} promotions, ${expandedProducts.length} products)`);

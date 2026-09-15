@@ -6,12 +6,14 @@ import {
   DashboardRounded,
   FactCheckRounded,
   FilterAltRounded,
+  Inventory2Rounded,
   LocalOfferRounded,
   MenuRounded,
   StorefrontRounded,
 } from "@mui/icons-material";
 import {
   AppBar,
+  Alert,
   Box,
   Button,
   Drawer,
@@ -22,6 +24,7 @@ import {
   ListItemText,
   MenuItem,
   Select,
+  Snackbar,
   ThemeProvider,
   Toolbar,
   Typography,
@@ -47,6 +50,7 @@ import {
 import BrandAnalytics from "./pages/BrandAnalytics/BrandAnalytics";
 import ProductDetail from "./pages/ProductDetail/ProductDetail";
 import Promotions from "./pages/Promotions/Promotions";
+import Products from "./pages/Products/Products";
 import PromotionalCalendar from "./pages/PromotionalCalendar/PromotionalCalendar";
 import PromotionFilterModal from "./components/PromotionFilterModal";
 import AssistantWidget from "./components/Assistant/AssistantWidget";
@@ -62,6 +66,7 @@ const navigation = [
     icon: <CalendarMonthRounded />,
   },
   { label: "Promotions", path: "/promotions", icon: <LocalOfferRounded /> },
+  { label: "Product catalog", path: "/product-catalog", icon: <Inventory2Rounded /> },
   { label: "Brand analytics", path: "/analytics", icon: <BarChartRounded /> },
   { label: "Store comparison", path: "/stores", icon: <StorefrontRounded /> },
   { label: "Review queue", path: "/review-queue", icon: <FactCheckRounded /> },
@@ -93,25 +98,25 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
             onClick={onNavigate}
             className="rounded-lg transition-all"
             sx={{
-              color: selected ? "#ffffff" : "#9199a6",
-              backgroundColor: selected ? "#2b2f39 !important" : "transparent",
+              color: selected ? "#ffffff" : "#a1a1aa",
+              backgroundColor: selected ? "#1e2c31 !important" : "transparent",
               "&.Mui-selected": {
-                backgroundColor: "#2b2f39",
+                backgroundColor: "#1e2c31",
                 color: "#ffffff",
                 boxShadow: "0 2px 6px rgba(0,0,0,0.18)",
               },
               "&.Mui-selected:hover": {
-                backgroundColor: "#323744",
+                backgroundColor: "#3f3f46",
               },
               "&:hover": {
-                backgroundColor: "#22252c",
+                backgroundColor: "#0a0a0a",
               },
             }}
           >
             <ListItemIcon
               sx={{
                 minWidth: 36,
-                color: selected ? "#78a1ff" : "inherit",
+                color: selected ? "#c1fbd4" : "inherit",
               }}
             >
               {item.icon}
@@ -134,7 +139,7 @@ function Navigation({ onNavigate }: { onNavigate: () => void }) {
 }
 
 function AppLayout() {
-  const { role, setRole, filters, setFilters } = useAppContext();
+  const { role, setRole, filters, setFilters, toast, clearToast } = useAppContext();
   const [filterOpen, setFilterOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
@@ -143,8 +148,8 @@ function AppLayout() {
   const currentPage =
     navigation.find((item) => item.path === location.pathname) ?? navigation[0];
   const drawer = (
-    <Box className="flex h-full flex-col bg-[#1a1d23]">
-      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#2b2f38]">
+    <Box className="flex h-full flex-col bg-[#000000]">
+      <Box className="flex items-center justify-between px-5 py-5 border-b border-[#1e2c31]">
         <Box>
           <Box className="flex items-center gap-2">
             <Typography
@@ -153,7 +158,7 @@ function AppLayout() {
                 color: "#ffffff",
                 fontSize: 20,
                 letterSpacing: "0.18em",
-                fontFamily: "Open Sans, sans-serif",
+                fontFamily: "Inter, sans-serif",
                 textTransform: "uppercase",
               }}
             >
@@ -161,8 +166,8 @@ function AppLayout() {
             </Typography>
             <Box
               sx={{
-                backgroundColor: "#4f82f7",
-                color: "white",
+                backgroundColor: "#c1fbd4",
+                color: "#000000",
                 fontSize: 9,
                 fontWeight: 600,
                 px: 0.8,
@@ -177,7 +182,7 @@ function AppLayout() {
           </Box>
           <Typography
             sx={{
-                color: "#aeb5c0",
+                color: "#a1a1aa",
               fontSize: 10.5,
               fontWeight: 600,
               letterSpacing: 1.5,
@@ -198,10 +203,10 @@ function AppLayout() {
         )}
       </Box>
 
-        <Box className="mx-3.5 my-3 rounded-xl bg-[#23262e] p-3 text-white">
+        <Box className="mx-3.5 my-3 rounded-xl bg-[#0a0a0a] p-3 text-white">
         <Typography
           sx={{
-            color: "#78a1ff",
+            color: "#c1fbd4",
             fontSize: 10,
             fontWeight: 500,
             letterSpacing: 1.2,
@@ -225,7 +230,7 @@ function AppLayout() {
 
       <Navigation onNavigate={() => setMobileOpen(false)} />
 
-      <Box className="mt-auto border-t border-[#2b2f38] p-4 bg-[#14161b]">
+      <Box className="mt-auto border-t border-[#1e2c31] p-4 bg-[#0a0a0a]">
         <Box className="flex items-center gap-2">
           <Box
             sx={{
@@ -235,7 +240,7 @@ function AppLayout() {
               backgroundColor: "#10b981",
             }}
           />
-            <Typography sx={{ color: "#9199a6", fontSize: 11, fontWeight: 500 }}>
+            <Typography sx={{ color: "#a1a1aa", fontSize: 11, fontWeight: 500 }}>
             Catalog synced live • 2026
           </Typography>
         </Box>
@@ -250,9 +255,9 @@ function AppLayout() {
         elevation={0}
         sx={{
           display: { md: "none" },
-          backgroundColor: "#1a1d23",
+          backgroundColor: "#000000",
           color: "#ffffff",
-          borderBottom: "1px solid #2b2f38",
+          borderBottom: "1px solid #1e2c31",
         }}
       >
         <Toolbar className="justify-between">
@@ -269,7 +274,7 @@ function AppLayout() {
               sx={{
                 fontSize: 18,
                 letterSpacing: "0.15em",
-                fontFamily: "Open Sans, sans-serif",
+                fontFamily: "Inter, sans-serif",
               }}
             >
               SEPHORA
@@ -277,8 +282,8 @@ function AppLayout() {
           </Box>
           <Box
             sx={{
-              backgroundColor: "#4f82f7",
-              color: "white",
+              backgroundColor: "#c1fbd4",
+              color: "#000000",
               fontSize: 10,
               fontWeight: 800,
               px: 1,
@@ -323,7 +328,7 @@ function AppLayout() {
                   fontSize: { xs: 24, md: 30 },
                   fontWeight: 500,
                   letterSpacing: "-0.02em",
-                  fontFamily: "Open Sans, sans-serif",
+                  fontFamily: "Inter, sans-serif",
                 }}
               >
                 {currentPage.label}
@@ -339,20 +344,20 @@ function AppLayout() {
               <Button
                 variant="outlined"
                 size="small"
-                startIcon={<FilterAltRounded sx={{ color: "#4f82f7" }} />}
+                startIcon={<FilterAltRounded sx={{ color: "#000000" }} />}
                 onClick={() => setFilterOpen(true)}
                 sx={{
                   display: { xs: "none", sm: "inline-flex" },
-                  borderColor: "#dce1e8",
-                  color: "#20242b",
+                  borderColor: "#000000",
+                  color: "#000000",
                   backgroundColor: "#ffffff",
                   fontSize: 13,
                   fontWeight: 500,
                   px: 2,
                   py: 0.8,
                   "&:hover": {
-                    borderColor: "#4f82f7",
-                    backgroundColor: "#f5f8ff",
+                    borderColor: "#000000",
+                    backgroundColor: "#d4f9e0",
                   },
                 }}
               >
@@ -392,6 +397,18 @@ function AppLayout() {
         }}
       />
       <AssistantWidget />
+      <Snackbar
+        open={Boolean(toast)}
+        autoHideDuration={4500}
+        onClose={clearToast}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        {toast ? (
+          <Alert onClose={clearToast} severity={toast.severity} variant="filled" sx={{ width: "100%" }}>
+            {toast.message}
+          </Alert>
+        ) : undefined}
+      </Snackbar>
     </Box>
   );
 }
@@ -406,6 +423,7 @@ function App() {
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<PromotionalCalendar />} />
               <Route path="/promotions" element={<Promotions />} />
+              <Route path="/product-catalog" element={<Products />} />
               <Route path="/products/:productId" element={<ProductDetail />} />
               <Route path="/analytics" element={<BrandAnalytics />} />
               <Route path="/stores" element={<StoreComparison />} />

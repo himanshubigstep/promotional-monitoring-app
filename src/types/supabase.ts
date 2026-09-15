@@ -70,6 +70,82 @@ export type Database = {
         }
         Relationships: []
       }
+      products: {
+        Row: {
+          brand_id: string | null
+          category_id: string | null
+          created_at: string
+          currency: string | null
+          external_id: string | null
+          id: string
+          image_url: string | null
+          last_seen_at: string
+          market: string
+          name: string
+          price: number | null
+          product_url: string | null
+          retailer_id: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          currency?: string | null
+          external_id?: string | null
+          id?: string
+          image_url?: string | null
+          last_seen_at?: string
+          market: string
+          name: string
+          price?: number | null
+          product_url?: string | null
+          retailer_id: string
+          source?: string
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string | null
+          category_id?: string | null
+          created_at?: string
+          currency?: string | null
+          external_id?: string | null
+          id?: string
+          image_url?: string | null
+          last_seen_at?: string
+          market?: string
+          name?: string
+          price?: number | null
+          product_url?: string | null
+          retailer_id?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_retailer_id_fkey"
+            columns: ["retailer_id"]
+            isOneToOne: false
+            referencedRelation: "retailers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -169,6 +245,7 @@ export type Database = {
           parent_promotion_id: string | null
           price: number | null
           price_after_discount: number | null
+          product_id: string | null
           promotion_type: string | null
           rating: number | null
           rejection_reason: string | null
@@ -201,6 +278,7 @@ export type Database = {
           parent_promotion_id?: string | null
           price?: number | null
           price_after_discount?: number | null
+          product_id?: string | null
           promotion_type?: string | null
           rating?: number | null
           rejection_reason?: string | null
@@ -233,6 +311,7 @@ export type Database = {
           parent_promotion_id?: string | null
           price?: number | null
           price_after_discount?: number | null
+          product_id?: string | null
           promotion_type?: string | null
           rating?: number | null
           rejection_reason?: string | null
@@ -267,6 +346,13 @@ export type Database = {
             columns: ["parent_promotion_id"]
             isOneToOne: false
             referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {

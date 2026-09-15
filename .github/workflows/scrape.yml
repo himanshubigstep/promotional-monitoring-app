@@ -4,10 +4,14 @@ on:
   schedule:
     # 05:00 UTC daily — after most PL retailers refresh overnight offers.
     - cron: "0 5 * * *"
+    # 06:00 UTC every Monday — the product catalog crawl visits far more
+    # pages per retailer than the promo scrape, so it runs weekly, not daily.
+    - cron: "0 6 * * 1"
   workflow_dispatch: {}
 
 jobs:
   scrape:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 5 * * *'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -31,3 +35,28 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: npm run scrape
+
+  scrape-products:
+    if: github.event_name != 'schedule' || github.event.schedule == '0 6 * * 1'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: scraper
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies (installs Chromium via postinstall)
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Run product catalog crawl
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run scrape:products

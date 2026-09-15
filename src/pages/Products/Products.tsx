@@ -1,0 +1,366 @@
+import { AddRounded, SearchRounded, ImageRounded } from "@mui/icons-material";
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Modal,
+  TextField,
+  Typography,
+} from "@mui/material";
+import { useMemo, useState } from "react";
+import { useDropzone } from "react-dropzone";
+import { useAppContext } from "../../context/AppContext";
+import AppPagination from "../../components/AppPagination";
+import FormField from "../../components/FormField";
+
+const fallbackImage =
+  "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
+const pageSize = 15;
+
+const emptyForm = {
+  name: "",
+  brand: "",
+  category: "",
+  retailer: "",
+  price: "",
+  imageUrl: "",
+};
+
+export default function Products() {
+  const {
+    productCatalog,
+    retailers: retailerOptions,
+    categories,
+    brandsByMarket,
+    filters,
+    canEdit,
+    addCatalogProduct,
+    showToast,
+  } = useAppContext();
+  const [search, setSearch] = useState("");
+  const [retailerFilter, setRetailerFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [addOpen, setAddOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+  const [imagePreview, setImagePreview] = useState("");
+  const selectedMarket = retailerOptions.find((r) => r.name === form.retailer)?.market ?? "PL";
+  const brandOptions = brandsByMarket[selectedMarket];
+  const onDrop = (files: File[]) => {
+    const file = files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const value = typeof reader.result === "string" ? reader.result : "";
+      setForm((current) => ({ ...current, imageUrl: value }));
+      setImagePreview(value);
+    };
+    reader.readAsDataURL(file);
+  };
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: { "image/*": [".png", ".jpg", ".jpeg", ".webp"] },
+    multiple: false,
+    maxFiles: 1,
+    maxSize: 5 * 1024 * 1024,
+  });
+
+  const marketRetailers = retailerOptions.filter(
+    (r) => filters.market === "All" || r.market === filters.market,
+  );
+
+  const filteredProducts = useMemo(
+    () =>
+      productCatalog.filter((product) => {
+        const searchValue = search.trim().toLowerCase();
+        return (
+          (filters.market === "All" || product.market === filters.market) &&
+          (retailerFilter === "All" || product.retailer === retailerFilter) &&
+          (!searchValue ||
+            product.name.toLowerCase().includes(searchValue) ||
+            product.brand.toLowerCase().includes(searchValue))
+        );
+      }),
+    [productCatalog, filters.market, retailerFilter, search],
+  );
+  const visibleProducts = filteredProducts.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
+
+  const handleAdd = async () => {
+    if (!form.name || !form.brand || !form.retailer) return;
+    setSaving(true);
+    try {
+      const retailer = retailerOptions.find((r) => r.name === form.retailer);
+      await addCatalogProduct({
+        name: form.name,
+        brand: form.brand,
+        category: form.category,
+        retailer: form.retailer,
+        market: retailer?.market ?? "PL",
+        price: form.price ? Number(form.price) : undefined,
+        currency: retailer?.market === "CZ" ? "CZK" : "PLN",
+        imageUrl: form.imageUrl || undefined,
+      });
+      showToast("Product added to the catalog.");
+      setAddOpen(false);
+      setForm(emptyForm);
+      setImagePreview("");
+    } catch (err) {
+      showToast("Unable to add the product. The database may be unavailable.", "error");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Box className="flex flex-col gap-5">
+      <Box className="flex flex-wrap items-center justify-between gap-3">
+        <Box>
+          <Typography
+            sx={{ color: "#20242b", fontSize: 16, fontWeight: 500, letterSpacing: "-0.01em" }}
+          >
+            Product Catalog
+          </Typography>
+          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
+            Every product our scraper has found across all monitored stores — pick from
+            these when creating a promotion, even before a campaign exists for it.
+          </Typography>
+        </Box>
+        {canEdit && (
+          <Button
+            variant="contained"
+            startIcon={<AddRounded />}
+            onClick={() => setAddOpen(true)}
+            sx={{
+              backgroundColor: "#22252b",
+              color: "#ffffff",
+              textTransform: "none",
+              borderRadius: "8px",
+              fontWeight: 700,
+              fontSize: 13,
+              px: 2.5,
+              "&:hover": { backgroundColor: "#343942" },
+            }}
+          >
+            Add product
+          </Button>
+        )}
+      </Box>
+
+      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
+        <Box className="border-b border-[#e7eaee] p-4 flex flex-wrap items-center gap-3">
+          <TextField
+            size="small"
+            placeholder="Search products or brands"
+            value={search}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
+            slotProps={{
+              input: { startAdornment: <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} /> },
+            }}
+            sx={{ minWidth: 280 }}
+          />
+          <Box className="flex flex-wrap gap-1.5">
+            <Chip
+              label="All stores"
+              size="small"
+              onClick={() => {
+                setRetailerFilter("All");
+                setPage(1);
+              }}
+              sx={{
+                backgroundColor: retailerFilter === "All" ? "#22252b" : "#eef1f4",
+                color: retailerFilter === "All" ? "#ffffff" : "#737b88",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            />
+            {marketRetailers.map((retailer) => (
+              <Chip
+                key={retailer.id}
+                label={retailer.name}
+                size="small"
+                onClick={() => {
+                  setRetailerFilter(retailer.name);
+                  setPage(1);
+                }}
+                sx={{
+                  backgroundColor: retailerFilter === retailer.name ? "#22252b" : "#eef1f4",
+                  color: retailerFilter === retailer.name ? "#ffffff" : "#737b88",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          </Box>
+        </Box>
+
+        {filteredProducts.length === 0 ? (
+          <Typography sx={{ color: "#737b88", fontSize: 13, py: 6, textAlign: "center" }}>
+            No products found yet. Once the scraper's catalog crawl runs, products from
+            every monitored store will show up here.
+          </Typography>
+        ) : (
+          <Box className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-5">
+            {visibleProducts.map((product) => (
+              <Box
+                key={product.id}
+                className="overflow-hidden rounded-2xl border border-[#e7eaee] bg-white transition-all hover:border-[#4f82f7] hover:shadow-md"
+              >
+                <Box className="relative h-32 bg-[#f4f6f8]">
+                  <img
+                    src={product.imageUrl || fallbackImage}
+                    alt={product.name}
+                    className="h-full w-full object-cover"
+                    onError={(event) => {
+                      event.currentTarget.onerror = null;
+                      event.currentTarget.src = fallbackImage;
+                    }}
+                  />
+                  <Chip
+                    label={product.retailer}
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      left: 8,
+                      top: 8,
+                      backgroundColor: product.isClient ? "#22252b" : "#ffffff",
+                      color: product.isClient ? "#ffffff" : "#20242b",
+                      fontSize: 10,
+                      fontWeight: 800,
+                      letterSpacing: "0.02em",
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.12)",
+                    }}
+                  />
+                </Box>
+                <Box className="p-3">
+                  <Typography
+                    sx={{
+                      color: "#737b88",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: "0.05em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {product.brand || "Unknown brand"}
+                  </Typography>
+                  <Typography
+                    sx={{ color: "#20242b", fontSize: 12.5, fontWeight: 500, lineHeight: 1.3, mt: 0.25 }}
+                  >
+                    {product.name}
+                  </Typography>
+                  <Box className="mt-1 flex items-center justify-between">
+                    <Typography sx={{ color: "#737b88", fontSize: 11 }}>
+                      {product.category || "Uncategorized"}
+                    </Typography>
+                    {product.price != null && (
+                      <Typography sx={{ color: "#20242b", fontSize: 12, fontWeight: 700 }}>
+                        {product.price} {product.currency}
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            ))}
+          </Box>
+        )}
+        {filteredProducts.length > 0 && (
+          <AppPagination
+            count={Math.ceil(filteredProducts.length / pageSize)}
+            page={page}
+            onChange={setPage}
+            total={filteredProducts.length}
+            pageSize={pageSize}
+            itemLabel="products"
+          />
+        )}
+      </Card>
+
+      <Modal open={addOpen} onClose={() => setAddOpen(false)}>
+        <Box
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e7eaee]"
+        >
+          <Typography sx={{ color: "#20242b", fontSize: 18, fontWeight: 700, mb: 3 }}>
+            Add a product
+          </Typography>
+          <Box className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <FormField
+              className="sm:col-span-2"
+              label="Product name"
+              value={form.name}
+              onValueChange={(value) => setForm((f) => ({ ...f, name: String(value) }))}
+              required
+              placeholder="e.g. Advanced Night Repair Serum"
+            />
+            <FormField
+              label="Brand"
+              type="select"
+              value={form.brand}
+              onValueChange={(value) => setForm((f) => ({ ...f, brand: String(value) }))}
+              options={brandOptions.map((brand) => ({ label: brand, value: brand }))}
+              required
+              placeholder="Choose a scraped brand"
+            />
+            <FormField
+              type="select"
+              label="Category"
+              value={form.category}
+              onValueChange={(value) => setForm((f) => ({ ...f, category: String(value) }))}
+              options={categories.map((c) => ({ label: c.name, value: c.name }))}
+              placeholder="Choose a category"
+            />
+            <FormField
+              type="select"
+              label="Retailer"
+              value={form.retailer}
+              onValueChange={(value) => setForm((f) => ({ ...f, retailer: String(value) }))}
+              options={retailerOptions.map((r) => ({ label: `${r.name} (${r.market})`, value: r.name }))}
+              required
+              placeholder="Choose a store"
+            />
+            <FormField
+              type="number"
+              label="Price"
+              value={form.price}
+              onValueChange={(value) => setForm((f) => ({ ...f, price: String(value) }))}
+              placeholder="e.g. 199"
+            />
+            <Box {...getRootProps()} className={`sm:col-span-2 cursor-pointer rounded-lg border-2 border-dashed p-4 text-center ${isDragActive ? "border-[#000000] bg-[#d4f9e0]" : "border-[#e4e4e7]"}`}>
+              <input {...getInputProps()} />
+              <Typography sx={{ color: "#000000", fontSize: 13, fontWeight: 600 }}>
+                {isDragActive ? "Drop image here" : "Upload or drop product image"}
+              </Typography>
+              <Button component="span" variant="text" startIcon={<ImageRounded />}>Choose image</Button>
+              {imagePreview && <img src={imagePreview} alt="Product preview" className="mt-2 h-24 w-24 rounded-lg object-cover" />}
+            </Box>
+          </Box>
+          <Box className="mt-5 flex justify-end gap-2">
+            <Button onClick={() => setAddOpen(false)} sx={{ textTransform: "none", fontWeight: 700 }}>
+              Cancel
+            </Button>
+            <Button
+              variant="contained"
+              disabled={saving}
+              onClick={handleAdd}
+              sx={{
+                backgroundColor: "#22252b",
+                color: "#ffffff",
+                textTransform: "none",
+                fontWeight: 700,
+                "&:hover": { backgroundColor: "#343942" },
+              }}
+            >
+              {saving ? "Saving…" : "Add product"}
+            </Button>
+          </Box>
+        </Box>
+      </Modal>
+    </Box>
+  );
+}

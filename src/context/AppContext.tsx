@@ -12,14 +12,16 @@ import {
   czProducts as initialCzProducts,
   plProducts as initialPlProducts,
 } from "../data/marketProducts";
-import type { Product, PromotionType } from "../data/productTypes";
+import type { CatalogProduct, Product, PromotionType } from "../data/productTypes";
 import {
   addBrandRow,
+  addProductRow,
   deletePromotionRow,
   insertPromotion,
   loadApprovedData,
   updatePromotionRow,
   type CategoryOption,
+  type ProductInput,
   type RetailerOption,
 } from "../lib/promotionsData";
 
@@ -129,6 +131,10 @@ type AppContextValue = {
   promotions: Promotion[];
   products: Product[];
   productsList: Product[];
+  // The real store catalog — "this retailer carries this product" —
+  // independent of promotions. See supabase/migrations/0006_products.sql
+  // and CatalogProduct in data/productTypes.ts.
+  productCatalog: CatalogProduct[];
   brands: string[];
   brandsByMarket: Record<"PL" | "CZ", string[]>;
   retailers: RetailerOption[];
@@ -138,6 +144,7 @@ type AppContextValue = {
   updatePromotion: (id: string, promotion: Omit<Promotion, "id" | "createdAt">) => Promise<void>;
   addBrand: (brand: string, market?: "PL" | "CZ") => Promise<void>;
   addProduct: (product: Product) => Promise<void>;
+  addCatalogProduct: (product: ProductInput) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   deletePromotion: (id: string) => Promise<void>;
   canEdit: boolean;
@@ -145,6 +152,9 @@ type AppContextValue = {
   setFilters: (filters: PromotionFilters) => void;
   loading: boolean;
   usingFallbackData: boolean;
+  showToast: (message: string, severity?: "success" | "error") => void;
+  toast: { message: string; severity: "success" | "error" } | null;
+  clearToast: () => void;
 };
 
 const AppContext = createContext<AppContextValue | undefined>(undefined);
@@ -175,6 +185,33 @@ function promotionsFromProducts(products: Product[]): Promotion[] {
       averageMarketDiscount: `${product.competitorDiscount}%`,
       createdAt: product.fromDate,
     }));
+}
+
+// Used only when Supabase is unreachable at load — same reasoning as
+// promotionsFromProducts above. Dedupes by name+retailer since the static
+// catalog has one entry per historical promotion, not per store listing.
+function catalogFromProducts(products: Product[]): CatalogProduct[] {
+  const seen = new Set<string>();
+  const catalog: CatalogProduct[] = [];
+  for (const product of products) {
+    const key = `${product.name}|${product.retailer}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    catalog.push({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      category: product.category,
+      retailer: product.retailer,
+      market: product.market,
+      price: product.price ?? null,
+      currency: product.currency ?? null,
+      imageUrl: product.image ?? null,
+      productUrl: null,
+      isClient: product.isClient,
+    });
+  }
+  return catalog;
 }
 
 function staticRetailerOptions(): RetailerOption[] {
@@ -227,6 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>("Admin");
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [productCatalog, setProductCatalog] = useState<CatalogProduct[]>([]);
   const [brandsByMarket, setBrandsByMarket] = useState<Record<"PL" | "CZ", string[]>>({
     PL: [],
     CZ: [],
@@ -238,6 +276,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<PromotionFilters>(emptyPromotionFilters);
   const [loading, setLoading] = useState(true);
   const [usingFallbackData, setUsingFallbackData] = useState(false);
+  const [toast, setToast] = useState<{ message: string; severity: "success" | "error" } | null>(null);
+  const showToast = useCallback(
+    (message: string, severity: "success" | "error" = "success") => {
+      setToast({ message, severity });
+    },
+    [],
+  );
+  const clearToast = useCallback(() => setToast(null), []);
   const lastAddedProduct = useMemo(
     () => products.find((product) => product.id === lastAddedProductId) ?? null,
     [products, lastAddedProductId],
@@ -247,6 +293,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const data = await loadApprovedData();
     setPromotions(data.promotions);
     setProducts(data.products);
+    setProductCatalog(data.productCatalog);
     setBrandsByMarket(data.brandsByMarket);
     setRetailers(data.retailers);
     setCategories(data.categories);
@@ -262,6 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (cancelled) return;
         setPromotions(data.promotions);
         setProducts(data.products);
+        setProductCatalog(data.productCatalog);
         setBrandsByMarket(data.brandsByMarket);
         setRetailers(data.retailers);
         setCategories(data.categories);
@@ -272,6 +320,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const fallbackProducts = [...initialPlProducts, ...initialCzProducts];
         setPromotions(promotionsFromProducts(fallbackProducts));
         setProducts(fallbackProducts);
+        setProductCatalog(catalogFromProducts(fallbackProducts));
         setBrandsByMarket({ PL: [...sephoraBrands], CZ: [...czDummyBrands] });
         setRetailers(staticRetailerOptions());
         setCategories(staticCategoryOptions());
@@ -314,10 +363,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         channel: toEnglish(promotion.channel),
       };
       const newId = await insertPromotion(normalizedPromotion);
-      // const data = await refresh();
+      await refresh();
       setLastAddedProductId(newId);
     },
-    [assertWritable],
+    [refresh, assertWritable],
   );
 
   const updatePromotion = useCallback(
@@ -363,10 +412,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         averageMarketDiscount: "",
       };
       const newId = await insertPromotion(promotionInput);
-      // const data = await refresh();
+      await refresh();
       setLastAddedProductId(newId);
     },
-    [assertWritable],
+    [refresh, assertWritable],
+  );
+
+  const addCatalogProduct = useCallback(
+    async (product: ProductInput) => {
+      assertWritable();
+      await addProductRow(product);
+      await refresh();
+    },
+    [refresh, assertWritable],
   );
 
   const deletePromotion = useCallback(
@@ -389,6 +447,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       promotions,
       products,
       productsList: products,
+      productCatalog,
       brands,
       brandsByMarket,
       retailers,
@@ -398,6 +457,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updatePromotion,
       addBrand,
       addProduct,
+      addCatalogProduct,
       deleteProduct,
       deletePromotion,
       canEdit: role !== "Viewer",
@@ -405,11 +465,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setFilters,
       loading,
       usingFallbackData,
+      showToast,
+      toast,
+      clearToast,
     }),
     [
       role,
       promotions,
       products,
+      productCatalog,
       brands,
       brandsByMarket,
       retailers,
@@ -419,11 +483,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       updatePromotion,
       addBrand,
       addProduct,
+      addCatalogProduct,
       deleteProduct,
       deletePromotion,
       filters,
       loading,
       usingFallbackData,
+      showToast,
+      toast,
+      clearToast,
     ],
   );
 

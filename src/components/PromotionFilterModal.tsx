@@ -57,7 +57,7 @@ export default function PromotionFilterModal({
         >
           <Box>
             <Box className="flex items-center gap-2">
-              <FilterAltRounded sx={{ color: "#4f82f7" }} />
+              <FilterAltRounded sx={{ color: "#000000" }} />
               <span className="font-bold text-[#20242b] text-base tracking-tight">
                 Promotion Filters
               </span>

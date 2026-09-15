@@ -23,11 +23,14 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import * as XLSX from "xlsx";
-import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
+import {
+  matchesPromotionFilters,
+  useAppContext,
+} from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
-import DeleteIcon from '@mui/icons-material/Delete';
+import DeleteIcon from "@mui/icons-material/Delete";
 import BrandComparisonTable from "../../components/BrandComparisonTable";
 import { accentTints } from "../../theme/sephoraTheme";
 
@@ -35,18 +38,8 @@ const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 const today = new Date().toISOString().slice(0, 10);
 const months = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
 function getGreeting() {
@@ -64,27 +57,20 @@ const Dashboard = () => {
     products: catalog,
     addPromotion,
     addBrand,
-    addProduct,
     deleteProduct,
     updatePromotion,
+    showToast,
     canEdit,
     brandsByMarket,
   } = useAppContext();
+
   const [catalogSearch, setCatalogSearch] = useState("");
-  const [actionError, setActionError] = useState<string | null>(null);
   const [catalogPage, setCatalogPage] = useState(1);
   const [expiredPage, setExpiredPage] = useState(1);
   const [formOpen, setFormOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
-  const [bulkError, setBulkError] = useState<string | null>(null);
   const [bulkSaving, setBulkSaving] = useState(false);
-  const [bulkTab, setBulkTab] = useState<"brands" | "products">("brands");
-  const [brandRows, setBrandRows] = useState([
-    { brand: "" },
-  ]);
-  const [productRows, setProductRows] = useState([
-    { brandName: "", title: "" },
-  ]);
+  const [brandRows, setBrandRows] = useState([{ brand: "" }]);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
   const [bulkMarket, setBulkMarket] = useState<"PL" | "CZ">(
     filters.market === "All" ? "PL" : (filters.market as "PL" | "CZ"),
@@ -104,22 +90,15 @@ const Dashboard = () => {
   const bulkText =
     bulkMarket === "PL"
       ? {
-        heading: "Import masowy marek i produktów",
+        heading: "Import masowy marek",
         market: "Rynek",
-        tabBrands: "Marki",
-        tabProducts: "Produkty",
         excelTemplate: "Szablon Excel",
-        templateHint: "Nazwa sklepu | Nazwa marki",
         downloadXlsx: "Pobierz szablon (.xlsx)",
         downloadCsv: "Pobierz szablon (.csv)",
         addBrandRow: "+ Dodaj kolejną markę",
-        addProductRow: "+ Dodaj kolejny produkt",
         saveRows: "Zapisz wpisy",
         cancel: "Anuluj",
         brand: "Marka",
-        title: "Tytuł",
-        brandName: "Nazwa marki",
-        delete: "Usuń",
         fileLabel: "Importuj z CSV/XLSX",
         fileHint: "Obsługiwane pliki: .csv, .xlsx, .xls",
         marketOptions: [
@@ -128,22 +107,15 @@ const Dashboard = () => {
         ],
       }
       : {
-        heading: "Hromadný import značek a produktů",
+        heading: "Hromadný import značek",
         market: "Trh",
-        tabBrands: "Značky",
-        tabProducts: "Produkty",
         excelTemplate: "Excel šablona",
-        templateHint: "Název obchodu | Název značky",
         downloadXlsx: "Stáhnout šablonu (.xlsx)",
         downloadCsv: "Stáhnout šablonu (.csv)",
         addBrandRow: "+ Přidat další značku",
-        addProductRow: "+ Přidat další produkt",
         saveRows: "Uložit záznamy",
         cancel: "Zrušit",
         brand: "Značka",
-        title: "Název",
-        brandName: "Název značky",
-        delete: "Smazat",
         fileLabel: "Importovat z CSV/XLSX",
         fileHint: "Podporované soubory: .csv, .xlsx, .xls",
         marketOptions: [
@@ -159,7 +131,6 @@ const Dashboard = () => {
         activeToday: "Dnes aktivní",
         averageDiscount: "Průměrná sleva",
         peakMonth: "Nejvyšší měsíc",
-        trendSubtitle: "Měsíční vývoj slev pro vybraný rok.",
         pulseSubtitle: "Všechny dostupné roky s filtrováním objemu nabídek.",
         ends: "Končí",
       }
@@ -172,14 +143,8 @@ const Dashboard = () => {
         ends: "Kończy się",
       };
 
-  const brandOptions = useMemo(
-    () => brandsByMarket[bulkMarket] || [],
-    [brandsByMarket, bulkMarket],
-  );
-
   const resetBulkRows = () => {
     setBrandRows([{ brand: "" }]);
-    setProductRows([{ brandName: "", title: "" }]);
   };
 
   const downloadBulkTemplate = (format: "csv" | "xlsx") => {
@@ -188,16 +153,10 @@ const Dashboard = () => {
       [bulkMarket === "PL" ? "Nazwa marki" : "Název značky"],
       [bulkMarket === "PL" ? "L'Oréal" : "L'Oréal"],
     ];
-    const productTemplate = [
-      [bulkText.brandName, bulkText.title],
-      [bulkMarket === "PL" ? "L'Oréal" : "L'Oréal", bulkMarket === "PL" ? "Krem nawilżający" : "Hydratační krém"],
-      [bulkMarket === "PL" ? "Nivea" : "Nivea", bulkMarket === "PL" ? "Serum do twarzy" : "Sérum pro obličej"],
-    ];
-    const rows = bulkTab === "brands" ? brandTemplate : productTemplate;
-    const fileName = `bulk-${bulkTab}-${bulkMarket.toLowerCase()}.${format}`;
+    const fileName = `bulk-brands-${bulkMarket.toLowerCase()}.${format}`;
 
     if (format === "csv") {
-      const csv = rows
+      const csv = brandTemplate
         .map((row) =>
           row
             .map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
@@ -217,16 +176,12 @@ const Dashboard = () => {
     }
 
     const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    const worksheet = XLSX.utils.aoa_to_sheet(brandTemplate);
     XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
     XLSX.writeFile(workbook, fileName);
   };
 
-  const updateBrandRow = (
-    index: number,
-    field: "brand",
-    value: string,
-  ) => {
+  const updateBrandRow = (index: number, field: "brand", value: string) => {
     setBrandRows((current) =>
       current.map((row, rowIndex) =>
         rowIndex === index ? { ...row, [field]: value } : row,
@@ -234,42 +189,13 @@ const Dashboard = () => {
     );
   };
 
-  const updateProductRow = (
-    index: number,
-    field: "brandName" | "title",
-    value: string,
-  ) => {
-    setProductRows((current) =>
-      current.map((row, rowIndex) =>
-        rowIndex === index ? { ...row, [field]: value } : row,
-      ),
-    );
-  };
-
   const addBrandRow = () =>
-    setBrandRows((current) => [
-      ...current,
-      { brand: "" },
-    ]);
-  const addProductRow = () =>
-    setProductRows((current) => [
-      ...current,
-      { brandName: "", title: "" },
-    ]);
+    setBrandRows((current) => [...current, { brand: "" }]);
 
   const removeBrandRow = (index: number) => {
     setBrandRows((current) => {
       if (current.length === 1) {
         return [{ brand: "" }];
-      }
-      return current.filter((_, rowIndex) => rowIndex !== index);
-    });
-  };
-
-  const removeProductRow = (index: number) => {
-    setProductRows((current) => {
-      if (current.length === 1) {
-        return [{ brandName: "", title: "" }];
       }
       return current.filter((_, rowIndex) => rowIndex !== index);
     });
@@ -283,117 +209,55 @@ const Dashboard = () => {
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
-    const rows = XLSX.utils.sheet_to_json<Record<string, string | number | null>>(
-      worksheet,
-      { defval: "" },
-    );
+    const rows = XLSX.utils.sheet_to_json<
+      Record<string, string | number | null>
+    >(worksheet, { defval: "" });
 
     const normalize = (value: string | number | null | undefined) =>
-      typeof value === "string" ? value.trim() : value == null ? "" : String(value).trim();
+      typeof value === "string"
+        ? value.trim()
+        : value == null
+          ? ""
+          : String(value).trim();
 
-    if (bulkTab === "brands") {
-      const items = rows
-        .map((row) => {
-          const brand = normalize(
-            row.Brand ?? row.Marka ?? row["Brand Name"] ?? row["Nazwa marki"],
-          );
-          return { brand };
-        })
-        .filter((row) => row.brand);
+    const items = rows
+      .map((row) => {
+        const brand = normalize(
+          row.Brand ?? row.Marka ?? row["Brand Name"] ?? row["Nazwa marki"],
+        );
+        return { brand };
+      })
+      .filter((row) => row.brand);
 
-      setBrandRows(items.length > 0 ? items : [{ brand: "" }]);
-    } else {
-      const items = rows
-        .map((row) => {
-          const brandName = normalize(
-            row["Brand Name"] ?? row["Nazwa marki"] ?? row.Brand ?? row.Marka,
-          );
-          const title = normalize(
-            row.Title ?? row.Tytuł ?? row["Product Name"] ?? row["Nazwa produktu"],
-          );
-          return { brandName, title };
-        })
-        .filter((row) => row.brandName || row.title);
-
-      setProductRows(
-        items.length > 0 ? items : [{ brandName: "", title: "" }],
-      );
-    }
-
+    setBrandRows(items.length > 0 ? items : [{ brand: "" }]);
     event.target.value = "";
   };
 
   const handleBulkSave = async (event?: React.FormEvent) => {
     event?.preventDefault();
-    setBulkError(null);
     setBulkSaving(true);
     try {
-      if (bulkTab === "brands") {
-        // Sequential, not Promise.all: two rows with the same new brand
-        // name racing the same lookup-or-create step could otherwise both
-        // try to insert it.
-        for (const row of brandRows) {
-          const brandName = row.brand.trim();
-          if (!brandName) continue;
-          await addBrand(brandName, bulkMarket);
-        }
-      } else {
-        const defaultRetailer = bulkMarket === "PL" ? "Douglas" : "CZ Demo Store Prague";
-
-        for (let index = 0; index < productRows.length; index += 1) {
-          const row = productRows[index];
-          const brandName = row.brandName.trim();
-          const title = row.title.trim();
-          if (!brandName || !title) continue;
-
-          const productId = `BULK-${bulkMarket}-${Date.now()}-${index}`;
-          await addProduct({
-            id: productId,
-            name: title,
-            brand: brandName,
-            category: "Skincare",
-            price: 0,
-            currency: bulkMarket === "CZ" ? "CZK" : "PLN",
-            market: bulkMarket,
-            retailer: defaultRetailer,
-            rating: 0,
-            stock: 1,
-            competitorDiscount: 0,
-            image:
-              "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80",
-            fromDate: today,
-            toDate: today,
-            promotionName: title,
-            description:
-              bulkMarket === "PL"
-                ? `Masowy import produktu dla ${brandName}`
-                : `Hromadně nahraný produkt pro ${brandName}`,
-            promotionDescription:
-              bulkMarket === "PL"
-                ? `Masowy import produktu dla ${brandName}`
-                : `Hromadně nahraný produkt pro ${brandName}`,
-            terms: bulkMarket === "PL" ? "Import masowy" : "Hromadný import",
-            priceAfterDiscount: 0,
-            promotionType: "Fixed promotion",
-          });
-        }
+      for (const row of brandRows) {
+        const brandName = row.brand.trim();
+        if (!brandName) continue;
+        await addBrand(brandName, bulkMarket);
       }
-
+      showToast("Brands saved successfully.");
       setBulkModalOpen(false);
       resetBulkRows();
     } catch (err) {
-      setBulkError(err instanceof Error ? err.message : "Failed to save.");
+      showToast("Unable to save. The database may be unavailable.", "error");
     } finally {
       setBulkSaving(false);
     }
   };
 
   async function handleDelete(id: string) {
-    setActionError(null);
     try {
       await deleteProduct(id);
+      showToast("Promotion deleted successfully.");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete.");
+      showToast("Unable to delete. The database may be unavailable.", "error");
     }
   }
 
@@ -403,9 +267,7 @@ const Dashboard = () => {
         .filter((product) => {
           return (
             (product.name.toLowerCase().includes(catalogSearch.toLowerCase()) ||
-              product.brand
-                .toLowerCase()
-                .includes(catalogSearch.toLowerCase()) ||
+              product.brand.toLowerCase().includes(catalogSearch.toLowerCase()) ||
               product.category
                 .toLowerCase()
                 .includes(catalogSearch.toLowerCase())) &&
@@ -421,7 +283,9 @@ const Dashboard = () => {
         }),
     [catalog, catalogSearch, filters],
   );
+
   const chartProducts = filteredProducts;
+
   const analytics = useMemo(() => {
     const monthValues = months.map((_, monthIndex) => {
       const month = String(monthIndex + 1).padStart(2, "0");
@@ -457,6 +321,7 @@ const Dashboard = () => {
       peakMonth: months[monthValues.indexOf(peak)],
     };
   }, [chartProducts]);
+
   const yearlyTrend = useMemo(
     () =>
       Array.from(
@@ -493,21 +358,26 @@ const Dashboard = () => {
         }),
     [catalog, filteredProducts],
   );
+
   const catalogProducts = filteredProducts.slice(
     (catalogPage - 1) * catalogPageSize,
     catalogPage * catalogPageSize,
   );
+
   const expiredProducts = useMemo(
     () =>
       catalog.filter(
-        product => product.toDate < today && matchesPromotionFilters(product, filters),
+        (product) =>
+          product.toDate < today && matchesPromotionFilters(product, filters),
       ),
     [catalog, filters],
   );
+
   const visibleExpiredProducts = expiredProducts.slice(
     (expiredPage - 1) * expiredPageSize,
     expiredPage * expiredPageSize,
   );
+
   useEffect(() => {
     setCatalogPage(1);
     setExpiredPage(1);
@@ -612,7 +482,6 @@ const Dashboard = () => {
                     size="small"
                     onClick={() => {
                       resetBulkRows();
-                      setBulkTab("brands");
                       setBulkModalOpen(true);
                     }}
                     sx={{
@@ -627,15 +496,12 @@ const Dashboard = () => {
                       },
                     }}
                   >
-                    Bulk upload brands or products
+                    Bulk upload brands
                   </Button>
                 </>
               )}
             </Box>
           </Box>
-          {actionError && (
-            <Box sx={{ color: "#ff8a8a", fontSize: 13, mt: 1 }}>{actionError}</Box>
-          )}
           <Typography
             sx={{
               color: "#ffffff",
@@ -648,12 +514,7 @@ const Dashboard = () => {
             Promotional & Competitor Monitor
           </Typography>
           <Typography
-            sx={{
-              color: "#aeb5c0",
-              fontSize: 13.5,
-              mt: 0.8,
-              maxWidth: "500px",
-            }}
+            sx={{ color: "#aeb5c0", fontSize: 13.5, mt: 0.8, maxWidth: "500px" }}
           >
             Track Poland & international retail promotions, analyze discount
             depth across competitors, and optimize campaign timings.
@@ -704,7 +565,6 @@ const Dashboard = () => {
                     color: "#737b88",
                     fontSize: 11.5,
                     fontWeight: 500,
-                    // letterSpacing: "0.05em",
                     textTransform: "uppercase",
                   }}
                 >
@@ -735,7 +595,7 @@ const Dashboard = () => {
               >
                 {value}
               </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12}}>
+              <Typography sx={{ color: "#737b88", fontSize: 12 }}>
                 {detail}
               </Typography>
             </CardContent>
@@ -744,10 +604,7 @@ const Dashboard = () => {
       </Box>
 
       <Box className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card
-          elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
-        >
+        <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
           <CardContent className="!p-6">
             <Box className="mb-5 flex flex-wrap items-start justify-between gap-3">
               <Box>
@@ -800,7 +657,10 @@ const Dashboard = () => {
                   <Box
                     className="w-full max-w-10 rounded-t-sm transition-all"
                     sx={{
-                      height: `${Math.max((value / Math.max(analytics.peak, 1)) * 125, value ? 10 : 2)}px`,
+                      height: `${Math.max(
+                        (value / Math.max(analytics.peak, 1)) * 125,
+                        value ? 10 : 2,
+                      )}px`,
                       backgroundColor:
                         value === analytics.peak
                           ? "#4f82f7"
@@ -820,10 +680,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card
-          elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
-        >
+        <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
           <CardContent className="!p-6">
             <Typography
               sx={{
@@ -919,10 +776,7 @@ const Dashboard = () => {
         </Card>
       </Box>
 
-      <Card
-        elevation={0}
-        className="rounded-2xl border border-[#e7eaee] bg-white"
-      >
+      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
         <CardContent className="!p-6">
           <Box className="mb-5 flex items-center justify-between">
             <Box>
@@ -1127,75 +981,46 @@ const Dashboard = () => {
 
       <Modal open={bulkModalOpen} onClose={() => setBulkModalOpen(false)}>
         <Box
-          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[900px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative border border-[#e7eaee] overflow-hidden"
+          className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[700px] max-h-[90vh] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white shadow-2xl relative border border-[#e7eaee] overflow-hidden"
           sx={{ p: 4 }}
         >
-          {/* Form spans full modal height with flex layout */}
-          <Box component="form" onSubmit={handleBulkSave} className="flex flex-col max-h-[80vh]">
-
-            {/* 1. Header (Fixed at top) */}
+          <Box
+            component="form"
+            onSubmit={handleBulkSave}
+            className="flex flex-col max-h-[80vh]"
+          >
+            {/* Header */}
             <Box className="pb-4">
               <Typography variant="h5" sx={{ fontWeight: 800, fontSize: 22 }}>
                 {bulkText.heading}
               </Typography>
             </Box>
 
-            {/* 2. Scrollable Body (Takes remaining space) */}
+            {/* Scrollable body */}
             <Box className="flex-1 overflow-y-auto py-4 flex flex-col gap-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               <Box>
                 <FormField
                   type="select"
                   label={bulkText.market}
                   value={bulkMarket}
-                  onValueChange={(value) => setBulkMarket(String(value) as "PL" | "CZ")}
+                  onValueChange={(value) =>
+                    setBulkMarket(String(value) as "PL" | "CZ")
+                  }
                   options={bulkText.marketOptions}
                   fullWidth
                 />
               </Box>
 
-              <Box className="flex gap-2">
-                <Button
-                  variant={bulkTab === "brands" ? "contained" : "outlined"}
-                  onClick={() => setBulkTab("brands")}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 500,
-                    backgroundColor: bulkTab === "brands" ? "#22252b" : "transparent",
-                    color: bulkTab === "brands" ? "#ffffff" : "#20242b",
-                    borderColor: "#dce1e8",
-                    "&:hover": {
-                      backgroundColor: bulkTab === "brands" ? "#343942" : "#f5f8ff",
-                    },
-                  }}
-                >
-                  {bulkText.tabBrands}
-                </Button>
-                <Button
-                  variant={bulkTab === "products" ? "contained" : "outlined"}
-                  onClick={() => setBulkTab("products")}
-                  sx={{
-                    textTransform: "none",
-                    fontWeight: 500,
-                    backgroundColor: bulkTab === "products" ? "#22252b" : "transparent",
-                    color: bulkTab === "products" ? "#ffffff" : "#20242b",
-                    borderColor: "#dce1e8",
-                    "&:hover": {
-                      backgroundColor: bulkTab === "products" ? "#343942" : "#f5f8ff",
-                    },
-                  }}
-                >
-                  {bulkText.tabProducts}
-                </Button>
-              </Box>
-
               <Box className="rounded-lg border border-[#e7eaee] bg-[#f4f6f8] p-3">
-                <Typography sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}>
+                <Typography
+                  sx={{ color: "#20242b", fontSize: 12, fontWeight: 800 }}
+                >
                   {bulkText.excelTemplate}
                 </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}>
-                  {bulkTab === "brands"
-                    ? bulkText.brand
-                    : `${bulkText.brandName} | ${bulkText.title}`}
+                <Typography
+                  sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}
+                >
+                  {bulkText.brand}
                 </Typography>
                 <Box className="mt-2 flex flex-col gap-2">
                   <Box className="flex items-center justify-between gap-2">
@@ -1207,7 +1032,10 @@ const Dashboard = () => {
                         borderColor: "#dce1e8",
                         color: "#20242b",
                         fontWeight: 500,
-                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
+                        "&:hover": {
+                          borderColor: "#4f82f7",
+                          backgroundColor: "#f5f8ff",
+                        },
                       }}
                     >
                       {bulkText.fileLabel}
@@ -1233,7 +1061,10 @@ const Dashboard = () => {
                         borderColor: "#dce1e8",
                         color: "#20242b",
                         fontWeight: 500,
-                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
+                        "&:hover": {
+                          borderColor: "#4f82f7",
+                          backgroundColor: "#f5f8ff",
+                        },
                       }}
                     >
                       {bulkText.downloadXlsx}
@@ -1247,7 +1078,10 @@ const Dashboard = () => {
                         borderColor: "#dce1e8",
                         color: "#20242b",
                         fontWeight: 500,
-                        "&:hover": { borderColor: "#4f82f7", backgroundColor: "#f5f8ff" },
+                        "&:hover": {
+                          borderColor: "#4f82f7",
+                          backgroundColor: "#f5f8ff",
+                        },
                       }}
                     >
                       {bulkText.downloadCsv}
@@ -1256,82 +1090,55 @@ const Dashboard = () => {
                 </Box>
               </Box>
 
-              {bulkTab === "brands" ? (
-                <Box className="flex flex-col gap-2">
-                  {brandRows.map((row, index) => (
-                    <Box key={`brand-row-${index}`} className="grid grid-cols-[1fr_50px] gap-2 items-center">
-                      <FormField
-                        type="text"
-                        label={bulkText.brand}
-                        value={row.brand}
-                        onValueChange={(value) => updateBrandRow(index, "brand", String(value))}
-                        placeholder={bulkText.brand}
-                      />
-                      <Button
-                        variant="text"
-                        color="error"
-                        onClick={() => removeBrandRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 500, mt: 2 }}
-                      >
-                        <DeleteIcon fontSize="small" color="error" />
-                      </Button>
-                    </Box>
-                  ))}
-                  <Button
-                    variant="text"
-                    onClick={addBrandRow}
-                    sx={{ textTransform: "none", fontWeight: 500, color: "#ffffff", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#22252b", "&:hover": { backgroundColor: "#343942" } }}
+              <Box className="flex flex-col gap-2">
+                {brandRows.map((row, index) => (
+                  <Box
+                    key={`brand-row-${index}`}
+                    className="grid grid-cols-[1fr_50px] gap-2 items-center"
                   >
-                    {bulkText.addBrandRow}
-                  </Button>
-                </Box>
-              ) : (
-                <Box className="flex flex-col gap-2">
-                  {productRows.map((row, index) => (
-                    <Box key={`product-row-${index}`} className="grid grid-cols-[1fr_1fr_50px] gap-2 items-center">
-                      <FormField
-                        type="select"
-                        label={bulkText.brandName}
-                        value={row.brandName}
-                        onValueChange={(value) => updateProductRow(index, "brandName", String(value))}
-                        options={brandOptions.map((option) => ({ label: option, value: option }))}
-                        fullWidth
-                      />
-                      <FormField
-                        type="text"
-                        label={bulkText.title}
-                        value={row.title}
-                        onValueChange={(value) => updateProductRow(index, "title", String(value))}
-                        placeholder={bulkText.title}
-                      />
-                      <Button
-                        variant="text"
-                        color="error"
-                        onClick={() => removeProductRow(index)}
-                        sx={{ minWidth: 0, px: 0, fontWeight: 500, mt: 2 }}
-                      >
-                        <DeleteIcon fontSize="small" color="error" />
-                      </Button>
-                    </Box>
-                  ))}
-                  <Button
-                    variant="text"
-                    onClick={addProductRow}
-                    sx={{ textTransform: "none", fontWeight: 500, color: "#ffffff", selfAlign: "flex-start", maxWidth: "fit-content", backgroundColor: "#22252b", "&:hover": { backgroundColor: "#343942" } }}
-                  >
-                    {bulkText.addProductRow}
-                  </Button>
-                </Box>
-              )}
+                    <FormField
+                      type="text"
+                      label={bulkText.brand}
+                      value={row.brand}
+                      onValueChange={(value) =>
+                        updateBrandRow(index, "brand", String(value))
+                      }
+                      placeholder={bulkText.brand}
+                    />
+                    <Button
+                      variant="text"
+                      color="error"
+                      onClick={() => removeBrandRow(index)}
+                      sx={{ minWidth: 0, px: 0, fontWeight: 500, mt: 2 }}
+                    >
+                      <DeleteIcon fontSize="small" color="error" />
+                    </Button>
+                  </Box>
+                ))}
+                <Button
+                  variant="text"
+                  onClick={addBrandRow}
+                  sx={{
+                    textTransform: "none",
+                    fontWeight: 500,
+                    color: "#ffffff",
+                    maxWidth: "fit-content",
+                    backgroundColor: "#22252b",
+                    "&:hover": { backgroundColor: "#343942" },
+                  }}
+                >
+                  {bulkText.addBrandRow}
+                </Button>
+              </Box>
             </Box>
 
-            {/* 3. Footer (Always pinned at bottom) */}
+            {/* Footer */}
             <Box className="pt-4 flex flex-col gap-2 bg-white">
-              {bulkError && (
-                <Box sx={{ color: "#e5484d", fontSize: 13 }}>{bulkError}</Box>
-              )}
               <Box className="flex items-center justify-end gap-2">
-                <Button onClick={() => setBulkModalOpen(false)} sx={{ textTransform: "none", fontWeight: 500 }}>
+                <Button
+                  onClick={() => setBulkModalOpen(false)}
+                  sx={{ textTransform: "none", fontWeight: 500 }}
+                >
                   {bulkText.cancel}
                 </Button>
                 <Button
@@ -1350,7 +1157,6 @@ const Dashboard = () => {
                 </Button>
               </Box>
             </Box>
-
           </Box>
         </Box>
       </Modal>
@@ -1363,25 +1169,26 @@ const Dashboard = () => {
           setEditingPromotion(null);
         }}
         onSave={async (promotion) => {
-          setActionError(null);
           try {
             if (editingPromotion) {
               await updatePromotion(editingPromotion.id, promotion);
             } else {
               await addPromotion(promotion);
             }
+            showToast(
+              editingPromotion
+                ? "Promotion updated successfully."
+                : "Promotion saved successfully.",
+            );
             setFormOpen(false);
             setEditingPromotion(null);
           } catch (err) {
-            setActionError(err instanceof Error ? err.message : "Failed to save.");
+            showToast("Unable to save. The database may be unavailable.", "error");
           }
         }}
       />
 
-      <Card
-        elevation={0}
-        className="rounded-2xl border border-[#e7eaee] bg-white"
-      >
+      <Card elevation={0} className="rounded-2xl border border-[#e7eaee] bg-white">
         <CardContent className="!p-6">
           <Box className="mb-4 flex items-center justify-between">
             <Box>

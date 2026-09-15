@@ -22,21 +22,24 @@ export const getMarketProducts = (market: "PL" | "CZ") =>
 export const upsertProductInMarket = (
   market: "PL" | "CZ",
   product: Product,
-  currentList: Product[] = getMarketProducts(market),
+  currentList?: Product[],
 ) => {
-  const isDuplicate = currentList.some(
+  const sourceList = currentList ?? getMarketProducts(market);
+  const isDuplicate = sourceList.some(
     (item) =>
       item.id === product.id ||
       (item.name.toLowerCase() === product.name.toLowerCase() &&
         item.brand.toLowerCase() === product.brand.toLowerCase()),
   );
 
-  const nextList = isDuplicate ? currentList : [product, ...currentList];
+  const nextList = isDuplicate ? sourceList : [product, ...sourceList];
 
-  if (market === "PL") {
-    plProducts = nextList;
-  } else {
-    czProducts = nextList;
+  if (!currentList) {
+    if (market === "PL") {
+      plProducts = nextList;
+    } else {
+      czProducts = nextList;
+    }
   }
 
   return nextList;

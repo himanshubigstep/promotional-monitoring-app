@@ -71,14 +71,14 @@ function getErrorMessage(
 const datePickerTheme = createTheme({
   palette: {
     primary: {
-      main: "#4f82f7",
+      main: "#000000",
     },
     secondary: {
-      main: "#e5484d",
+      main: "#52525b",
     },
   },
   typography: {
-    fontFamily: "Open Sans, sans-serif",
+  fontFamily: "Inter, sans-serif",
   },
   components: {
     MuiOutlinedInput: {

@@ -105,10 +105,12 @@ test("scopes retailer and brand options to the selected market", () => {
 test("creates one offer for every Polish retailer per product", () => {
   const productsByName = new Map<string, ReturnType<typeof getMarketProducts>>();
 
-  getMarketProducts("PL").forEach((product) => {
+  getMarketProducts("PL")
+    .filter((product) => !product.id.includes("BULK-"))
+    .forEach((product) => {
     const key = `${product.brand}::${product.name}`;
     productsByName.set(key, [...(productsByName.get(key) ?? []), product]);
-  });
+    });
 
   productsByName.forEach((offers) => {
     expect(new Set(offers.map((product) => product.retailer))).toEqual(

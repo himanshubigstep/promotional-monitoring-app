@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import type { Product, ProductCategory, PromotionType } from "../data/productTypes";
+import type { CatalogProduct, Product, ProductCategory, PromotionType } from "../data/productTypes";
 import type { Promotion } from "../context/AppContext";
 
 const CREATIVES_BUCKET = "promotion-creatives";
@@ -12,10 +12,47 @@ export type CategoryOption = { id: string; name: string };
 export type LoadedData = {
   promotions: Promotion[];
   products: Product[];
+  productCatalog: CatalogProduct[];
   brandsByMarket: Record<"PL" | "CZ", string[]>;
   retailers: RetailerOption[];
   categories: CategoryOption[];
 };
+
+type ProductRow = {
+  id: string;
+  name: string;
+  market: string;
+  price: number | null;
+  currency: string | null;
+  image_url: string | null;
+  product_url: string | null;
+  brands: { name: string } | null;
+  categories: { name: string } | null;
+  retailers: { name: string; is_client: boolean } | null;
+};
+
+const PRODUCT_SELECT = `
+  id, name, market, price, currency, image_url, product_url,
+  brands ( name ),
+  categories ( name ),
+  retailers ( name, is_client )
+`;
+
+function mapProductRow(row: ProductRow): CatalogProduct {
+  return {
+    id: row.id,
+    name: row.name,
+    brand: row.brands?.name ?? "",
+    category: (row.categories?.name as ProductCategory) ?? "",
+    retailer: row.retailers?.name ?? "",
+    market: row.market as "PL" | "CZ",
+    price: row.price,
+    currency: (row.currency as "PLN" | "CZK") ?? null,
+    imageUrl: row.image_url,
+    productUrl: row.product_url,
+    isClient: row.retailers?.is_client ?? false,
+  };
+}
 
 type PromotionRow = {
   id: string;
@@ -137,17 +174,31 @@ const PROMOTION_SELECT = `
 // (RLS blocks analysts from seeing anything else, but editors get no such
 // filter for free from the database).
 export async function loadApprovedData(): Promise<LoadedData> {
-  const [promotionsResult, brandsResult, retailersResult, categoriesResult] = await Promise.all([
+  const [promotionsResult, brandsResult, retailersResult, categoriesResult, productsResult] = await Promise.all([
     supabase.from("promotions").select(PROMOTION_SELECT).eq("status", "approved").order("created_at", { ascending: false }),
     supabase.from("brands").select("id, name, market"),
     supabase.from("retailers").select("id, name, market, is_client"),
     supabase.from("categories").select("id, name"),
+    supabase.from("products").select(PRODUCT_SELECT).order("name"),
   ]);
 
   if (promotionsResult.error) throw promotionsResult.error;
   if (brandsResult.error) throw brandsResult.error;
   if (retailersResult.error) throw retailersResult.error;
   if (categoriesResult.error) throw categoriesResult.error;
+  // Deliberately non-fatal, unlike the other four: a freshly-migrated DB
+  // legitimately has zero rows here until the scraper's catalog crawl (or a
+  // manual add) runs for the first time, and — more importantly — an older
+  // DB that hasn't had 0006_products.sql applied yet doesn't even have this
+  // table (PostgREST returns PGRST205, "not found in schema cache"). Either
+  // way, that shouldn't force the whole app into offline/static fallback —
+  // just an empty product catalog until the table/migration exists.
+  if (productsResult.error) {
+    console.warn(
+      "Failed to load the product catalog (falling back to an empty one, everything else still loads normally):",
+      productsResult.error,
+    );
+  }
 
   const dataSets = [
     ["promotions", promotionsResult.data],
@@ -178,9 +229,12 @@ export async function loadApprovedData(): Promise<LoadedData> {
     isClient: r.is_client,
   }));
 
+  const productCatalog = ((productsResult.data ?? []) as unknown as ProductRow[]).map(mapProductRow);
+
   return {
     promotions: mapped.map((m) => m.promotion),
     products: mapped.map((m) => m.product),
+    productCatalog,
     brandsByMarket,
     retailers,
     categories: categoriesResult.data ?? [],
@@ -291,10 +345,50 @@ export async function deletePromotionRow(id: string): Promise<void> {
   if (error) throw error;
 }
 
+export type ProductInput = {
+  name: string;
+  brand: string;
+  category: string;
+  retailer: string;
+  market: "PL" | "CZ";
+  price?: number;
+  currency?: "PLN" | "CZK";
+  imageUrl?: string;
+  productUrl?: string;
+};
+
+export async function addProductRow(product: ProductInput): Promise<void> {
+  const retailerId = await lookupRetailerId(product.retailer, product.market);
+  if (!retailerId) {
+    throw new Error(`Unknown retailer "${product.retailer}" for market ${product.market}`);
+  }
+  const brandId = await lookupOrCreateBrandId(product.brand, product.market);
+  const categoryId = await lookupCategoryId(product.category);
+
+  const { error } = await supabase.from("products").insert({
+    id: crypto.randomUUID(),
+    retailer_id: retailerId,
+    market: product.market,
+    brand_id: brandId,
+    category_id: categoryId,
+    name: product.name,
+    price: product.price ?? null,
+    currency: product.currency ?? null,
+    image_url: product.imageUrl ?? null,
+    product_url: product.productUrl ?? null,
+    source: "manual",
+  }).select(PRODUCT_SELECT).single();
+  if (error) throw error;
+}
+
 export async function addBrandRow(name: string, market: "PL" | "CZ"): Promise<void> {
   const trimmed = name.trim();
   if (!trimmed) return;
-  const { error } = await supabase.from("brands").insert({ name: trimmed, market });
+  const { error } = await supabase
+    .from("brands")
+    .insert({ id: crypto.randomUUID(), name: trimmed, market })
+    .select("id, name, market")
+    .maybeSingle();
   // Duplicate brand names are expected (unique constraint) — not a real error.
   if (error && error.code !== "23505") throw error;
 }
