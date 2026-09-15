@@ -171,6 +171,18 @@ const round1 = (value: number) => Math.round(value * 10) / 10;
 const average = (values: number[]) =>
   values.length ? round1(values.reduce((sum, v) => sum + v, 0) / values.length) : 0;
 
+// The UI now shows a compact preview (5 rows/cards) with a "View More"
+// expander over the *full* result, so tools can afford to hand back a larger
+// slice of the real dataset than before without cluttering the chat — the
+// progressive disclosure happens at render time, not here. What Gemini itself
+// sees for its 1-4 sentence summary is capped separately and much smaller
+// (MODEL_PREVIEW_ROWS): it doesn't need every row to describe the result, and
+// a smaller payload keeps token usage sane regardless of how much the UI ends
+// up rendering.
+const UI_ROW_LIMIT = 50;
+const MODEL_PREVIEW_ROWS = 5;
+const capForModel = <T>(items: T[], n = MODEL_PREVIEW_ROWS): T[] => items.slice(0, n);
+
 // ---------------------------------------------------------------------------
 // Tool implementations
 // ---------------------------------------------------------------------------
@@ -204,27 +216,49 @@ export function toolSearchStores(
       (!args.query || includesCI(p.retailer, args.query)),
   );
   const retailers = Array.from(new Set(filtered.map((p) => p.retailer)));
-  const rows: CellValue[][] = retailers.map((retailer) => {
-    const offers = filtered.filter((p) => p.retailer === retailer);
-    const discounts = offers.map((p) => p.competitorDiscount || 0);
-    const prices = offers.map((p) => p.price || 0).filter((v) => v > 0);
-    const brandCount = new Set(offers.map((p) => p.brand)).size;
-    return [
-      retailer,
-      offers.length,
-      brandCount,
-      `${average(discounts)}%`,
-      prices.length ? `${average(prices)}` : "—",
-    ];
-  });
+  const ranked = retailers
+    .map((retailer) => {
+      const offers = filtered.filter((p) => p.retailer === retailer);
+      const discounts = offers.map((p) => p.competitorDiscount || 0);
+      const prices = offers.map((p) => p.price || 0).filter((v) => v > 0);
+      const brandCount = new Set(offers.map((p) => p.brand)).size;
+      return {
+        retailer,
+        count: offers.length,
+        brandCount,
+        avgDiscount: average(discounts),
+        avgPrice: prices.length ? average(prices) : null,
+      };
+    })
+    // Ranked by discount so a "which stores have the highest discount"
+    // question is answered correctly by simply showing the top of the list
+    // (the UI's "top 5" preview), not an arbitrary/insertion order.
+    .sort((a, b) => b.avgDiscount - a.avgDiscount);
+
+  const rows: CellValue[][] = ranked.map((r) => [
+    r.retailer,
+    r.count,
+    r.brandCount,
+    `${r.avgDiscount}%`,
+    r.avgPrice !== null ? `${r.avgPrice}` : "—",
+  ]);
+
+  const insights = ranked.length
+    ? [
+        `Highest avg. discount: **${ranked[0].retailer}** (${ranked[0].avgDiscount}%)`,
+        `${ranked.length} retailer(s) tracked${args.market && args.market !== "All" ? ` in ${args.market}` : ""}.`,
+      ]
+    : undefined;
+
   return {
     result: {
       type: "table",
       title: "Stores / retailers",
       columns: ["Retailer", "Tracked products", "Brands", "Avg. discount", "Avg. price"],
       rows,
+      insights,
     },
-    summaryForModel: rows,
+    summaryForModel: capForModel(rows),
   };
 }
 
@@ -238,28 +272,46 @@ export function toolSearchBrands(
       (!args.market || args.market === "All" || p.market === args.market) &&
       (!args.query || includesCI(p.brand, args.query)),
   );
-  const brands = Array.from(new Set(filtered.map((p) => p.brand))).sort();
-  const rows: CellValue[][] = brands.map((brand) => {
-    const offers = filtered.filter((p) => p.brand === brand);
-    const discounts = offers.map((p) => p.competitorDiscount || 0);
-    const prices = offers.map((p) => p.price || 0).filter((v) => v > 0);
-    const retailers = Array.from(new Set(offers.map((p) => p.retailer)));
-    return [
-      brand,
-      offers.length,
-      retailers.join(", "),
-      prices.length ? `${average(prices)}` : "—",
-      `${average(discounts)}%`,
-    ];
-  });
+  const brands = Array.from(new Set(filtered.map((p) => p.brand)));
+  const ranked = brands
+    .map((brand) => {
+      const offers = filtered.filter((p) => p.brand === brand);
+      const discounts = offers.map((p) => p.competitorDiscount || 0);
+      const prices = offers.map((p) => p.price || 0).filter((v) => v > 0);
+      const retailers = Array.from(new Set(offers.map((p) => p.retailer)));
+      return {
+        brand,
+        count: offers.length,
+        retailers,
+        avgPrice: prices.length ? average(prices) : null,
+        avgDiscount: average(discounts),
+      };
+    })
+    // Ranked by discount by default so "most discounted brand" is just the
+    // top of the list, same as toolSearchStores.
+    .sort((a, b) => b.avgDiscount - a.avgDiscount);
+
+  const rows: CellValue[][] = ranked.map((r) => [
+    r.brand,
+    r.count,
+    r.retailers.join(", "),
+    r.avgPrice !== null ? `${r.avgPrice}` : "—",
+    `${r.avgDiscount}%`,
+  ]);
+
+  const insights = ranked.length
+    ? [`Highest avg. discount: **${ranked[0].brand}** (${ranked[0].avgDiscount}%).`]
+    : undefined;
+
   return {
     result: {
       type: "table",
       title: args.query ? `Brands matching "${args.query}"` : "Brands",
       columns: ["Brand", "Offers", "Retailers", "Avg. price", "Avg. discount"],
       rows,
+      insights,
     },
-    summaryForModel: rows,
+    summaryForModel: capForModel(rows),
   };
 }
 
@@ -307,18 +359,38 @@ export function toolSearchProducts(
     return order === "asc" ? av - bv : bv - av;
   });
 
-  const limited = filtered.slice(0, Math.min(args.limit || 12, 30));
+  // Fetch a generous slice for the UI's progressive-disclosure table (up to
+  // UI_ROW_LIMIT) — the model can still ask for a smaller/larger `limit`
+  // explicitly, but the default is no longer tied to how many rows the chat
+  // bubble shows at once (that's the UI's job now, see AssistantResultView).
+  const limited = filtered.slice(0, Math.min(args.limit || UI_ROW_LIMIT, UI_ROW_LIMIT));
   const items = limited.map(toProductCard);
+
+  const metricLabel = sortKey === "discount" ? "discount" : sortKey === "price" ? "price" : "rating";
+  const formatMetric = (item: ProductCardItem) =>
+    sortKey === "discount"
+      ? `${item.discount ?? 0}%`
+      : sortKey === "price"
+        ? `${item.price ?? "?"} ${item.currency}`
+        : `${item.rating ?? "?"}★`;
+  const insights =
+    items.length > 0
+      ? [
+          `${order === "asc" ? "Lowest" : "Highest"} ${metricLabel}: **${items[0].name}** — ${formatMetric(items[0])} at ${items[0].retailer}.`,
+        ]
+      : undefined;
+
   return {
     result: {
       type: "product_cards",
       title: "Products",
       items,
-      caption: `${filtered.length} matching product(s), showing ${items.length}.`,
+      caption: `${filtered.length} matching product(s) in total.`,
+      insights,
     },
     summaryForModel: {
       totalMatches: filtered.length,
-      shown: items.map((i) => ({
+      shown: capForModel(items).map((i) => ({
         id: i.id,
         name: i.name,
         brand: i.brand,
@@ -344,38 +416,52 @@ export type SearchPromotionsArgs = {
   limit?: number;
 };
 
+const discountNumberOf = (promotion: Promotion) =>
+  Number((promotion.discount.match(/(\d+(?:\.\d+)?)/) || [])[1] || 0);
+
 export function toolSearchPromotions(
   args: SearchPromotionsArgs,
   ctx: AssistantDataContext,
 ): ToolExecutionResult {
-  const filtered = ctx.promotions.filter((p) => {
-    const discountNumber = Number((p.discount.match(/(\d+(?:\.\d+)?)/) || [])[1] || 0);
-    return (
-      (!args.brand || includesCI(p.brands, args.brand)) &&
-      (!args.category || includesCI(p.category, args.category)) &&
-      (!args.retailer || includesCI(p.retailer, args.retailer)) &&
-      (!args.market || args.market === "All" || p.market === args.market) &&
-      (!args.query ||
-        includesCI(p.name, args.query) ||
-        includesCI(p.brands, args.query) ||
-        includesCI(p.category, args.query)) &&
-      (args.minDiscount === undefined || discountNumber >= args.minDiscount) &&
-      (!args.fromDate || p.to >= args.fromDate) &&
-      (!args.toDate || p.from <= args.toDate)
-    );
-  });
-  const limited = filtered.slice(0, Math.min(args.limit || 12, 30));
+  const filtered = ctx.promotions
+    .filter((p) => {
+      const discountNumber = discountNumberOf(p);
+      return (
+        (!args.brand || includesCI(p.brands, args.brand)) &&
+        (!args.category || includesCI(p.category, args.category)) &&
+        (!args.retailer || includesCI(p.retailer, args.retailer)) &&
+        (!args.market || args.market === "All" || p.market === args.market) &&
+        (!args.query ||
+          includesCI(p.name, args.query) ||
+          includesCI(p.brands, args.query) ||
+          includesCI(p.category, args.query)) &&
+        (args.minDiscount === undefined || discountNumber >= args.minDiscount) &&
+        (!args.fromDate || p.to >= args.fromDate) &&
+        (!args.toDate || p.from <= args.toDate)
+      );
+    })
+    // Ranked by discount by default, same reasoning as toolSearchProducts —
+    // "biggest promotions" is then simply the top of the UI's preview.
+    .sort((a, b) => discountNumberOf(b) - discountNumberOf(a));
+
+  const limited = filtered.slice(0, Math.min(args.limit || UI_ROW_LIMIT, UI_ROW_LIMIT));
   const items = limited.map(toPromotionCard);
+  const insights =
+    items.length > 0
+      ? [`Biggest promotion: **${items[0].name}** — ${items[0].discount} at ${items[0].retailer}.`]
+      : undefined;
+
   return {
     result: {
       type: "promotion_cards",
       title: "Promotions",
       items,
-      caption: `${filtered.length} matching promotion(s), showing ${items.length}.`,
+      caption: `${filtered.length} matching promotion(s) in total.`,
+      insights,
     },
     summaryForModel: {
       totalMatches: filtered.length,
-      shown: items,
+      shown: capForModel(items),
     },
   };
 }
@@ -434,7 +520,7 @@ export function toolCompareProducts(
     };
   });
 
-  const filteredRows = toBool(args.onlyCheaperCompetitor)
+  const scoped = toBool(args.onlyCheaperCompetitor)
     ? rows.filter(
         (row) =>
           row.ourPrice !== null &&
@@ -442,8 +528,11 @@ export function toolCompareProducts(
           row.competitorPrice < row.ourPrice,
       )
     : rows;
+  // Ranked by discount by default so "biggest competitor discount" is simply
+  // the top of the UI's 5-row preview rather than an arbitrary match order.
+  const filteredRows = scoped.slice().sort((a, b) => (b.discount || 0) - (a.discount || 0));
 
-  const limited = filteredRows.slice(0, Math.min(args.limit || 15, 30));
+  const limited = filteredRows.slice(0, Math.min(args.limit || UI_ROW_LIMIT, UI_ROW_LIMIT));
   const tableRows: CellValue[][] = limited.map((row) => [
     row.product,
     row.ourPrice !== null ? row.ourPrice : "No matching product",
@@ -464,6 +553,19 @@ export function toolCompareProducts(
     };
   }
 
+  const cheaperCount = rows.filter(
+    (row) => row.ourPrice !== null && row.competitorPrice !== null && row.competitorPrice < row.ourPrice,
+  ).length;
+  const insights: string[] = [];
+  if (filteredRows.length > 0 && filteredRows[0].discount !== null) {
+    insights.push(
+      `Biggest competitor discount: **${filteredRows[0].discount}%** — ${filteredRows[0].product} at ${filteredRows[0].competitor}.`,
+    );
+  }
+  if (rows.length > 0) {
+    insights.push(`${cheaperCount} of ${rows.length} competitor offer(s) beat our price.`);
+  }
+
   return {
     result: {
       type: "comparison_table",
@@ -471,8 +573,9 @@ export function toolCompareProducts(
       columns: ["Product", "Our price", "Competitor", "Competitor price", "Discount"],
       rows: tableRows,
       caption: `${filteredRows.length} competitor offer(s) compared against ${ours.length} of our matching product(s).`,
+      insights: insights.length ? insights : undefined,
     },
-    summaryForModel: { ourProductCount: ours.length, rows: limited },
+    summaryForModel: { ourProductCount: ours.length, rows: capForModel(limited) },
   };
 }
 
@@ -493,25 +596,38 @@ export function toolCompareBrands(
     };
   }
   const retailers = Array.from(new Set(offers.map((p) => p.retailer)));
-  const rows: CellValue[][] = retailers.map((retailer) => {
-    const retailerOffers = offers.filter((p) => p.retailer === retailer);
-    const prices = retailerOffers.map((p) => p.price || 0).filter((v) => v > 0);
-    const discounts = retailerOffers.map((p) => p.competitorDiscount || 0);
-    return [
-      retailer,
-      retailerOffers.length,
-      prices.length ? average(prices) : "—",
-      `${average(discounts)}%`,
-    ];
-  });
+  const ranked = retailers
+    .map((retailer) => {
+      const retailerOffers = offers.filter((p) => p.retailer === retailer);
+      const prices = retailerOffers.map((p) => p.price || 0).filter((v) => v > 0);
+      const discounts = retailerOffers.map((p) => p.competitorDiscount || 0);
+      return {
+        retailer,
+        count: retailerOffers.length,
+        avgPrice: prices.length ? average(prices) : null,
+        avgDiscount: average(discounts),
+      };
+    })
+    .sort((a, b) => b.avgDiscount - a.avgDiscount);
+
+  const rows: CellValue[][] = ranked.map((r) => [
+    r.retailer,
+    r.count,
+    r.avgPrice !== null ? r.avgPrice : "—",
+    `${r.avgDiscount}%`,
+  ]);
+
   return {
     result: {
       type: "comparison_table",
       title: `${args.brand}: average price & discount by retailer`,
       columns: ["Retailer", "Products", "Avg. price", "Avg. discount"],
       rows,
+      insights: ranked.length
+        ? [`Highest avg. discount for ${args.brand}: **${ranked[0].retailer}** (${ranked[0].avgDiscount}%).`]
+        : undefined,
     },
-    summaryForModel: rows,
+    summaryForModel: capForModel(rows),
   };
 }
 
@@ -546,12 +662,22 @@ export function toolCompareStores(
     ["Avg. price", statA.avgPrice, statB.avgPrice],
     ["Avg. discount", `${statA.avgDiscount}%`, `${statB.avgDiscount}%`],
   ];
+  const discountWinner =
+    statA.avgDiscount === statB.avgDiscount
+      ? null
+      : statA.avgDiscount > statB.avgDiscount
+        ? args.retailerA
+        : args.retailerB;
+
   return {
     result: {
       type: "comparison_table",
       title: `${args.retailerA} vs. ${args.retailerB}`,
       columns: ["Metric", args.retailerA, args.retailerB],
       rows,
+      insights: discountWinner
+        ? [`**${discountWinner}** has the higher average discount.`]
+        : undefined,
     },
     summaryForModel: { [args.retailerA]: statA, [args.retailerB]: statB },
   };
@@ -577,14 +703,17 @@ export function toolGetRecentPromotions(
         (p.from >= cutoffISO && p.from <= todayISO),
     )
     .sort((a, b) => b.from.localeCompare(a.from));
-  const items = recent.slice(0, 15).map(toPromotionCard);
+  const items = recent.slice(0, UI_ROW_LIMIT).map(toPromotionCard);
   return {
     result: {
       type: "promotion_cards",
       title: `Promotions from the last ${days} days`,
       items,
       caption: `${recent.length} promotion(s) started or were added in the last ${days} days.`,
+      insights: items.length
+        ? [`Most recent: **${items[0].name}** at ${items[0].retailer} (started ${items[0].from}).`]
+        : undefined,
     },
-    summaryForModel: { count: recent.length, items },
+    summaryForModel: { count: recent.length, items: capForModel(items) },
   };
 }
