@@ -6,7 +6,6 @@ import {
   LocalOfferRounded,
   SearchRounded,
   StorefrontRounded,
-  TrendingDownRounded,
   TrendingUpRounded,
 } from "@mui/icons-material";
 import {
@@ -32,9 +31,8 @@ import FormField from "../../components/FormField";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import DeleteIcon from "@mui/icons-material/Delete";
 import BrandComparisonTable from "../../components/BrandComparisonTable";
-import { accentTints } from "../../theme/sephoraTheme";
 import { isBenchmarkProduct } from "../../data/marketProducts";
-import { BarChart, LineChart } from "@mui/x-charts";
+import { BarChart } from "@mui/x-charts";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
