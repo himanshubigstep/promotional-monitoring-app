@@ -240,7 +240,7 @@ export function toolSearchStores(
     r.count,
     r.brandCount,
     `${r.avgDiscount}%`,
-    r.avgPrice !== null ? `${r.avgPrice}` : "—",
+    r.avgPrice !== null ? `${r.avgPrice}` : "-",
   ]);
 
   const insights = ranked.length
@@ -295,7 +295,7 @@ export function toolSearchBrands(
     r.brand,
     r.count,
     r.retailers.join(", "),
-    r.avgPrice !== null ? `${r.avgPrice}` : "—",
+    r.avgPrice !== null ? `${r.avgPrice}` : "-",
     `${r.avgDiscount}%`,
   ]);
 
@@ -376,7 +376,7 @@ export function toolSearchProducts(
   const insights =
     items.length > 0
       ? [
-          `${order === "asc" ? "Lowest" : "Highest"} ${metricLabel}: **${items[0].name}** — ${formatMetric(items[0])} at ${items[0].retailer}.`,
+          `${order === "asc" ? "Lowest" : "Highest"} ${metricLabel}: **${items[0].name}** - ${formatMetric(items[0])} at ${items[0].retailer}.`,
         ]
       : undefined;
 
@@ -448,7 +448,7 @@ export function toolSearchPromotions(
   const items = limited.map(toPromotionCard);
   const insights =
     items.length > 0
-      ? [`Biggest promotion: **${items[0].name}** — ${items[0].discount} at ${items[0].retailer}.`]
+      ? [`Biggest promotion: **${items[0].name}** - ${items[0].discount} at ${items[0].retailer}.`]
       : undefined;
 
   return {
@@ -538,7 +538,7 @@ export function toolCompareProducts(
     row.ourPrice !== null ? row.ourPrice : "No matching product",
     row.competitor,
     row.competitorPrice,
-    row.discount !== null ? `${row.discount}%` : "—",
+    row.discount !== null ? `${row.discount}%` : "-",
   ]);
 
   if (!ours.length && !competitors.length) {
@@ -559,7 +559,7 @@ export function toolCompareProducts(
   const insights: string[] = [];
   if (filteredRows.length > 0 && filteredRows[0].discount !== null) {
     insights.push(
-      `Biggest competitor discount: **${filteredRows[0].discount}%** — ${filteredRows[0].product} at ${filteredRows[0].competitor}.`,
+      `Biggest competitor discount: **${filteredRows[0].discount}%** - ${filteredRows[0].product} at ${filteredRows[0].competitor}.`,
     );
   }
   if (rows.length > 0) {
@@ -613,7 +613,7 @@ export function toolCompareBrands(
   const rows: CellValue[][] = ranked.map((r) => [
     r.retailer,
     r.count,
-    r.avgPrice !== null ? r.avgPrice : "—",
+    r.avgPrice !== null ? r.avgPrice : "-",
     `${r.avgDiscount}%`,
   ]);
 

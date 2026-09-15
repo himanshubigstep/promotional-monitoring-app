@@ -43,7 +43,24 @@
     "extends": [
       "react-app",
       "react-app/jest"
-    ]
+    ],
+    "rules": {
+      "no-restricted-syntax": [
+        "error",
+        {
+          "selector": "Literal[value=/—/]",
+          "message": "Avoid em dashes in strings - use a hyphen (-) or rewrite the sentence."
+        },
+        {
+          "selector": "JSXText[value=/—/]",
+          "message": "Avoid em dashes in UI text - use a hyphen (-) or rewrite the sentence."
+        },
+        {
+          "selector": "TemplateElement[value.raw=/—/]",
+          "message": "Avoid em dashes in template strings - use a hyphen (-) or rewrite the sentence."
+        }
+      ]
+    }
   },
   "browserslist": {
     "production": [

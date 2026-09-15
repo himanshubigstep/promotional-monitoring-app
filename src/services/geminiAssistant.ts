@@ -41,25 +41,25 @@ ${navigationSummaryForPrompt}
 
 Rules:
 - For any question about data (prices, discounts, promotions, comparisons, brands, stores, products), you MUST call one of the provided tools. Never invent numbers, product names, prices, or dates yourself.
-- When the user names a specific brand, product, category, or retailer, ALWAYS pass it verbatim as the tool's brand/query/retailer argument — even if it looks unfamiliar or you suspect it may not exist. Never omit the filter and return a generic/unfiltered list instead.
+- When the user names a specific brand, product, category, or retailer, ALWAYS pass it verbatim as the tool's brand/query/retailer argument - even if it looks unfamiliar or you suspect it may not exist. Never omit the filter and return a generic/unfiltered list instead.
 - If a tool call returns zero matches, immediately report plainly that nothing was found for that request (e.g. "No Lakmé products were found in the tracked data"). Do NOT retry with broader or different arguments, and do NOT substitute unrelated products/promotions/results to seem more helpful.
-- After a tool result comes back, write a short (1-4 sentence, or a few short bullets for analytical questions) natural-language answer that summarizes it. The UI already renders the full table/cards with its own "View More" control, so never re-list rows in your text — reference at most the top 1-2 items by name if it helps the summary read naturally.
-- Ranking intent: map the user's wording to the tool's sort options instead of relying on row order — "highest/most/biggest discount" -> sortBy "discount", order "desc"; "lowest/cheapest/least" -> sortBy "price", order "asc"; "top rated" -> sortBy "rating", order "desc". Tools already return their rows/cards pre-ranked this way by default, so you don't need to re-sort anything yourself — just pick the right sortBy/order when the wording implies one.
-- Rows/cards you get back may already number in the dozens — that's expected and fine; the UI truncates to a short preview with its own expand control. Do not shorten or filter the tool's result yourself to "help"; just describe it.
+- After a tool result comes back, write a short (1-4 sentence, or a few short bullets for analytical questions) natural-language answer that summarizes it. The UI already renders the full table/cards with its own "View More" control, so never re-list rows in your text - reference at most the top 1-2 items by name if it helps the summary read naturally.
+- Ranking intent: map the user's wording to the tool's sort options instead of relying on row order - "highest/most/biggest discount" -> sortBy "discount", order "desc"; "lowest/cheapest/least" -> sortBy "price", order "asc"; "top rated" -> sortBy "rating", order "desc". Tools already return their rows/cards pre-ranked this way by default, so you don't need to re-sort anything yourself - just pick the right sortBy/order when the wording implies one.
+- Rows/cards you get back may already number in the dozens - that's expected and fine; the UI truncates to a short preview with its own expand control. Do not shorten or filter the tool's result yourself to "help"; just describe it.
 - For pure navigation questions ("where can I see X", "how do I do Y"), you may answer directly from the navigation list above without calling a tool.
 - Keep answers concise and business-friendly. Use PLN for Polish prices unless the data says otherwise.
 - "Our brand" / "us" / "our products" means retailer values containing "(Your brand)".
 
-Tone: write like a helpful, knowledgeable teammate talking to a colleague — warm and direct, never like a report generator.
+Tone: write like a helpful, knowledgeable teammate talking to a colleague - warm and direct, never like a report generator.
 - Don't announce what you're doing ("I will call...", "Let me search...", "Based on the data retrieved..."). Just answer, the way a person who already knows the answer would.
 - Don't pad with filler ("Great question!", "I'd be happy to help!", "Here is a summary:"). Start directly with the answer.
 
-Formatting (the app renders your markdown, so use it — but only where it actually helps):
-- For a simple factual or navigation answer, just write plain sentences — no headings, no bullets, no bold. Formatting a one-line answer looks worse, not better.
-- For an analytical or comparison answer, prefer: one short summary sentence, then a compact bullet list of 2-4 key findings, each with the important number/name in **bold**. Use a "### Key findings"-style heading only when the answer has more than one distinct section — never for a single short paragraph or a single bullet list.
+Formatting (the app renders your markdown, so use it - but only where it actually helps):
+- For a simple factual or navigation answer, just write plain sentences - no headings, no bullets, no bold. Formatting a one-line answer looks worse, not better.
+- For an analytical or comparison answer, prefer: one short summary sentence, then a compact bullet list of 2-4 key findings, each with the important number/name in **bold**. Use a "### Key findings"-style heading only when the answer has more than one distinct section - never for a single short paragraph or a single bullet list.
 - Use *italics* sparingly, only for a genuinely secondary caveat (e.g. *based on currently tracked promotions*), not for emphasis you'd otherwise bold.
 - Use a numbered list only when the order itself is meaningful (e.g. ranked steps); otherwise use bullets.
-- Do not put a markdown table in your text reply — tabular data always comes from the tool's own structured result, which the UI already renders as a real table.`;
+- Do not put a markdown table in your text reply - tabular data always comes from the tool's own structured result, which the UI already renders as a real table.`;
 
 type GeminiPart =
   | { text: string }
@@ -108,7 +108,7 @@ const functionDeclarations = [
   {
     name: "search_products",
     description:
-      "Search/filter individual products across our own catalog and competitor promotions. Supports sorting (e.g. biggest discount). Do NOT use this for 'compare our X vs competitors' questions — use compare_products instead.",
+      "Search/filter individual products across our own catalog and competitor promotions. Supports sorting (e.g. biggest discount). Do NOT use this for 'compare our X vs competitors' questions - use compare_products instead.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -151,7 +151,7 @@ const functionDeclarations = [
   {
     name: "compare_products",
     description:
-      "Use this whenever the user asks to 'compare' our products/prices against competitors (any retailer), typically filtered by brand — e.g. 'compare our Lakmé products with competitors'. Use onlyCheaperCompetitor to find products where a competitor beats our price. Returns a comparison table even if brand spelling differs slightly.",
+      "Use this whenever the user asks to 'compare' our products/prices against competitors (any retailer), typically filtered by brand - e.g. 'compare our Lakmé products with competitors'. Use onlyCheaperCompetitor to find products where a competitor beats our price. Returns a comparison table even if brand spelling differs slightly.",
     parameters: {
       type: "OBJECT",
       properties: {
@@ -257,7 +257,7 @@ async function callGemini(
         "Content-Type": "application/json",
         // Passed as a header rather than a `?key=` query param so it doesn't
         // end up in browser history, server access logs, or any proxy in
-        // between — the key is still shipped to the client either way (see
+        // between - the key is still shipped to the client either way (see
         // module-level note on backend migration), but this avoids the most
         // casual leak vector.
         "x-goog-api-key": GEMINI_API_KEY,
@@ -275,7 +275,7 @@ async function callGemini(
   }
   const parts: GeminiPart[] = payload?.candidates?.[0]?.content?.parts || [];
   // Gemini can return several functionCall parts in one turn for a compound
-  // question — collect all of them so every call gets answered and every
+  // question - collect all of them so every call gets answered and every
   // one gets a matching functionResponse (a dropped call with no response
   // breaks the next round).
   const functionCallParts = parts.filter(
@@ -298,7 +298,7 @@ export type AssistantAnswer = {
   toolName?: AssistantToolName;
 };
 
-// Light cleanup only — the system prompt now asks the model to use markdown
+// Light cleanup only - the system prompt now asks the model to use markdown
 // (bold/bullets/headings) for analytical answers, and AssistantWidget renders
 // it (see FormattedText.tsx), so this no longer strips that out. It just
 // tidies the couple of things we don't render: inline code spans (no code-
@@ -307,7 +307,7 @@ export type AssistantAnswer = {
 // result, not its text reply.
 function humanizeText(text: string): string {
   return text
-    .replace(/`([^`]+)`/g, "$1") // `code` — no inline-code styling in the chat bubble
+    .replace(/`([^`]+)`/g, "$1") // `code` - no inline-code styling in the chat bubble
     .replace(/^\|.*\|$/gm, "") // stray markdown table rows
     .replace(/^[-|: ]+$/gm, "") // stray markdown table separator rows (---|---)
     .replace(/\n{3,}/g, "\n\n") // collapse blank lines left behind by the above
@@ -315,7 +315,7 @@ function humanizeText(text: string): string {
 }
 
 // Friendly, past-tense labels for the small "what I checked" indicator shown
-// under a reply — reads like a person mentioning what they looked up, not a
+// under a reply - reads like a person mentioning what they looked up, not a
 // raw function/endpoint name.
 const TOOL_LABELS: Partial<Record<AssistantToolName, string>> = {
   get_navigation: "Checked the app's navigation",
@@ -351,7 +351,7 @@ function serializeResultForContext(result: AssistantResult): string {
         .join("\n");
     case "promotion_cards":
       return cap(result.items)
-        .map((item) => `${item.name} — ${item.brand} @ ${item.retailer}: ${item.discount}`)
+        .map((item) => `${item.name} - ${item.brand} @ ${item.retailer}: ${item.discount}`)
         .join("\n");
     case "summary":
       return result.stats.map((stat) => `${stat.label}: ${stat.value}`).join("\n");
@@ -369,7 +369,7 @@ export async function askAssistant(
 ): Promise<AssistantAnswer> {
   const priorMessages = history.filter((message) => !message.isError);
   // `history` may or may not already end with this turn's question,
-  // depending on the caller — guard against sending it twice rather than
+  // depending on the caller - guard against sending it twice rather than
   // relying on that convention.
   const trimmedHistory =
     priorMessages[priorMessages.length - 1]?.role === "user" &&
@@ -403,7 +403,7 @@ export async function askAssistant(
     }
 
     // Echo every function-call part back verbatim (including thoughtSignature,
-    // when present — Gemini's thinking models require this for the follow-up
+    // when present - Gemini's thinking models require this for the follow-up
     // turn to be accepted), and answer every one of them: a compound question
     // can produce more than one call in the same turn, and each needs a
     // matching functionResponse or the next round is rejected/confused.
@@ -420,7 +420,7 @@ export async function askAssistant(
   }
 
   // Exhausted the round-trip budget while Gemini was still requesting tool
-  // calls. We already have a real result (lastResult) from the final round —
+  // calls. We already have a real result (lastResult) from the final round -
   // make one more request with tools disabled so Gemini is forced to
   // summarize it in text instead of silently discarding it behind a
   // hardcoded placeholder.

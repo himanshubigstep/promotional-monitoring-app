@@ -138,7 +138,7 @@ const BrandComparisonTable = () => {
         if (!cell) {
             return (
                 <Typography sx={{ fontSize: 13, color: "#cbd0dd", fontWeight: 600 }}>
-                    —
+                    -
                 </Typography>
             );
         }

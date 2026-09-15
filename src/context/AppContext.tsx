@@ -324,7 +324,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setCategories(data.categories);
         setUsingFallbackData(false);
       } catch (err) {
-        console.warn("Falling back to static data — Supabase fetch failed:", err);
+        console.warn("Falling back to static data - Supabase fetch failed:", err);
         if (cancelled) return;
         const fallbackProducts = [...initialPlProducts, ...initialCzProducts];
         setPromotions(promotionsFromProducts(fallbackProducts));
@@ -401,7 +401,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const assertWritable = useCallback(() => {
     if (usingFallbackData) {
       throw new Error(
-        "Can't save right now — the database is unreachable and the app is showing offline data.",
+        "Can't save right now - the database is unreachable and the app is showing offline data.",
       );
     }
   }, [usingFallbackData]);

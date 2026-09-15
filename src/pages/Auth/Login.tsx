@@ -98,7 +98,7 @@ export default function Login() {
             Sign in
           </Typography>
           <Typography sx={{ color: "text.secondary", fontSize: 13, mt: 0.5, mb: 3 }}>
-            Sephora Promotional Monitor — editor &amp; analyst access.
+            Sephora Promotional Monitor - editor &amp; analyst access.
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} className="flex flex-col gap-3">
@@ -137,7 +137,7 @@ export default function Login() {
           </Box>
 
           <Typography sx={{ color: "#9fa6bc", fontSize: 11.5, mt: 3 }}>
-            Don't have an account? Ask a teammate to provision one — accounts
+            Don't have an account? Ask a teammate to provision one - accounts
             aren't self-serve yet.
           </Typography>
         </Card>

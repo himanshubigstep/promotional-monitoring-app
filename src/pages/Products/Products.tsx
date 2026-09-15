@@ -144,7 +144,7 @@ export default function Products() {
             Product Catalog
           </Typography>
           <Typography sx={{ color: "#525b75", fontSize: 13, mt: 0.5 }}>
-            Every product our scraper has found across all monitored stores — pick from
+            Every product our scraper has found across all monitored stores - pick from
             these when creating a promotion, even before a campaign exists for it.
           </Typography>
         </Box>
