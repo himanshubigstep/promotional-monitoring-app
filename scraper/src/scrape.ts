@@ -21,6 +21,28 @@ function isIsoDate(value: string | undefined): value is string {
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+const PROMOTION_TYPES = ["Fixed promotion", "Buy one get one free", "Custom"] as const;
+
+function sanitizePromotionType(value: string | undefined): (typeof PROMOTION_TYPES)[number] | null {
+  return value && (PROMOTION_TYPES as readonly string[]).includes(value)
+    ? (value as (typeof PROMOTION_TYPES)[number])
+    : null;
+}
+
+// Gemini's confidence/discountPercent are free-form model output, not
+// guaranteed to respect the shape we asked for — clamp rather than trust
+// them verbatim, since `promotions.extraction_confidence` has a 0-1 DB
+// check constraint that would otherwise reject the whole insert.
+function clampConfidence(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || Number.isNaN(value)) return null;
+  return Math.min(1, Math.max(0, value));
+}
+
+function sanitizeDiscountPercent(value: number | null | undefined): number | null {
+  if (typeof value !== "number" || Number.isNaN(value) || value < 0) return null;
+  return value;
+}
+
 async function findCategoryId(categories: { id: string; name: string }[], raw: string | undefined) {
   if (!raw) return null;
   const needle = raw.trim().toLowerCase();
@@ -130,9 +152,13 @@ async function scrapeRetailer(
           date_from: dateFrom,
           date_to: dateTo,
           discount_text: item.discount || null,
+          discount_percent: sanitizeDiscountPercent(item.discountPercent),
           threshold: item.threshold || null,
           notes: item.notes || null,
           avg_market_discount: item.averageMarketDiscount || null,
+          promotion_type: sanitizePromotionType(item.promotionType),
+          extraction_confidence: clampConfidence(item.confidence),
+          uncertain_fields: item.uncertainFields?.length ? item.uncertainFields : null,
           status: "pending_review",
           source: "scraper",
         })

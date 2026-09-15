@@ -26,6 +26,17 @@ import { useAppContext } from "../../context/AppContext";
 const fallbackImage =
   "https://images.unsplash.com/photo-1556229010-6c3f2c9ca5f8?auto=format&fit=crop&w=900&q=80";
 
+// Color-codes Gemini's self-reported extraction confidence so the sketchiest
+// scraped rows are visually obvious before a reviewer reads a single field.
+// Thresholds are a judgment call, not a calibrated cutoff — the model's
+// confidence is a rough signal, not a guarantee.
+function confidenceChipProps(confidence: number | null): { label: string; color: "error" | "warning" | "success" } | null {
+  if (confidence === null) return null;
+  if (confidence < 0.5) return { label: `Low confidence (${Math.round(confidence * 100)}%)`, color: "error" };
+  if (confidence < 0.8) return { label: `Medium confidence (${Math.round(confidence * 100)}%)`, color: "warning" };
+  return { label: `High confidence (${Math.round(confidence * 100)}%)`, color: "success" };
+}
+
 export default function ReviewQueue() {
   const { canEdit } = useAppContext();
   const [items, setItems] = useState<PendingPromotion[]>([]);
@@ -137,6 +148,20 @@ export default function ReviewQueue() {
                 {item.category?.name && <Chip size="small" label={item.category.name} variant="outlined" />}
                 {item.discount_text && (
                   <Chip size="small" color="error" label={item.discount_text} />
+                )}
+                {(() => {
+                  const confidence = confidenceChipProps(item.extraction_confidence);
+                  return confidence ? (
+                    <Chip size="small" color={confidence.color} variant="outlined" label={confidence.label} />
+                  ) : null;
+                })()}
+                {!!item.uncertain_fields?.length && (
+                  <Chip
+                    size="small"
+                    color="warning"
+                    variant="outlined"
+                    label={`Unsure: ${item.uncertain_fields.join(", ")}`}
+                  />
                 )}
               </Stack>
               <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{item.name}</Typography>
