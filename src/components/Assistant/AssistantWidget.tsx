@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   AutoAwesomeRounded,
   CloseRounded,
@@ -20,6 +20,7 @@ import { askAssistant, humanizeToolName, isGeminiConfigured } from "../../servic
 import type { AssistantDataContext } from "../../services/assistantTools";
 import type { ChatMessage } from "../../types/assistant";
 import AssistantResultView from "./AssistantResultView";
+import FormattedText from "./FormattedText";
 
 const SUGGESTIONS = [
   "Where can I see analytics?",
@@ -27,6 +28,26 @@ const SUGGESTIONS = [
   "Show me all Lakmé products",
   "Summarize promotions from the last 10 days",
 ];
+
+// Resizable panel width (desktop only — the drawer stays full-width on
+// mobile). Persisted across sessions so a user's preferred width sticks.
+const MIN_PANEL_WIDTH = 320;
+const MAX_PANEL_WIDTH = 900;
+const DEFAULT_PANEL_WIDTH = 420;
+const PANEL_WIDTH_STORAGE_KEY = "assistantPanelWidth";
+
+function readStoredPanelWidth(): number {
+  try {
+    const stored = Number(localStorage.getItem(PANEL_WIDTH_STORAGE_KEY));
+    if (Number.isFinite(stored) && stored >= MIN_PANEL_WIDTH && stored <= MAX_PANEL_WIDTH) {
+      return stored;
+    }
+  } catch {
+    // localStorage can throw in private/locked-down browser contexts —
+    // fall back to the default rather than breaking the widget.
+  }
+  return DEFAULT_PANEL_WIDTH;
+}
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -52,6 +73,51 @@ export default function AssistantWidget() {
   // fire a second concurrent request. This ref is set synchronously instead.
   const sendingRef = useRef(false);
   const { productsList, promotions, brandsByMarket } = useAppContext();
+
+  const [panelWidth, setPanelWidth] = useState(readStoredPanelWidth);
+  const panelWidthRef = useRef(panelWidth);
+  const isResizingRef = useRef(false);
+  panelWidthRef.current = panelWidth;
+
+  // Drag-to-resize: mousedown on the handle starts tracking, mousemove
+  // (attached to the window, not just the handle, so the drag keeps working
+  // even if the cursor slips past the thin handle) updates the width live,
+  // mouseup ends it and persists the final width. Listeners are attached
+  // once on mount rather than re-attached on every width change.
+  useEffect(() => {
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!isResizingRef.current) return;
+      const next = Math.min(
+        MAX_PANEL_WIDTH,
+        Math.max(MIN_PANEL_WIDTH, window.innerWidth - event.clientX),
+      );
+      setPanelWidth(next);
+    };
+    const stopResizing = () => {
+      if (!isResizingRef.current) return;
+      isResizingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        localStorage.setItem(PANEL_WIDTH_STORAGE_KEY, String(panelWidthRef.current));
+      } catch {
+        // Ignore storage errors — losing the remembered width isn't critical.
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, []);
+
+  const startResizing = (event: React.MouseEvent) => {
+    event.preventDefault();
+    isResizingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
 
   const dataContext: AssistantDataContext = useMemo(
     () => ({
@@ -127,9 +193,9 @@ export default function AssistantWidget() {
             bottom: 24,
             right: 24,
             zIndex: 1300,
-            backgroundColor: "#22252b",
+            backgroundColor: "#141824",
             color: "#ffffff",
-            "&:hover": { backgroundColor: "#343942" },
+            "&:hover": { backgroundColor: "#31374a" },
           }}
           aria-label="Open assistant"
         >
@@ -141,19 +207,42 @@ export default function AssistantWidget() {
         anchor="right"
         open={open}
         onClose={() => setOpen(false)}
-        slotProps={{ paper: { sx: { width: { xs: "100%", sm: 420 } } } }}
+        slotProps={{ paper: { sx: { width: { xs: "100%", sm: panelWidth } } } }}
       >
-        <Box className="flex h-full flex-col bg-[#f4f6f8]">
-          <Box className="flex items-center justify-between border-b border-[#e7eaee] bg-white px-4 py-3.5">
+        <Box className="relative flex h-full flex-col bg-[#f5f7fa]">
+          {/* Drag handle: hidden on mobile, where the drawer is always
+              full-width. Listens on mousedown only — the window-level
+              listeners in the effect above handle the rest of the drag. */}
+          <Box
+            onMouseDown={startResizing}
+            sx={{
+              display: { xs: "none", sm: "block" },
+              position: "absolute",
+              // Fully inside the panel, never over the backdrop — straddling
+              // the edge risked a stray pixel registering as a backdrop
+              // click, which closes the whole drawer instead of resizing it.
+              left: 0,
+              top: 0,
+              bottom: 0,
+              width: 8,
+              cursor: "col-resize",
+              zIndex: 10,
+              "&:hover, &:active": {
+                backgroundColor: "rgba(0,0,0,0.12)",
+              },
+            }}
+            aria-hidden="true"
+          />
+          <Box className="flex items-center justify-between border-b border-[#e3e6ed] bg-white px-4 py-3.5">
             <Box className="flex items-center gap-2">
               <Box className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#1a1d23]">
                 <AutoAwesomeRounded sx={{ fontSize: 17, color: "#78a1ff" }} />
               </Box>
               <Box>
-                <Typography sx={{ color: "#20242b", fontSize: 14, fontWeight: 800 }}>
+                <Typography sx={{ color: "#141824", fontSize: 14, fontWeight: 800 }}>
                   Promo Assistant
                 </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 10.5 }}>
+                <Typography sx={{ color: "#525b75", fontSize: 10.5 }}>
                   Grounded in your live app data
                 </Typography>
               </Box>
@@ -175,21 +264,28 @@ export default function AssistantWidget() {
                   <Box
                     className={`max-w-[92%] rounded-xl px-3 py-2 ${
                       message.role === "user"
-                        ? "bg-[#22252b] text-white"
+                        ? "bg-[#141824] text-white"
                         : message.isError
-                          ? "border border-[#f5c6c6] bg-[#fdecec]"
-                          : "border border-[#e7eaee] bg-white"
+                          ? "border border-[#f5c6c6] bg-[#ffe2dc]"
+                          : "border border-[#e3e6ed] bg-white"
                     }`}
                   >
-                    <Typography
-                      sx={{
-                        fontSize: 13,
-                        color: message.role === "user" ? "#fff" : message.isError ? "#e5484d" : "#20242b",
-                        whiteSpace: "pre-wrap",
-                      }}
-                    >
-                      {message.text}
-                    </Typography>
+                    {message.role === "user" || message.isError ? (
+                      // The user's own text and error strings are shown as-is
+                      // — only the assistant's replies use markdown (see the
+                      // system prompt), so only they need FormattedText.
+                      <Typography
+                        sx={{
+                          fontSize: 13,
+                          color: message.role === "user" ? "#fff" : "#fa3b1d",
+                          whiteSpace: "pre-wrap",
+                        }}
+                      >
+                        {message.text}
+                      </Typography>
+                    ) : (
+                      <FormattedText text={message.text} color="#141824" />
+                    )}
                   </Box>
                   {message.toolName && (
                     <Chip
@@ -199,8 +295,8 @@ export default function AssistantWidget() {
                         height: 17,
                         fontSize: 9.5,
                         fontWeight: 700,
-                        backgroundColor: "#eef1f4",
-                        color: "#737b88",
+                        backgroundColor: "#eff2f6",
+                        color: "#525b75",
                       }}
                     />
                   )}
@@ -212,16 +308,16 @@ export default function AssistantWidget() {
                 </Box>
               ))}
               {loading && (
-                <Box className="flex items-center gap-2 rounded-xl border border-[#e7eaee] bg-white px-3 py-2">
-                  <CircularProgress size={14} sx={{ color: "#4f82f7" }} />
-                  <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>Thinking…</Typography>
+                <Box className="flex items-center gap-2 rounded-xl border border-[#e3e6ed] bg-white px-3 py-2">
+                  <CircularProgress size={14} sx={{ color: "#3874ff" }} />
+                  <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>Thinking…</Typography>
                 </Box>
               )}
             </Box>
           </Box>
 
           {messages.length <= 1 && (
-            <Box className="flex flex-wrap gap-1.5 border-t border-[#e7eaee] bg-white px-3.5 py-2.5">
+            <Box className="flex flex-wrap gap-1.5 border-t border-[#e3e6ed] bg-white px-3.5 py-2.5">
               {SUGGESTIONS.map((suggestion) => (
                 <Chip
                   key={suggestion}
@@ -234,7 +330,7 @@ export default function AssistantWidget() {
             </Box>
           )}
 
-          <Box className="flex items-center gap-2 border-t border-[#e7eaee] bg-white px-3 py-2.5">
+          <Box className="flex items-center gap-2 border-t border-[#e3e6ed] bg-white px-3 py-2.5">
             <TextField
               fullWidth
               size="small"
@@ -249,7 +345,7 @@ export default function AssistantWidget() {
             <IconButton
               onClick={() => send(input)}
               disabled={loading || !input.trim()}
-              sx={{ backgroundColor: "#22252b", color: "#fff", "&:hover": { backgroundColor: "#343942" } }}
+              sx={{ backgroundColor: "#141824", color: "#fff", "&:hover": { backgroundColor: "#31374a" } }}
             >
               <SendRounded fontSize="small" />
             </IconButton>

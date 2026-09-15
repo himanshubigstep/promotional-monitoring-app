@@ -50,24 +50,24 @@ export default function PromotionFilterModal({
       onClose={onClose}
       aria-labelledby="promotion-filter-title"
     >
-      <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e7eaee]">
+      <Box className="absolute left-1/2 top-1/2 w-[calc(100%-32px)] max-w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-5 shadow-2xl border border-[#e3e6ed]">
         <Box
-          className="mb-4 flex items-start justify-between gap-4 border-b border-[#e7eaee] pb-3"
+          className="mb-4 flex items-start justify-between gap-4 border-b border-[#e3e6ed] pb-3"
           id="promotion-filter-title"
         >
           <Box>
             <Box className="flex items-center gap-2">
-              <FilterAltRounded sx={{ color: "#4f82f7" }} />
-              <span className="font-bold text-[#20242b] text-base tracking-tight">
+              <FilterAltRounded sx={{ color: "#3874ff" }} />
+              <span className="font-bold text-[#141824] text-base tracking-tight">
                 Promotion Filters
               </span>
             </Box>
-            <span className="text-xs text-[#737b88] mt-0.5 block">
+            <span className="text-xs text-[#525b75] mt-0.5 block">
               Filter products, campaigns, and store offers across Sephora &
               competitors.
             </span>
           </Box>
-          <Button onClick={onClose} sx={{ minWidth: 40, color: "#20242b" }}>
+          <Button onClick={onClose} sx={{ minWidth: 40, color: "#141824" }}>
             <CloseRounded />
           </Button>
         </Box>
@@ -120,18 +120,18 @@ export default function PromotionFilterModal({
             onValueChange={(value) => update("toDate", value)}
           />
         </Box>
-        <Box className="mt-5 flex justify-end gap-2 border-t border-[#e7eaee] pt-4">
+        <Box className="mt-5 flex justify-end gap-2 border-t border-[#e3e6ed] pt-4">
           <Button
             onClick={() => {
               onApply(emptyPromotionFilters);
               onClose();
             }}
             sx={{
-              color: "#737b88",
+              color: "#525b75",
               textTransform: "none",
               fontWeight: 600,
               fontSize: 13,
-              "&:hover": { color: "#20242b", backgroundColor: "#f4f6f8" },
+              "&:hover": { color: "#141824", backgroundColor: "#f5f7fa" },
             }}
           >
             Clear filters
@@ -143,13 +143,13 @@ export default function PromotionFilterModal({
             }}
             variant="contained"
             sx={{
-              backgroundColor: "#22252b",
+              backgroundColor: "#141824",
               color: "#ffffff",
               textTransform: "none",
               fontWeight: 700,
               fontSize: 13,
               px: 3,
-              "&:hover": { backgroundColor: "#343942" },
+              "&:hover": { backgroundColor: "#31374a" },
             }}
           >
             Apply filters

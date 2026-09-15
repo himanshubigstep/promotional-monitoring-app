@@ -21,10 +21,25 @@ export default function StoreComparison() {
   const categoryProducts = products.filter((product) =>
     matchesPromotionFilters(product, filters),
   );
+  const today = new Date().toISOString().slice(0, 10);
+
+  const yourOffers = categoryProducts.filter((product) => product.isClient);
+  const yourDiscount = yourOffers.length
+    ? Math.round(
+        yourOffers.reduce(
+          (sum, product) => sum + product.competitorDiscount,
+          0,
+        ) / yourOffers.length,
+      )
+    : null;
+
+  const competitorProducts = categoryProducts.filter(
+    (product) => !product.isClient,
+  );
   const retailers = Array.from(
-    new Set(categoryProducts.map((product) => product.retailer)),
+    new Set(competitorProducts.map((product) => product.retailer)),
   ).map((retailer) => {
-    const offers = categoryProducts.filter(
+    const offers = competitorProducts.filter(
       (product) => product.retailer === retailer,
     );
     const discount = Math.round(
@@ -43,20 +58,20 @@ export default function StoreComparison() {
     return [
       retailer,
       discount,
-      Math.max(0, discount - 2),
+      yourDiscount,
       latest.fromDate,
       latest.toDate,
       trend,
     ] as const;
   });
   const averageMarket = Math.round(
-    categoryProducts.reduce(
+    competitorProducts.reduce(
       (sum, product) => sum + product.competitorDiscount,
       0,
-    ) / Math.max(categoryProducts.length, 1),
+    ) / Math.max(competitorProducts.length, 1),
   );
   const activeCount = retailers.filter(
-    (retailer) => retailer[4] >= "2026-09-08",
+    (retailer) => retailer[3] <= today && retailer[4] >= today,
   ).length;
   const bestCurrentOffer = retailers.length
     ? Math.max(...retailers.map((retailer) => Number(retailer[1])))
@@ -76,12 +91,12 @@ export default function StoreComparison() {
           <Card
             key={label}
             elevation={0}
-            className="rounded-2xl border border-[#e7eaee] bg-white transition-all hover:border-[#c8d0da]"
+            className="rounded-2xl border border-[#e3e6ed] bg-white transition-all hover:border-[#cbd0dd]"
           >
             <Box className="p-5">
               <Typography
                 sx={{
-                  color: "#737b88",
+                  color: "#525b75",
                   fontSize: 11.5,
                   fontWeight: 500,
                   letterSpacing: "0.05em",
@@ -92,7 +107,7 @@ export default function StoreComparison() {
               </Typography>
               <Typography
                 sx={{
-                  color: "#20242b",
+                  color: "#141824",
                   fontSize: 24,
                   fontWeight: 500,
                   mt: 1,
@@ -107,14 +122,14 @@ export default function StoreComparison() {
       </Box>
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#e7eaee] bg-white"
+        className="rounded-2xl border border-[#e3e6ed] bg-white"
       >
-        <Box className="border-b border-[#e7eaee] px-5 py-4">
+        <Box className="border-b border-[#e3e6ed] px-5 py-4">
           <Box className="flex items-center gap-2">
-            <FilterAltRounded sx={{ color: "#4f82f7", fontSize: 18 }} />
+            <FilterAltRounded sx={{ color: "#3874ff", fontSize: 18 }} />
             <Typography
               sx={{
-                color: "#20242b",
+                color: "#141824",
                 fontSize: 16,
                 fontWeight: 500,
                 letterSpacing: "-0.01em",
@@ -123,7 +138,7 @@ export default function StoreComparison() {
               Retailer Discount Comparison
             </Typography>
           </Box>
-          <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
+          <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
             Sephora discount versus competitor stores, with campaign dates and
             status.
           </Typography>
@@ -143,12 +158,12 @@ export default function StoreComparison() {
                   <TableCell
                     key={header}
                     sx={{
-                      color: "#737b88",
+                      color: "#525b75",
                       fontSize: 11,
                       fontWeight: 500,
                       textTransform: "uppercase",
                       letterSpacing: "0.05em",
-                      backgroundColor: "#f4f6f8",
+                      backgroundColor: "#f5f7fa",
                     }}
                   >
                     {header}
@@ -158,54 +173,81 @@ export default function StoreComparison() {
             </TableHead>
             <TableBody>
               {retailers.map((retailer) => {
-                const gap = Number(retailer[2]) - Number(retailer[1]);
-                const active = retailer[4] >= "2026-09-08";
+                const yourRetailerDiscount = retailer[2];
+                const gap =
+                  yourRetailerDiscount === null
+                    ? null
+                    : yourRetailerDiscount - Number(retailer[1]);
+                const status =
+                  retailer[3] > today
+                    ? "Upcoming"
+                    : retailer[4] >= today
+                      ? "Active"
+                      : "Expired";
                 return (
                   <TableRow key={retailer[0]} hover>
                     <TableCell
-                      sx={{ color: "#20242b", fontSize: 13, fontWeight: 500 }}
+                      sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
                     >
                       {retailer[0]}
                     </TableCell>
                     <TableCell
-                      sx={{ color: "#4f82f7", fontSize: 13.5, fontWeight: 500 }}
+                      sx={{ color: "#3874ff", fontSize: 13.5, fontWeight: 500 }}
                     >
                       -{retailer[1]}%
                     </TableCell>
                     <TableCell
-                      sx={{ color: "#20242b", fontSize: 13.5, fontWeight: 500 }}
+                      sx={{ color: "#141824", fontSize: 13.5, fontWeight: 500 }}
                     >
-                      -{retailer[2]}%
+                      {yourRetailerDiscount === null
+                        ? "No data"
+                        : `-${yourRetailerDiscount}%`}
                     </TableCell>
                     <TableCell>
-                      <Chip
-                        label={`${gap >= 0 ? "+" : ""}${gap}%`}
-                        icon={
-                          gap >= 0 ? (
-                            <ArrowUpwardRounded sx={{ fontSize: 14 }} />
-                          ) : (
-                            <ArrowDownwardRounded sx={{ fontSize: 14 }} />
-                          )
-                        }
-                        size="small"
-                        sx={{
-                          backgroundColor: gap >= 0 ? "#22252b" : "#fdecec",
-                          color: gap >= 0 ? "#ffffff" : "#e5484d",
-                          fontWeight: 500,
-                          borderRadius: "6px",
-                        }}
-                      />
+                      {gap === null ? (
+                        <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>
+                          No data
+                        </Typography>
+                      ) : (
+                        <Chip
+                          label={`${gap >= 0 ? "+" : ""}${gap}%`}
+                          icon={
+                            gap >= 0 ? (
+                              <ArrowUpwardRounded sx={{ fontSize: 14 }} />
+                            ) : (
+                              <ArrowDownwardRounded sx={{ fontSize: 14 }} />
+                            )
+                          }
+                          size="small"
+                          sx={{
+                            backgroundColor: gap >= 0 ? "#141824" : "#ffe2dc",
+                            color: gap >= 0 ? "#ffffff" : "#fa3b1d",
+                            fontWeight: 500,
+                            borderRadius: "6px",
+                          }}
+                        />
+                      )}
                     </TableCell>
-                    <TableCell sx={{ color: "#737b88", fontSize: 12.5 }}>
+                    <TableCell sx={{ color: "#525b75", fontSize: 12.5 }}>
                       {retailer[3]} - {retailer[4]}
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={active ? "Active" : "Expired"}
+                        label={status}
                         size="small"
                         sx={{
-                          backgroundColor: active ? "#22252b" : "#eef1f4",
-                          color: active ? "#ffffff" : "#737b88",
+                          backgroundColor:
+                            status === "Active"
+                              ? "#141824"
+                              : status === "Upcoming"
+                                ? "#eaf1ff"
+                                : "#eff2f6",
+                          color:
+                            status === "Active"
+                              ? "#ffffff"
+                              : status === "Upcoming"
+                                ? "#3874ff"
+                                : "#525b75",
                           fontWeight: 500,
                           fontSize: 10,
                           borderRadius: "4px",

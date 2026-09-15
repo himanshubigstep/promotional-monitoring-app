@@ -1,7 +1,6 @@
 import {
   AddRounded,
   DeleteOutlineRounded,
-  DownloadRounded,
   EditRounded,
   SearchRounded,
 } from "@mui/icons-material";
@@ -31,25 +30,21 @@ export default function Promotions() {
     deletePromotion,
     canEdit,
     filters,
-    lastAddedProduct,
     products: catalog,
-    promotions,
+    showToast,
   } = useAppContext();
   const [formOpen, setFormOpen] = useState(false);
   const [editingPromotion, setEditingPromotion] = useState<any | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [savedPage, setSavedPage] = useState(1);
   const pageSize = 10;
-  const savedPageSize = 10;
 
   async function handleDelete(id: string) {
-    setActionError(null);
     try {
       await deletePromotion(id);
+      showToast("Promotion deleted successfully.");
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to delete.");
+      showToast("Unable to delete. The database may be unavailable.", "error");
     }
   }
 
@@ -78,59 +73,9 @@ export default function Promotions() {
     (page - 1) * pageSize,
     page * pageSize,
   );
-  const savedPromotions = promotions
-    .filter(
-      (promotion) => {
-        const searchValue = filters.search.trim().toLowerCase();
-        const minimumDiscount =
-          filters.discount === "All"
-            ? 0
-            : Number(filters.discount.replace("%+", ""));
-        const discount = Number(promotion.discount.match(/\d+(?:\.\d+)?/)?.[0] || 0);
-        return (
-          (!searchValue ||
-            promotion.name.toLowerCase().includes(searchValue) ||
-            promotion.brands.toLowerCase().includes(searchValue)) &&
-          (filters.market === "All" || promotion.market === filters.market) &&
-          (filters.category === "All" || promotion.category === filters.category) &&
-          (filters.retailer === "All" || promotion.retailer === filters.retailer) &&
-          discount >= minimumDiscount &&
-          (!filters.fromDate || promotion.from >= filters.fromDate) &&
-          (!filters.toDate || promotion.to <= filters.toDate)
-        );
-      },
-    )
-    .sort((a, b) => {
-      const aActive = a.to >= today;
-      const bActive = b.to >= today;
-      if (aActive !== bActive) {
-        return aActive ? -1 : 1;
-      }
-      return b.to.localeCompare(a.to);
-    });
-  const visibleSavedPromotions = savedPromotions.slice(
-    (savedPage - 1) * savedPageSize,
-    savedPage * savedPageSize,
-  );
-  const downloadUpdatedProducts = () => {
-    if (!catalog || !Array.isArray(catalog) || catalog.length === 0) {
-      return;
-    }
-    const headers = Object.keys(catalog[0]);
-    const table = ` <table border="1"> <thead> <tr> ${headers.map((header) => `<th>${String(header)}</th>`).join("")} </tr> </thead> <tbody> ${catalog.map((product) => ` <tr> ${headers.map((header) => `<td>${String(product[header as keyof typeof product] ?? "")}</td>`).join("")} </tr> `).join("")} </tbody> </table> `;
-    const blob = new Blob([table], { type: "application/vnd.ms-excel" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "products.updated.xls";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
+
   useEffect(() => {
     setPage(1);
-    setSavedPage(1);
   }, [filters]);
 
   return (
@@ -139,7 +84,7 @@ export default function Promotions() {
         <Box>
           <Typography
             sx={{
-              color: "#20242b",
+              color: "#141824",
               fontSize: 16,
               fontWeight: 500,
               letterSpacing: "-0.01em",
@@ -147,7 +92,7 @@ export default function Promotions() {
           >
             Promotion Workspace
           </Typography>
-          <Typography sx={{ color: "#737b88", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: "#525b75", fontSize: 13, mt: 0.5 }}>
             Browse products, track discounts, and manage competitive beauty
             campaigns.
           </Typography>
@@ -159,7 +104,7 @@ export default function Promotions() {
               startIcon={<AddRounded />}
               onClick={() => setFormOpen(true)}
               sx={{
-                backgroundColor: "#22252b",
+                backgroundColor: "#141824",
                 color: "#ffffff",
                 textTransform: "none",
                 borderRadius: "8px",
@@ -167,7 +112,7 @@ export default function Promotions() {
                 fontSize: 13,
                 px: 2.5,
                 "&:hover": {
-                  backgroundColor: "#343942",
+                  backgroundColor: "#31374a",
                 },
               }}
             >
@@ -176,14 +121,11 @@ export default function Promotions() {
           )}
         </Box>
       </Box>
-      {actionError && (
-        <Box sx={{ color: "#e5484d", fontSize: 13 }}>{actionError}</Box>
-      )}
       <Card
         elevation={0}
-        className="rounded-2xl border border-[#e7eaee] bg-white"
+        className="rounded-2xl border border-[#e3e6ed] bg-white"
       >
-        <Box className="border-b border-[#e7eaee] p-4">
+        <Box className="border-b border-[#e3e6ed] p-4">
           <TextField
             size="small"
             placeholder="Search products, brands, or categories"
@@ -195,7 +137,7 @@ export default function Promotions() {
             slotProps={{
               input: {
                 startAdornment: (
-                  <SearchRounded sx={{ color: "#a0a8b3", mr: 1 }} />
+                  <SearchRounded sx={{ color: "#9fa6bc", mr: 1 }} />
                 ),
               },
             }}
@@ -211,9 +153,9 @@ export default function Promotions() {
                 component={Link}
                 to={`/products/${product.id}`}
                 elevation={0}
-                className="overflow-hidden rounded-2xl border border-[#e7eaee] no-underline transition-all hover:border-[#4f82f7] hover:shadow-md bg-white"
+                className="overflow-hidden rounded-2xl border border-[#e3e6ed] no-underline transition-all hover:border-[#3874ff] hover:shadow-md bg-white"
               >
-                <Box className="relative h-36 bg-[#f4f6f8]">
+                <Box className="relative h-36 bg-[#f5f7fa]">
                   <img
                     src={product.image || fallbackImage}
                     alt={product.name}
@@ -228,8 +170,8 @@ export default function Promotions() {
                       label={expired ? "Expired" : "Active"}
                       size="small"
                       sx={{
-                        backgroundColor: expired ? "#eef1f4" : "#22252b",
-                        color: expired ? "#737b88" : "#ffffff",
+                        backgroundColor: expired ? "#eff2f6" : "#141824",
+                        color: expired ? "#525b75" : "#ffffff",
                         fontSize: 10,
                         fontWeight: 800,
                         letterSpacing: "0.04em",
@@ -273,10 +215,10 @@ export default function Promotions() {
                         }}
                         sx={{
                           backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#20242b",
+                          color: "#141824",
                           padding: "4px",
                           borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#f5f8ff", color: "#4f82f7" },
+                          "&:hover": { backgroundColor: "#eaf1ff", color: "#3874ff" },
                         }}
                       >
                         <EditRounded sx={{ fontSize: 16 }} />
@@ -293,16 +235,16 @@ export default function Promotions() {
                         }}
                         sx={{
                           backgroundColor: "rgba(255,255,255,0.95)",
-                          color: "#e5484d",
+                          color: "#fa3b1d",
                           padding: "4px",
                           borderRadius: "6px",
-                          "&:hover": { backgroundColor: "#fdecec" },
+                          "&:hover": { backgroundColor: "#ffe2dc" },
                         }}
                       >
                         <DeleteOutlineRounded sx={{ fontSize: 16 }} />
                       </IconButton>
                     )}
-                    <Box className="rounded-md bg-[#f3873a] px-2 py-0.5 shadow-sm">
+                    <Box className="rounded-md bg-[#e5780b] px-2 py-0.5 shadow-sm">
                       <Typography
                         sx={{ color: "#ffffff", fontSize: 11, fontWeight: 800 }}
                       >
@@ -314,7 +256,7 @@ export default function Promotions() {
                 <Box className="p-3">
                   <Typography
                     sx={{
-                      color: "#737b88",
+                      color: "#525b75",
                       fontSize: 10,
                       fontWeight: 500,
                       letterSpacing: "0.05em",
@@ -325,7 +267,7 @@ export default function Promotions() {
                   </Typography>
                   <Typography
                     sx={{
-                      color: "#20242b",
+                      color: "#141824",
                       fontSize: 13,
                       fontWeight: 500,
                       lineHeight: 1.3,
@@ -334,12 +276,12 @@ export default function Promotions() {
                   >
                     {product.name}
                   </Typography>
-                  <Typography sx={{ color: "#737b88", fontSize: 11, mt: 0.5 }}>
+                  <Typography sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}>
                     {product.category} · {product.retailer}
                   </Typography>
                   <Typography
                     sx={{
-                      color: expired ? "#737b88" : "#4f82f7",
+                      color: expired ? "#525b75" : "#3874ff",
                       fontSize: 11,
                       fontWeight: 700,
                       mt: 1,
@@ -363,166 +305,6 @@ export default function Promotions() {
           itemLabel="products"
         />
       </Card>
-      {promotions.length > 0 && (
-        <Card
-          elevation={0}
-          className="rounded-2xl border border-[#e7eaee] bg-white"
-        >
-          <Box className="p-4 border-b border-[#e7eaee]">
-            <Box className="flex flex-wrap items-start justify-between gap-3">
-              <Box>
-                <Typography
-                  sx={{ color: "#20242b", fontSize: 16, fontWeight: 500 }}
-                >
-                  Saved Promotions
-                </Typography>
-                <Typography sx={{ color: "#737b88", fontSize: 12.5, mt: 0.5 }}>
-                  Campaigns added via the form, saved in Polish.
-                </Typography>
-              </Box>
-              <Button
-                variant="outlined"
-                size="small"
-                startIcon={<DownloadRounded />}
-                onClick={downloadUpdatedProducts}
-                sx={{
-                  borderColor: "#dce1e8",
-                  color: "#20242b",
-                  fontWeight: 700,
-                  fontSize: 12.5,
-                  textTransform: "none",
-                  "&:hover": {
-                    borderColor: "#4f82f7",
-                    backgroundColor: "#f5f8ff",
-                  },
-                }}
-              >
-                Download
-              </Button>
-            </Box>
-          </Box>
-          {lastAddedProduct && (
-            <Box className="m-4 rounded-xl border border-[#e7eaee] bg-[#eaf1ff] p-4">
-              <Typography
-                sx={{
-                  color: "#3b6fed",
-                  fontSize: 11,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em",
-                }}
-              >
-                Ostatnio zaktualizowany rekord
-              </Typography>
-              <Typography
-                sx={{
-                  color: "#20242b",
-                  fontSize: 14,
-                  fontWeight: 800,
-                  mt: 0.5,
-                }}
-              >
-                {lastAddedProduct.id} · {lastAddedProduct.name}
-              </Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12, mt: 0.5 }}>
-                {lastAddedProduct.market} · {lastAddedProduct.brand} ·{" "}
-                {lastAddedProduct.retailer} · {lastAddedProduct.fromDate} -{" "}
-                {lastAddedProduct.toDate} · -
-                {lastAddedProduct.competitorDiscount}%
-              </Typography>
-            </Box>
-          )}
-          <Box className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
-            {visibleSavedPromotions.map((promotion) => {
-              const isExpired = promotion.to < today;
-              return (
-                <Box
-                  key={promotion.id}
-                  className="rounded-xl border border-[#e7eaee] p-4 bg-white hover:border-[#4f82f7] transition-all"
-                >
-                  <Box className="flex items-start justify-between gap-3">
-                    <Box>
-                      <Typography
-                        sx={{ color: "#20242b", fontSize: 13.5, fontWeight: 500 }}
-                      >
-                        {promotion.name}
-                      </Typography>
-                      <Typography
-                        sx={{ color: "#737b88", fontSize: 11.5, mt: 0.5 }}
-                      >
-                        {promotion.brands} · {promotion.retailer}
-                      </Typography>
-                    </Box>
-                    <Box className="flex items-center gap-1">
-                      {!isExpired && canEdit && (
-                        <IconButton
-                          size="small"
-                          title="Edit promotion"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            setEditingPromotion(promotion);
-                            setFormOpen(true);
-                          }}
-                          sx={{
-                            color: "#20242b",
-                            backgroundColor: "#eef1f4",
-                            borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#e7eaee" },
-                          }}
-                        >
-                          <EditRounded sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      )}
-                      {isExpired && canEdit && (
-                        <IconButton
-                          size="small"
-                          title="Delete expired promotion"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            handleDelete(promotion.id);
-                          }}
-                          sx={{
-                            color: "#e5484d",
-                            backgroundColor: "#fdecec",
-                            borderRadius: "6px",
-                            "&:hover": { backgroundColor: "#fbdada" },
-                          }}
-                        >
-                          <DeleteOutlineRounded sx={{ fontSize: 16 }} />
-                        </IconButton>
-                      )}
-                    </Box>
-                  </Box>
-                  <Typography sx={{ color: "#737b88", fontSize: 12, mt: 1 }}>
-                    {promotion.from} - {promotion.to} · {promotion.category}
-                  </Typography>
-                  <Chip
-                    label={promotion.discount}
-                    size="small"
-                    sx={{
-                      mt: 1.5,
-                      backgroundColor: "#f3873a",
-                      color: "#ffffff",
-                      fontWeight: 800,
-                      borderRadius: "6px",
-                    }}
-                  />
-                </Box>
-              );
-            })}
-          </Box>
-          <AppPagination
-            count={Math.ceil(savedPromotions.length / savedPageSize)}
-            page={savedPage}
-            onChange={setSavedPage}
-            total={savedPromotions.length}
-            pageSize={savedPageSize}
-            itemLabel="saved promotions"
-          />
-        </Card>
-      )}
       <PromotionFormModal
         open={formOpen}
         editingPromotion={editingPromotion}
@@ -531,17 +313,17 @@ export default function Promotions() {
           setEditingPromotion(null);
         }}
         onSave={async (promotion) => {
-          setActionError(null);
           try {
             if (editingPromotion) {
               await updatePromotion(editingPromotion.id, promotion);
             } else {
               await addPromotion(promotion);
             }
+            showToast(editingPromotion ? "Promotion updated successfully." : "Promotion saved successfully.");
             setFormOpen(false);
             setEditingPromotion(null);
           } catch (err) {
-            setActionError(err instanceof Error ? err.message : "Failed to save.");
+            showToast("Unable to save. The database may be unavailable.", "error");
           }
         }}
       />

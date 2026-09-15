@@ -24,7 +24,8 @@ This is a POC being built to win back a client (beauty-retail promotional monito
 | Data entry form, Dashboard, Calendar, Brand Analytics, Store Comparison | **Merged (PR #4).** Wired to real Supabase data, static files kept as a verified fallback |
 | OCR on manual upload (Gemini + Tesseract) | Existing, works, but API key is client-exposed — needs to move server-side |
 | Review queue (approve/edit/reject `pending_review` rows) | **Merged (PR #3).** Verified end-to-end against local + cloud DB. 78 scraper-sourced rows currently sitting unreviewed as of 2026-09-14 — nobody can act on them yet without login (see Auth row below) |
-| Auth login/session UI | Not built — `src/lib/supabaseClient.ts` has a dev-only `window.supabase` stopgap for testing until this exists. Scoped in `AUTH_LOGIN_PLAN.md`, ready to build. Deployed anon key reads via `0005_anon_public_read.sql` (see below) — kept permanently regardless of this shipping, per decision below |
+| Product catalog (real per-store product list, independent of promotions) | **New this session (Claude) — crosses into Gajendra's `supabase/`/`scraper/` area, flagging for review, not yet run against a live DB.** New `products` table + weekly catalog crawl (3 of 4 scrapable retailers; Flaconi excluded, no stable selectors) + a Product Catalog page + the promotion form's product picker now reads from it. See the new "Product catalog" subsection below and the "Product catalog (step 3)" entry in Decisions.md |
+| Auth login/session UI | **In `feature/auth-login-flow`, reconciled against main's toast-system/theme rewrite — ready for review.** Real `supabase.auth` login page, real `profiles.role`-driven `canEdit` (replaces the old fake `Admin/Data Analytics/Viewer` selector entirely — confirmed via grep that nothing else referenced it). Deliberately not a hard route guard: anon visitors still see everything read-only exactly as before. Deployed anon key still reads via `0005_anon_public_read.sql` (see below) — kept permanently regardless of this shipping, per decision below |
 | AI chat assistant | **Merged, but now stale.** Reads static `AppContext` data — once PR #4 merges, `assistantTools.ts` will keep reading the *fallback* shape correctly (same `Promotion`/`Product` types), but the `catalog`/`productsList` split it was written against no longer exists as two things; needs a quick pass to confirm it still behaves post-merge |
 | PDF export, alerts/digests, CRM/social monitoring | Explicitly deprioritized for the POC |
 
@@ -121,6 +122,40 @@ supabase/migrations/0005_anon_public_read.sql   Adds anon-role select policies o
 **Why this exists:** every RLS policy through `0003` is scoped `to authenticated`. With no login UI built yet, the deployed frontend always runs as the unauthenticated `anon` role, so the live Vercel deployment returned zero rows everywhere — not a data or env-var problem, an access problem. `0005` adds anon read access, deliberately narrower than what authenticated users get: reference tables are fully readable, but promotions (and anything joined off one) are restricted to `status = 'approved'`, matching the same backstop `0003` put in place for the analyst role. No insert/update/delete was added for anon, and `profiles` got no anon policy at all.
 
 **Decided (2026-09-14): `0005`'s anon policies stay permanently**, independent of the Auth login/session UI (see `AUTH_LOGIN_PLAN.md`). This is a deliberate call, not an accidental leftover from demo pressure — the deployed link stays read-only-viewable without login even after real editor/analyst auth ships; login adds real role-based capability on top, it doesn't replace or require removing public anon access.
+
+### Product catalog (Claude, this session — crosses into Gajendra's area, flagging for review)
+
+```
+supabase/migrations/0006_products.sql        New products table (retailer/brand/category FKs, price, image,
+                                                external_id for scraper dedupe) + a nullable promotions.product_id.
+                                                Same open-read/editor-write RLS shape as brands/retailers/categories.
+scraper/src/retailers.ts                      Added catalogTargets — real listing-page URLs + CSS selectors per
+                                                retailer for the DOM-based catalog crawl, verified live 2026-09-14
+                                                (see inline comments per retailer for what was actually checked).
+scraper/src/scrapeProducts.ts                 New entry point (npm run scrape:products): walks each catalogTarget's
+                                                listing pages and upserts into products, keyed on retailer_id+external_id.
+.github/workflows/scrape.yml                  Added a second weekly (Monday) scheduled job for the catalog crawl,
+                                                alongside the existing daily promo-scrape job.
+src/data/productTypes.ts                      New CatalogProduct type — distinct from Product (which is a
+                                                promotion viewed as a product, not a real catalog entry).
+src/lib/promotionsData.ts                     fetchProductCatalog / addProductRow, folded into loadApprovedData()
+                                                as productCatalog (an empty products table does NOT trigger the
+                                                offline-fallback path — only a genuine fetch error does).
+src/context/AppContext.tsx                    Exposes productCatalog + addCatalogProduct; fallback synthesizes a
+                                                catalog from the existing static data when Supabase is unreachable.
+src/components/PromotionFormModal.tsx         The "Produkt" picker now offers every catalog product (any store),
+                                                not just ones with an existing promotion — same prefill behavior.
+src/pages/Products/Products.tsx (new page)    Browse/search the full catalog by store, add a product manually.
+scripts/generate-seed.js                      Also seeds products from the same static catalog used for sample
+                                                promotions, so local `db reset` has picker data without a scraper run.
+```
+
+**Why this exists:** until now, "products" were only ever promotions viewed differently (`src/lib/promotionsData.ts` derived a `Product` and a `Promotion` from the same row, 1:1) — so the promotion form's product picker only ever offered items that already had a campaign attached. There was no way to see or pick from everything a store actually carries. See "Product catalog (step 3)" in Decisions.md for the full reasoning, especially why 3 sites' pagination isn't implemented yet and why Flaconi is excluded from the crawl.
+
+**Not yet done / needs Gajendra's eyes:**
+1. Not run against a real database — this sandbox has no Docker/Supabase-CLI access, so the migration is unverified beyond careful review against the existing `0001`–`0005` migrations' patterns. Run `npx supabase db reset` and `npm run db:types` for real before trusting it.
+2. `src/types/supabase.ts` was hand-edited to add the `products` table (normally generated, never hand-edited per the note below) — same reason as above. Regenerate for real once there's DB access.
+3. Selector-based catalog crawl is a new pattern alongside the existing Gemini-vision promo scrape — worth a second opinion on whether that split (vision for promo banners, DOM selectors for catalogs) is the right call long-term, and whether the "first page only" pagination gap for Notino/Super-Pharm/Drogerie Natura is worth resolving now or later.
 
 ### Planned, not yet built
 

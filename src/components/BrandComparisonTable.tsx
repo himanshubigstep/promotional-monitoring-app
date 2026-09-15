@@ -4,7 +4,13 @@ import {
     TableContainer, TableHead, TableRow, TextField, Typography,
     ToggleButton, ToggleButtonGroup, Paper, InputAdornment,
 } from "@mui/material";
-import { SearchRounded, StorefrontRounded } from "@mui/icons-material";
+import {
+    SearchRounded,
+    StorefrontRounded,
+    UnfoldMoreRounded,
+    CheckRounded,
+    ScheduleRounded,
+} from "@mui/icons-material";
 import { matchesPromotionFilters, useAppContext } from "../context/AppContext";
 import { getMarketRetailers } from "../data/retailers";
 
@@ -131,32 +137,35 @@ const BrandComparisonTable = () => {
     const renderCell = (cell: RetailerCell | undefined) => {
         if (!cell) {
             return (
-                <Typography sx={{ fontSize: 13, color: "#d1d5db", fontWeight: 600 }}>
+                <Typography sx={{ fontSize: 13, color: "#cbd0dd", fontWeight: 600 }}>
                     —
                 </Typography>
             );
         }
 
         return (
-            <Box className="flex flex-col items-center justify-center py-1">
-                <Typography
+            <Box className="flex flex-col items-center justify-center gap-0.5 py-1">
+                <Box
+                    className="inline-flex items-center gap-0.5 rounded-full"
                     sx={{
-                        fontSize: "12px",
-                        fontWeight: 800,
-                        color: cell.active ? "#15803d" : "#b91c1c",
-                        lineHeight: 1.2,
+                        px: 1,
+                        py: 0.3,
+                        backgroundColor: cell.active ? "#d9fbd0" : "#ffe2dc",
+                        color: cell.active ? "#1c6c09" : "#c92e13",
                     }}
                 >
-                    -{cell.discount}%
-                </Typography>
-                <Typography
-                    sx={{
-                        fontSize: "11px",
-                        fontWeight: 700,
-                        color: cell.active ? "#166534" : "#991b1b",
-                        mt: 0.2,
-                    }}
-                >
+                    {cell.active ? (
+                        <CheckRounded sx={{ fontSize: 12 }} />
+                    ) : (
+                        <ScheduleRounded sx={{ fontSize: 12 }} />
+                    )}
+                    <Typography
+                        sx={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.2 }}
+                    >
+                        -{cell.discount}%
+                    </Typography>
+                </Box>
+                <Typography sx={{ fontSize: "10.5px", fontWeight: 500, color: "#525b75" }}>
                     {cell.priceAfterDiscount}
                 </Typography>
             </Box>
@@ -166,32 +175,27 @@ const BrandComparisonTable = () => {
     return (
         <Card
             elevation={0}
-            sx={{
-                borderRadius: "16px",
-                border: "1px solid #f1f5f9",
-                boxShadow: "0 10px 30px -5px rgba(0, 0, 0, 0.05)",
-                backgroundColor: "#ffffff",
-                overflow: "hidden",
-            }}
+            className="rounded-2xl border border-[#e3e6ed] bg-white"
+            sx={{ overflow: "hidden" }}
         >
             <CardContent sx={{ p: { xs: 2, sm: 3.5 } }}>
                 {/* Header Section */}
-                <Box className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                <Box className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
                     <Box>
                         <Box className="flex items-center gap-2 mb-1">
-                            <StorefrontRounded sx={{ color: "#0f172a", fontSize: 18 }} />
-                            <Typography sx={{ fontSize: 16, fontWeight: 500, color: "#0f172a", letterSpacing: "-0.3px" }}>
+                            <StorefrontRounded sx={{ color: "#3874ff", fontSize: 18 }} />
+                            <Typography sx={{ fontSize: 17, fontWeight: 800, color: "#141824", letterSpacing: "-0.3px" }}>
                                 Brand × Retailer Comparison
                             </Typography>
                         </Box>
-                        <Typography sx={{ fontSize: 13, color: "#64748b" }}>
+                        <Typography sx={{ fontSize: 13, color: "#525b75" }}>
                             Overview of promotions across retailers. Active deals have a green background and expired deals have a red background.
                         </Typography>
                     </Box>
                 </Box>
 
                 {/* Filters Section */}
-                <Box className="flex flex-wrap items-center gap-3 mb-6 p-2.5 bg-[#f8fafc] rounded-xl border border-[#e2e8f0]">
+                <Box className="flex flex-wrap items-center gap-3 mb-5 pb-4 border-b border-[#e3e6ed]">
                     <ToggleButtonGroup
                         size="small"
                         exclusive
@@ -210,11 +214,11 @@ const BrandComparisonTable = () => {
                                 fontSize: "12px",
                                 px: 2,
                                 py: 0.5,
-                                color: "#64748b",
+                                color: "#525b75",
                                 "&.Mui-selected": {
-                                    backgroundColor: "#0f172a",
+                                    backgroundColor: "#3874ff",
                                     color: "#ffffff",
-                                    "&:hover": { backgroundColor: "#1e293b" },
+                                    "&:hover": { backgroundColor: "#2c5fd6" },
                                 },
                             },
                         }}
@@ -233,7 +237,7 @@ const BrandComparisonTable = () => {
                             input: {
                                 startAdornment: (
                                     <InputAdornment position="start">
-                                        <SearchRounded sx={{ color: "#94a3b8", fontSize: 18 }} />
+                                        <SearchRounded sx={{ color: "#9fa6bc", fontSize: 18 }} />
                                     </InputAdornment>
                                 ),
                             },
@@ -244,7 +248,7 @@ const BrandComparisonTable = () => {
                             "& .MuiOutlinedInput-root": {
                                 borderRadius: "8px",
                                 fontSize: "13px",
-                                "& fieldset": { borderColor: "#cbd5e1" },
+                                "& fieldset": { borderColor: "#cbd0dd" },
                             },
                         }}
                     />
@@ -260,7 +264,7 @@ const BrandComparisonTable = () => {
                             "& .MuiOutlinedInput-root": {
                                 borderRadius: "8px",
                                 fontSize: "13px",
-                                "& fieldset": { borderColor: "#cbd5e1" },
+                                "& fieldset": { borderColor: "#cbd0dd" },
                             },
                         }}
                     />
@@ -284,11 +288,11 @@ const BrandComparisonTable = () => {
                                 fontSize: "12px",
                                 px: 1.8,
                                 py: 0.5,
-                                color: "#64748b",
+                                color: "#525b75",
                                 "&.Mui-selected": {
-                                    backgroundColor: "#0f172a",
+                                    backgroundColor: "#3874ff",
                                     color: "#ffffff",
-                                    "&:hover": { backgroundColor: "#1e293b" },
+                                    "&:hover": { backgroundColor: "#2c5fd6" },
                                 },
                             },
                         }}
@@ -302,11 +306,11 @@ const BrandComparisonTable = () => {
                 {/* Table Section */}
                 <TableContainer
                     component={Paper}
+                    elevation={0}
                     sx={{
                         maxHeight: 620,
                         boxShadow: "none",
-                        borderRadius: "12px",
-                        border: "1px solid #e2e8f0",
+                        backgroundColor: "transparent",
                     }}
                 >
                     <Table stickyHeader size="small">
@@ -314,31 +318,37 @@ const BrandComparisonTable = () => {
                             <TableRow>
                                 <TableCell
                                     sx={{
-                                        fontWeight: 500,
-                                        backgroundColor: "#f8fafc",
-                                        color: "#334155",
+                                        fontWeight: 700,
+                                        backgroundColor: "#ffffff",
+                                        color: "#525b75",
                                         minWidth: 140,
-                                        borderBottom: "2px solid #e2e8f0",
-                                        fontSize: "12px",
+                                        borderBottom: "1px solid #e3e6ed",
+                                        fontSize: "11px",
                                         textTransform: "uppercase",
                                         letterSpacing: "0.5px",
                                     }}
                                 >
-                                    Brand
+                                    <Box className="flex items-center gap-0.5">
+                                        Brand
+                                        <UnfoldMoreRounded sx={{ fontSize: 14, color: "#9fa6bc" }} />
+                                    </Box>
                                 </TableCell>
                                 <TableCell
                                     sx={{
-                                        fontWeight: 500,
-                                        backgroundColor: "#f8fafc",
-                                        color: "#334155",
+                                        fontWeight: 700,
+                                        backgroundColor: "#ffffff",
+                                        color: "#525b75",
                                         minWidth: 200,
-                                        borderBottom: "2px solid #e2e8f0",
-                                        fontSize: "12px",
+                                        borderBottom: "1px solid #e3e6ed",
+                                        fontSize: "11px",
                                         textTransform: "uppercase",
                                         letterSpacing: "0.5px",
                                     }}
                                 >
-                                    Product
+                                    <Box className="flex items-center gap-0.5">
+                                        Product
+                                        <UnfoldMoreRounded sx={{ fontSize: 14, color: "#9fa6bc" }} />
+                                    </Box>
                                 </TableCell>
                                 {retailers.map((r) => {
                                     const isYour = r === yourStore;
@@ -347,12 +357,12 @@ const BrandComparisonTable = () => {
                                             key={r}
                                             align="center"
                                             sx={{
-                                                fontWeight: 500,
+                                                fontWeight: 700,
                                                 minWidth: 110,
-                                                backgroundColor: isYour ? "#22252b" : "#f8fafc",
-                                                color: isYour ? "#ffffff" : "#334155",
-                                                borderBottom: "2px solid #e2e8f0",
-                                                fontSize: "11px",
+                                                backgroundColor: isYour ? "#eaf1ff" : "#ffffff",
+                                                color: isYour ? "#3874ff" : "#525b75",
+                                                borderBottom: isYour ? "1px solid #cfe0ff" : "1px solid #e3e6ed",
+                                                fontSize: "10.5px",
                                                 letterSpacing: "0.3px",
                                             }}
                                         >
@@ -367,20 +377,21 @@ const BrandComparisonTable = () => {
                                 <TableRow
                                     key={row.key}
                                     sx={{
-                                        "&:hover": { backgroundColor: "#f8fafc" },
+                                        "&:hover": { backgroundColor: "#f5f7fa" },
                                         transition: "background-color 0.15s ease",
+                                        "& .MuiTableCell-root": { borderBottom: "1px solid #eff2f6" },
                                     }}
                                 >
-                                    <TableCell sx={{ borderColor: "#f1f5f9" }}>
-                                        <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: "#0f172a" }}>
+                                    <TableCell>
+                                        <Typography sx={{ fontSize: 12.5, fontWeight: 600, color: "#3874ff" }}>
                                             {row.brand}
                                         </Typography>
                                     </TableCell>
-                                    <TableCell sx={{ borderColor: "#f1f5f9" }}>
-                                        <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: "#1e293b" }}>
+                                    <TableCell>
+                                        <Typography sx={{ fontSize: 12.5, fontWeight: 500, color: "#141824" }}>
                                             {row.name}
                                         </Typography>
-                                        <Typography sx={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>
+                                        <Typography sx={{ fontSize: 11, color: "#525b75", fontWeight: 500 }}>
                                             {row.category} • <span style={{ fontWeight: 500 }}>{row.market}</span>
                                         </Typography>
                                     </TableCell>
@@ -388,22 +399,12 @@ const BrandComparisonTable = () => {
                                         const cell = row.retailers[r];
                                         const isYour = r === yourStore;
 
-                                        // Image jaise background colors:
-                                        // Active = Light Green (#e8f5e9)
-                                        // Expired = Light Red/Pink (#fff0f3)
-                                        let cellBg = "transparent";
-                                        if (cell) {
-                                            cellBg = cell.active ? "#e8f5e9" : "#fff0f3";
-                                        }
-
                                         return (
                                             <TableCell
                                                 key={r}
                                                 align="center"
                                                 sx={{
-                                                    backgroundColor: cellBg,
-                                                    borderLeft: isYour ? "2px solid #22252b" : "1px solid #f1f5f9",
-                                                    borderRight: isYour ? "2px solid #22252b" : "1px solid #f1f5f9",
+                                                    backgroundColor: isYour ? "rgba(56,116,255,0.04)" : "transparent",
                                                     px: 1,
                                                     py: 1,
                                                 }}
@@ -419,9 +420,9 @@ const BrandComparisonTable = () => {
                                     <TableCell
                                         colSpan={retailers.length + 2}
                                         align="center"
-                                        sx={{ py: 8 }}
+                                        sx={{ py: 8, borderBottom: "none" }}
                                     >
-                                        <Typography sx={{ color: "#64748b", fontSize: 13, fontWeight: 500 }}>
+                                        <Typography sx={{ color: "#525b75", fontSize: 13, fontWeight: 500 }}>
                                             No products match your filters.
                                         </Typography>
                                     </TableCell>
@@ -430,6 +431,14 @@ const BrandComparisonTable = () => {
                         </TableBody>
                     </Table>
                 </TableContainer>
+
+                {rows.length > 0 && (
+                    <Box className="flex flex-wrap items-center justify-between gap-2 mt-3 pt-3 border-t border-[#e3e6ed]">
+                        <Typography sx={{ fontSize: 12, color: "#525b75", fontWeight: 500 }}>
+                            Showing {rows.length} product{rows.length === 1 ? "" : "s"} across {retailers.length} retailer{retailers.length === 1 ? "" : "s"}
+                        </Typography>
+                    </Box>
+                )}
             </CardContent>
         </Card>
     );

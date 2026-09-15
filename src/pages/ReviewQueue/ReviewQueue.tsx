@@ -100,32 +100,32 @@ export default function ReviewQueue() {
 
   return (
     <Box className="flex flex-col gap-5">
-      <Typography sx={{ color: "#737b88", fontSize: 13 }}>
+      <Typography sx={{ color: "#525b75", fontSize: 13 }}>
         Scraped and OCR-sourced promotions wait here until an editor approves, corrects, or
         rejects them. Nothing here is visible anywhere else in the app yet.
       </Typography>
 
       {actionError && (
-        <Box sx={{ color: "#e5484d", fontSize: 13 }}>{actionError}</Box>
+        <Box sx={{ color: "#fa3b1d", fontSize: 13 }}>{actionError}</Box>
       )}
 
-      {loading && <Typography sx={{ color: "#737b88" }}>Loading…</Typography>}
+      {loading && <Typography sx={{ color: "#525b75" }}>Loading…</Typography>}
 
       {!loading && loadError && (
-        <Box sx={{ color: "#e5484d", fontSize: 13 }}>{loadError}</Box>
+        <Box sx={{ color: "#fa3b1d", fontSize: 13 }}>{loadError}</Box>
       )}
 
       {!loading && !loadError && items.length === 0 && (
-        <Typography sx={{ color: "#737b88" }}>Nothing waiting for review.</Typography>
+        <Typography sx={{ color: "#525b75" }}>Nothing waiting for review.</Typography>
       )}
 
       <Box className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         {items.map((item) => (
-          <Card key={item.id} className="flex flex-col overflow-hidden" sx={{ borderRadius: "16px", border: "1px solid #e7eaee" }}>
+          <Card key={item.id} className="flex flex-col overflow-hidden" sx={{ borderRadius: "16px", border: "1px solid #e3e6ed" }}>
             <img
               src={item.screenshotUrl || fallbackImage}
               alt={item.name}
-              className="w-full h-40 object-cover bg-[#f4f6f8]"
+              className="w-full h-40 object-cover bg-[#f5f7fa]"
               onError={(event) => {
                 event.currentTarget.onerror = null;
                 event.currentTarget.src = fallbackImage;
@@ -140,17 +140,17 @@ export default function ReviewQueue() {
                 )}
               </Stack>
               <Typography sx={{ fontWeight: 700, fontSize: 14 }}>{item.name}</Typography>
-              <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>
+              <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>
                 {item.date_from} – {item.date_to}
                 {item.threshold ? ` • min. ${item.threshold}` : ""}
               </Typography>
               {item.brands.length > 0 && (
-                <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>
+                <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>
                   Brands: {item.brands.map((brand) => brand.name).join(", ")}
                 </Typography>
               )}
               {item.notes && (
-                <Typography sx={{ color: "#737b88", fontSize: 12.5 }}>{item.notes}</Typography>
+                <Typography sx={{ color: "#525b75", fontSize: 12.5 }}>{item.notes}</Typography>
               )}
               {canEdit ? (
                 <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
