@@ -3,11 +3,35 @@
 // own answer that only public data is in scope for now.
 //
 // Three retailers are deliberately excluded — all fall back to manual entry:
-// - Hebe: serves an interactive Cloudflare Turnstile challenge.
-// - Douglas, Sephora: block plain headless Playwright with a WAF "access
-//   denied" (no challenge to solve, just a hard reject). Decision made to
-//   treat these as blocked rather than spend time on fingerprint hardening —
-//   revisit if that changes.
+// - Hebe: serves a genuine interactive Cloudflare Turnstile challenge (a real
+//   "verify you are human" widget, confirmed still current) — not attempting
+//   an automated bypass of that.
+// - Douglas, Sephora: both sit behind Akamai Bot Manager (confirmed via the
+//   "Access Denied" / errors.edgesuite.net response — that's Akamai's edge
+//   error page, not a generic WAF). Investigated properly rather than just
+//   re-confirming the old assumption:
+//     - An interactive, non-automated browser session loads both sites
+//       completely normally (real promo content, no challenge) FROM THE SAME
+//       OUTBOUND IP as this scraper's sandbox test below — so this is not an
+//       IP/network-reputation block, ruling that out directly.
+//     - A plain scraper/src/scrape.ts-equivalent Playwright launch, even
+//       hardened (navigator.webdriver patched to undefined,
+//       --disable-blink-features=AutomationControlled, realistic locale/
+//       timezone/viewport/UA), still gets an immediate 403 from Akamai.
+//   That means the block is happening on a signal deeper than the simple
+//   JS-level fingerprint checks that hardening pass addressed — Akamai Bot
+//   Manager is known to also fingerprint the TLS/HTTP2 handshake and detect
+//   CDP artifacts (Playwright drives Chromium via the DevTools Protocol,
+//   which leaves traces a product like this specifically looks for) —
+//   neither of which a `page.addInitScript` can touch. Reliably getting past
+//   that would mean much heavier tooling (e.g. playwright-extra + a stealth
+//   plugin, or a proper anti-detect browser/residential-proxy service) with
+//   real recurring cost and no guaranteed outcome against an enterprise
+//   product that's actively maintained against exactly this kind of evasion
+//   — a materially different, bigger decision than a scoped hardening pass,
+//   and not attempted here. For Sephora specifically (the client's own
+//   site), asking them for a direct data export/feed is very likely both
+//   easier and more reliable than continuing to fight their own WAF.
 
 export type RetailerTarget = {
   name: string; // must match `retailers.name` in the DB (see supabase/seed.sql)
