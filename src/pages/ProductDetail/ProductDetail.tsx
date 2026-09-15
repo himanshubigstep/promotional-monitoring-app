@@ -512,7 +512,7 @@ export default function ProductDetail() {
                   mt: 0.5,
                 }}
               >
-                {product.fromDate} — {product.toDate}
+                {product.fromDate} - {product.toDate}
               </Typography>
             </Box>
           </Box>

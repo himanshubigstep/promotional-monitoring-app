@@ -194,7 +194,7 @@ function DataTable({
                     key={cellIndex}
                     sx={{ color: "#141824", fontSize: 12.5, whiteSpace: "nowrap" }}
                   >
-                    {cell === null || cell === "" ? "—" : cell}
+                    {cell === null || cell === "" ? "-" : cell}
                   </TableCell>
                 ))}
               </TableRow>
@@ -262,7 +262,7 @@ function ProductCard({ item }: { item: ProductCardItem }) {
             </>
           ) : (
             <Typography sx={{ color: "#141824", fontSize: 12.5, fontWeight: 800 }}>
-              {item.price !== null ? `${item.price} ${item.currency}` : "—"}
+              {item.price !== null ? `${item.price} ${item.currency}` : "-"}
             </Typography>
           )}
           {item.discount !== null && item.discount > 0 && (
@@ -320,7 +320,7 @@ function PromotionCard({ item }: { item: PromotionCardItem }) {
       <Box className="flex items-center justify-between gap-2">
         <Typography sx={{ color: "#141824", fontSize: 12.5, fontWeight: 800 }}>{item.name}</Typography>
         <Chip
-          label={item.discount || "—"}
+          label={item.discount || "-"}
           size="small"
           sx={{ height: 18, fontSize: 10, fontWeight: 800, backgroundColor: "#fff1e6", color: "#e5780b" }}
         />
