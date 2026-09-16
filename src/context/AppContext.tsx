@@ -159,8 +159,8 @@ type AppContextValue = {
   setFilters: (filters: PromotionFilters) => void;
   loading: boolean;
   usingFallbackData: boolean;
-  showToast: (message: string, severity?: "success" | "error") => void;
-  toast: { message: string; severity: "success" | "error" } | null;
+  showToast: (message: string, severity?: "success" | "error" | "warning") => void;
+  toast: { message: string; severity: "success" | "error" | "warning" } | null;
   clearToast: () => void;
 };
 
@@ -285,9 +285,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [filters, setFilters] = useState<PromotionFilters>(emptyPromotionFilters);
   const [loading, setLoading] = useState(true);
   const [usingFallbackData, setUsingFallbackData] = useState(false);
-  const [toast, setToast] = useState<{ message: string; severity: "success" | "error" } | null>(null);
+  const [toast, setToast] = useState<{ message: string; severity: "success" | "error" | "warning" } | null>(null);
   const showToast = useCallback(
-    (message: string, severity: "success" | "error" = "success") => {
+    (message: string, severity: "success" | "error" | "warning" = "success") => {
       setToast({ message, severity });
     },
     [],

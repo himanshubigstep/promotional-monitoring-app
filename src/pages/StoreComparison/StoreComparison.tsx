@@ -150,7 +150,7 @@ export default function StoreComparison() {
               <TableRow>
                 {[
                   "Retailer",
-                  "Their discount",
+                  "Competitor Discount",
                   "Your discount",
                   "Gap",
                   "Campaign dates",

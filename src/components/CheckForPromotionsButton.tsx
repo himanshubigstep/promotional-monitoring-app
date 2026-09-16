@@ -48,7 +48,7 @@ export default function CheckForPromotionsButton() {
         "success",
       );
     } catch (err) {
-      showToast("No Promotions Available for now", "error");
+      showToast("No Promotions Available for now", "warning");
     } finally {
       setTriggering(false);
     }
