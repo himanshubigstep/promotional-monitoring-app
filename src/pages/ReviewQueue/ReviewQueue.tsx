@@ -22,7 +22,7 @@ import {
 } from "../../lib/reviewQueue";
 import ReviewEditModal from "./ReviewEditModal";
 import { useAppContext } from "../../context/AppContext";
-import { noImagePlaceholder as fallbackImage } from "../../lib/media";
+import { getNoImagePlaceholder } from "../../lib/media";
 
 // Color-codes Gemini's self-reported extraction confidence so the sketchiest
 // scraped rows are visually obvious before a reviewer reads a single field.
@@ -132,12 +132,12 @@ export default function ReviewQueue() {
         {items.map((item) => (
           <Card key={item.id} className="flex flex-col overflow-hidden" sx={{ borderRadius: "16px", border: "1px solid #e3e6ed" }}>
             <img
-              src={item.screenshotUrl || fallbackImage}
+              src={item.screenshotUrl || getNoImagePlaceholder()}
               alt={item.name}
               className="w-full h-40 object-cover bg-[#f5f7fa]"
               onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = fallbackImage;
+                event.currentTarget.src = getNoImagePlaceholder();
               }}
             />
             <Box className="flex flex-col gap-2 p-4">

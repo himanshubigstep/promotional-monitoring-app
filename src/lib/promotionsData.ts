@@ -1,5 +1,5 @@
 import { supabase } from "./supabaseClient";
-import { noImagePlaceholder as fallbackImage } from "./media";
+import { getNoImagePlaceholder } from "./media";
 import type { CatalogProduct, Product, ProductCategory, PromotionType } from "../data/productTypes";
 import type { Promotion } from "../context/AppContext";
 
@@ -142,7 +142,7 @@ async function mapRow(row: PromotionRow): Promise<{ promotion: Promotion; produc
     rating: row.rating ?? 0,
     stock: row.stock ?? 0,
     competitorDiscount: parseDiscountNumber(row.discount_text),
-    image: screenshotUrl ?? fallbackImage,
+    image: screenshotUrl ?? getNoImagePlaceholder(),
     fromDate: row.date_from,
     toDate: row.date_to,
     promotionName: row.name,

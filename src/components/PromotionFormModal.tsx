@@ -27,7 +27,7 @@ import {
   convertCurrencyInText,
 } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
-import { noImagePlaceholder as fallbackImage } from "../lib/media";
+import { getNoImagePlaceholder } from "../lib/media";
 
 const categories = [
   "Pielęgnacja",
@@ -760,7 +760,7 @@ export default function PromotionFormModal({
     }
 
     const nextCreativeData = editingPromotion.creativeData || "";
-    const safePreview = nextCreativeData || fallbackImage;
+    const safePreview = nextCreativeData || getNoImagePlaceholder();
     setPreviewUrl(safePreview);
     setImageFile(null);
     setDisplayLang(editingPromotion.market);
@@ -1195,12 +1195,12 @@ export default function PromotionFormModal({
                   <Box className="relative rounded-lg overflow-hidden border border-[#e3e6ed]">
                     <Box className="relative">
                       <img
-                        src={previewUrl || fallbackImage}
+                        src={previewUrl || getNoImagePlaceholder()}
                         alt="Promotion preview"
                         className="w-full h-auto max-h-[20rem] object-cover bg-[#f5f7fa]"
                         onError={(event) => {
                           event.currentTarget.onerror = null;
-                          event.currentTarget.src = fallbackImage;
+                          event.currentTarget.src = getNoImagePlaceholder();
                         }}
                       />
                       <Box className="absolute top-2 right-2 flex gap-1">

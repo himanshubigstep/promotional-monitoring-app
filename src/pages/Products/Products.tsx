@@ -15,7 +15,7 @@ import { Link } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
-import { noImagePlaceholder as fallbackImage } from "../../lib/media";
+import { getNoImagePlaceholder } from "../../lib/media";
 
 const pageSize = 15;
 
@@ -263,12 +263,12 @@ export default function Products() {
               >
                 <Box className="relative h-32 bg-[#f5f7fa]">
                   <img
-                    src={product.imageUrl || fallbackImage}
+                    src={product.imageUrl || getNoImagePlaceholder()}
                     alt={product.name}
                     className="h-full w-full object-cover"
                     onError={(event) => {
                       event.currentTarget.onerror = null;
-                      event.currentTarget.src = fallbackImage;
+                      event.currentTarget.src = getNoImagePlaceholder();
                     }}
                   />
                   <Chip

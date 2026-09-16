@@ -25,7 +25,7 @@ import type {
   PromotionCardItem,
 } from "../../types/assistant";
 import { renderInline } from "./FormattedText";
-import { noImagePlaceholder as fallbackImage } from "../../lib/media";
+import { getNoImagePlaceholder } from "../../lib/media";
 
 // A large table/card list is now shown 5-at-a-time with a "View More"
 // expander (see ExpandableSection below) instead of dumping 30+ rows into
@@ -233,12 +233,12 @@ function ProductCard({ item }: { item: ProductCardItem }) {
   return (
     <Box className="flex gap-2.5 rounded-lg border border-[#e3e6ed] p-2">
       <img
-        src={item.image || fallbackImage}
+        src={item.image || getNoImagePlaceholder()}
         alt={item.name}
         className="h-16 w-16 shrink-0 rounded-md object-cover"
         onError={(event) => {
           event.currentTarget.onerror = null;
-          event.currentTarget.src = fallbackImage;
+          event.currentTarget.src = getNoImagePlaceholder();
         }}
       />
       <Box className="min-w-0 flex-1">

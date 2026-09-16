@@ -190,7 +190,7 @@ ${currencyRule}
   (e.g. tiered spend-and-save, gift with purchase with no buy-get structure).
 - Use empty string for unknown values, including when none of the given app values fit.
 - Do not include markdown, explanations, code fences, or comments.
-- Keep the discount as a string like "-25%" or "20%" (or a currency amount like "$40" if that's what's shown instead of a percentage).
+- Keep the discount as a string like "-25%" or "20%" (or a currency amount like "$40" if that's what's shown instead of a percentage). If the image qualifies the number (e.g. "UP TO 40% OFF"), keep that qualifier in the discount string exactly as printed, e.g. "up to 40%" - a qualified "up to X%" is not the same offer as a flat "X%", so never drop or rephrase it. Unlike "name"/"notes", do not translate the discount field into ${targetLanguageName} - transcribe it in whatever language it's actually printed in.
 - Keep threshold as a string like "powyżej 99 PLN" or "99 PLN" if visible.`,
               },
               {

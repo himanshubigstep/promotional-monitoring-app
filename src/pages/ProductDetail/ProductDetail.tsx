@@ -8,7 +8,7 @@ import {
 import { Box, Button, Card, Chip, Divider, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
-import { noImagePlaceholder as fallbackImage } from "../../lib/media";
+import { getNoImagePlaceholder } from "../../lib/media";
 
 function CatalogProductDetail({
   product,
@@ -38,12 +38,12 @@ function CatalogProductDetail({
         >
           <Box className="relative max-h-[420px] bg-[#f5f7fa]">
             <img
-              src={product.imageUrl || fallbackImage}
+              src={product.imageUrl || getNoImagePlaceholder()}
               alt={product.name}
               className="h-full max-h-[420px] w-full object-cover"
               onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = fallbackImage;
+                event.currentTarget.src = getNoImagePlaceholder();
               }}
             />
             <Box
@@ -298,7 +298,7 @@ export default function ProductDetail() {
               className="h-full max-h-[420px] w-full object-cover"
               onError={(event) => {
                 event.currentTarget.onerror = null;
-                event.currentTarget.src = fallbackImage;
+                event.currentTarget.src = getNoImagePlaceholder();
               }}
             />
             <Box className="absolute left-4 top-4 rounded-md bg-[#e5780b] px-3 py-1.5 shadow">

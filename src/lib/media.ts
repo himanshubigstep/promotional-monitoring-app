@@ -1,21 +1,19 @@
-// Single shared "no image available" placeholder, used everywhere a
+// Shared "no image available" placeholders, used everywhere a
 // product/promotion has no real image_url/screenshotUrl (or its URL 404s).
-// Previously this was a real stock photo of an actual product, copy-pasted
-// independently into 8 different files — since any number of unrelated
-// items with no real image all rendered that same photo, it read as
-// duplicate/broken data to anyone browsing the app even though it was just
-// a display fallback. An inline SVG "no image" icon reads unambiguously as
-// "nothing to show" instead of looking like a real (repeated) product photo,
-// and having one shared constant means a future change is a one-line edit
-// instead of eight.
-export const noImagePlaceholder =
-  "data:image/svg+xml;utf8," +
-  encodeURIComponent(`
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
-  <rect width="400" height="400" fill="#f5f7fa"/>
-  <g fill="none" stroke="#cbd0dd" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="60" y="90" width="280" height="220" rx="16"/>
-    <circle cx="150" cy="160" r="24"/>
-    <path d="M60 270l80-80 60 60 60-50 80 80"/>
-  </g>
-</svg>`.trim());
+// Cycled in a fixed repeating order (not random) from the real placeholder
+// images in public/ (served at the app root by CRA), instead of one fixed
+// inline SVG, so a full page of missing-image items doesn't all render the
+// exact same icon. Having one shared list means a future change (adding
+// more images, swapping these ones out) is a one-line edit instead of eight.
+const NO_IMAGE_PLACEHOLDERS = ["/discount.png", "/discount2.png", "/discount3.png", "/discount4.png", "/discount5.png"];
+
+let nextPlaceholderIndex = 0;
+
+// Call this once per fallback image needed (not a plain constant) so each
+// one advances to the next picture in the list, wrapping back to the start
+// after the last - a round-robin loop rather than a single fixed value.
+export function getNoImagePlaceholder(): string {
+  const image = NO_IMAGE_PLACEHOLDERS[nextPlaceholderIndex % NO_IMAGE_PLACEHOLDERS.length];
+  nextPlaceholderIndex += 1;
+  return image;
+}

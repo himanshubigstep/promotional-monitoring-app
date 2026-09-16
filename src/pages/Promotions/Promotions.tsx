@@ -20,7 +20,7 @@ import { matchesPromotionFilters, useAppContext } from "../../context/AppContext
 import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import { isBenchmarkProduct } from "../../data/marketProducts";
-import { noImagePlaceholder as fallbackImage } from "../../lib/media";
+import { getNoImagePlaceholder } from "../../lib/media";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -197,12 +197,12 @@ export default function Promotions() {
                 >
                   <Box className="relative h-36 bg-[#f5f7fa]">
                     <img
-                      src={product.image || fallbackImage}
+                      src={product.image || getNoImagePlaceholder()}
                       alt={product.name}
                       className="h-full w-full object-cover"
                       onError={(event) => {
                         event.currentTarget.onerror = null;
-                        event.currentTarget.src = fallbackImage;
+                        event.currentTarget.src = getNoImagePlaceholder();
                       }}
                     />
                     <Box className="absolute left-2 top-2 flex flex-col items-start gap-1">
