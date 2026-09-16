@@ -2,20 +2,102 @@ import {
   Box,
   Card,
   CardContent,
-  Chip,
+  FormControl,
   LinearProgress,
+  MenuItem,
+  Select,
+  Tooltip,
   Typography,
 } from "@mui/material";
+import type { SelectChangeEvent } from "@mui/material/Select";
+import { BarChart } from "@mui/x-charts";
 import React, { useState } from "react";
-import type { Product } from "../../data/productTypes";
+import type { Product, PromotionType } from "../../data/productTypes";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 
-const weeks = ["W1", "W2", "W3", "W4", "W5", "W6", "W7", "W8"];
+const months = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+// Small, borderless dropdown used for the analytics filters below (year,
+// heatmap dimension) - shares one style so every filter on this page looks
+// the same regardless of which chart it controls.
+function InlineSelect<T extends string | number>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (value: T) => void;
+  options: { label: string; value: T }[];
+}) {
+  return (
+    <FormControl size="small">
+      <Select
+        value={value}
+        onChange={(event: SelectChangeEvent<T>) =>
+          onChange(event.target.value as T)
+        }
+        sx={{
+          fontSize: 11,
+          fontWeight: 500,
+          color: "#141824",
+          backgroundColor: "#f5f7fa",
+          borderRadius: "6px",
+          "& .MuiOutlinedInput-notchedOutline": { borderColor: "#e3e6ed" },
+          "& .MuiSelect-select": { py: 0.5, px: 1.25 },
+        }}
+      >
+        {options.map((option) => (
+          <MenuItem
+            key={option.value}
+            value={option.value}
+            sx={{ fontSize: 12 }}
+          >
+            {option.label}
+          </MenuItem>
+        ))}
+      </Select>
+    </FormControl>
+  );
+}
+
+const getYear = (dateStr: string) => (dateStr ? Number(dateStr.slice(0, 4)) : NaN);
+const getMonthIndex = (dateStr: string) => (dateStr ? Number(dateStr.slice(5, 7)) - 1 : -1);
+
+type HeatmapDimension = "category" | "brand" | "store";
+
+const getDimensionValue = (product: Product, dimension: HeatmapDimension) => {
+  if (dimension === "brand") return product.brand;
+  if (dimension === "store") return product.retailer;
+  return product.category;
+};
+
+const promotionTypes: PromotionType[] = [
+  "Fixed promotion",
+  "Buy one get one free",
+  "Custom",
+];
+const promotionTypeColors: Record<PromotionType, string> = {
+  "Fixed promotion": "#000000",
+  "Buy one get one free": "#7c5cfa",
+  Custom: "#e5780b",
+};
+
 export default function BrandAnalytics() {
   const { filters, products: catalog } = useAppContext();
   const typedCatalog: Product[] = catalog;
   const [brandPage, setBrandPage] = useState(1);
+  const [storePage, setStorePage] = useState(1);
+  const [activityYear, setActivityYear] = useState<number | "all">("all");
+  const [heatmapYear, setHeatmapYear] = useState<number | "all">("all");
+  const [heatmapDimension, setHeatmapDimension] =
+    useState<HeatmapDimension>("category");
+  const [promoMixDimension, setPromoMixDimension] =
+    useState<"brand" | "store">("brand");
+  const [topDiscountsYear, setTopDiscountsYear] = useState<number | "all">("all");
   const baseProducts = typedCatalog.filter(
     (product: Product) =>
       matchesPromotionFilters(product, filters),
@@ -32,7 +114,7 @@ export default function BrandAnalytics() {
     );
     const discount = Math.round(
       offers.reduce((sum, product) => sum + product.competitorDiscount, 0) /
-        offers.length,
+      offers.length,
     );
     return [
       brand,
@@ -47,8 +129,34 @@ export default function BrandAnalytics() {
     (brandPage - 1) * brandsPerPage,
     brandPage * brandsPerPage,
   );
+  // Same shape as `brands` above, grouped by retailer instead - powers the
+  // "Store vs. Store Discount Comparison" card.
+  const stores = Array.from(
+    new Set(filteredProducts.map((product) => product.retailer)),
+  ).map((store, index) => {
+    const offers = filteredProducts.filter(
+      (product) => product.retailer === store,
+    );
+    const discount = Math.round(
+      offers.reduce((sum, product) => sum + product.competitorDiscount, 0) /
+      offers.length,
+    );
+    return [
+      store,
+      `${offers.length} offers`,
+      discount,
+      ["#000000", "#7c5cfa", "#e5780b", "#25b003"][index % 4],
+    ] as const;
+  });
+  const storesPerPage = 5;
+  const storePageCount = Math.ceil(stores.length / storesPerPage);
+  const visibleStores = stores.slice(
+    (storePage - 1) * storesPerPage,
+    storePage * storesPerPage,
+  );
   React.useEffect(() => {
     setBrandPage(1);
+    setStorePage(1);
   }, [
     filters.market,
     filters.search,
@@ -64,59 +172,167 @@ export default function BrandAnalytics() {
         categoryProducts
           .filter((product) => product.category === category)
           .reduce((sum, product) => sum + product.competitorDiscount, 0) /
-          Math.max(
-            categoryProducts.filter((product) => product.category === category)
-              .length,
-            1,
-          ),
+        Math.max(
+          categoryProducts.filter((product) => product.category === category)
+            .length,
+          1,
+        ),
       ),
     }))
     .sort((left, right) => right.discount - left.discount);
   const averageDiscount = summaryProducts.length
     ? Math.round(
-        summaryProducts.reduce(
-          (sum, product) => sum + product.competitorDiscount,
-          0,
-        ) / summaryProducts.length,
-      )
+      summaryProducts.reduce(
+        (sum, product) => sum + product.competitorDiscount,
+        0,
+      ) / summaryProducts.length,
+    )
     : 0;
-  // Buckets fromDate values into `weeks.length` chronological buckets spanning
-  // the earliest-to-latest date actually present in the filtered data, rather
-  // than day-of-month modulo 4 (which conflated e.g. Jan 3rd and Aug 3rd into
-  // the same "week").
-  const productDates = baseProducts
-    .map((product) => product.fromDate)
-    .filter(Boolean)
-    .sort();
-  const rangeStart = productDates.length
-    ? new Date(productDates[0]).getTime()
-    : 0;
-  const rangeEnd = productDates.length
-    ? new Date(productDates[productDates.length - 1]).getTime()
-    : 0;
-  const rangeSpan = Math.max(rangeEnd - rangeStart, 1);
-  const weekBucketIndex = (dateStr: string) => {
-    if (!dateStr) return 0;
-    const ratio = (new Date(dateStr).getTime() - rangeStart) / rangeSpan;
-    return Math.min(weeks.length - 1, Math.max(0, Math.floor(ratio * weeks.length)));
-  };
-  const weeklyActivity = weeks.map((week, index) => {
-    const weekProducts = summaryProducts.filter(
-      (product) => weekBucketIndex(product.fromDate) === index,
+  // Every year actually present in the filtered data (by fromDate), newest
+  // first, so the year selects below never offer a year with no data.
+  const availableYears = Array.from(
+    new Set(
+      baseProducts
+        .map((product) => getYear(product.fromDate))
+        .filter((year) => Number.isFinite(year)),
+    ),
+  ).sort((a, b) => b - a);
+
+  // Monthly (Jan-Dec) offer activity for the selected year, or summed across
+  // every year when "All years" is selected.
+  const activityProducts =
+    activityYear === "all"
+      ? summaryProducts
+      : summaryProducts.filter(
+        (product) => getYear(product.fromDate) === activityYear,
+      );
+  const monthlyActivity = months.map((month, index) => {
+    const monthProducts = activityProducts.filter(
+      (product) => getMonthIndex(product.fromDate) === index,
     );
     return {
-      week,
-      count: weekProducts.length,
-      discount: weekProducts.length
+      month,
+      count: monthProducts.length,
+      discount: monthProducts.length
         ? Math.round(
-            weekProducts.reduce(
-              (sum, product) => sum + product.competitorDiscount,
-              0,
-            ) / weekProducts.length,
-          )
+          monthProducts.reduce(
+            (sum, product) => sum + product.competitorDiscount,
+            0,
+          ) / monthProducts.length,
+        )
         : 0,
     };
   });
+
+  // Heatmap: rows are whichever dimension is selected (category/brand/store),
+  // capped to the 6 busiest values so the grid stays readable, columns are
+  // always the 12 calendar months of the selected year.
+  const heatmapYearProducts =
+    heatmapYear === "all"
+      ? heatmapProducts
+      : heatmapProducts.filter(
+        (product) => getYear(product.fromDate) === heatmapYear,
+      );
+  const heatmapRowValues = Array.from(
+    new Map(
+      heatmapYearProducts.map((product) => [
+        getDimensionValue(product, heatmapDimension),
+        true,
+      ]),
+    ).keys(),
+  )
+    .filter(Boolean)
+    .map((value) => ({
+      value,
+      count: heatmapYearProducts.filter(
+        (product) => getDimensionValue(product, heatmapDimension) === value,
+      ).length,
+    }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 6)
+    .map((row) => row.value);
+  const heatmapAvgDiscount = (rowValue: string, monthIndex: number) => {
+    const monthProducts = heatmapYearProducts.filter(
+      (product) =>
+        getDimensionValue(product, heatmapDimension) === rowValue &&
+        getMonthIndex(product.fromDate) === monthIndex,
+    );
+    return monthProducts.length
+      ? Math.round(
+        monthProducts.reduce(
+          (sum, product) => sum + product.competitorDiscount,
+          0,
+        ) / monthProducts.length,
+      )
+      : 0;
+  };
+  const heatmapRows = heatmapRowValues.map((rowValue) => {
+    let previousDiscount: number | null = null;
+    const cells = months.map((month, monthIndex) => {
+      const discount = heatmapAvgDiscount(rowValue, monthIndex);
+      // "Hike ratio" = % change in average discount vs the previous month
+      // in the same row - null (shown as "-") for January, where there's no
+      // prior month within the selected year to compare against.
+      const hikeRatio =
+        previousDiscount === null
+          ? null
+          : previousDiscount === 0
+            ? discount > 0
+              ? 100
+              : 0
+            : Math.round(((discount - previousDiscount) / previousDiscount) * 100);
+      previousDiscount = discount;
+      return { month, discount, hikeRatio };
+    });
+    return { rowValue, cells };
+  });
+  const heatmapDimensionLabel =
+    heatmapDimension === "brand"
+      ? "Brand"
+      : heatmapDimension === "store"
+        ? "Store"
+        : "Category";
+
+  // The single highest-discounted product+store offers across the whole
+  // filtered catalog - powers the "Top Discounts" chart.
+  const topDiscountsProducts =
+    topDiscountsYear === "all"
+      ? baseProducts
+      : baseProducts.filter((product) => getYear(product.fromDate) === topDiscountsYear);
+  const topDiscountedOffers = [...topDiscountsProducts]
+    .sort((left, right) => right.competitorDiscount - left.competitorDiscount)
+    .slice(0, 12)
+    .map((product) => ({
+      label: `${product.name} · ${product.retailer}`,
+      discount: product.competitorDiscount,
+    }));
+
+  // Promotion mechanic (Fixed / BOGO / Custom) mix per brand or store -
+  // powers the "Promotion Type Mix" stacked bars.
+  const promoMixValue = (product: Product) =>
+    promoMixDimension === "store" ? product.retailer : product.brand;
+  const promoMixRows = Array.from(
+    new Map(baseProducts.map((product) => [promoMixValue(product), true])).keys(),
+  )
+    .filter(Boolean)
+    .map((value) => ({
+      value,
+      count: baseProducts.filter((product) => promoMixValue(product) === value).length,
+    }))
+    .sort((left, right) => right.count - left.count)
+    .slice(0, 5)
+    .map(({ value }) => {
+      const rowProducts = baseProducts.filter((product) => promoMixValue(product) === value);
+      const total = rowProducts.length || 1;
+      const segments = promotionTypes.map((type) => {
+        const count = rowProducts.filter(
+          (product) => (product.promotionType || "Fixed promotion") === type,
+        ).length;
+        return { type, count, pct: Math.round((count / total) * 100) };
+      });
+      return { value, segments, total: rowProducts.length };
+    });
+
   const strongestCategory = categoryTotals[0]?.category || "No category data";
   const latestYear = summaryProducts
     .reduce(
@@ -256,64 +472,91 @@ export default function BrandAnalytics() {
                 >
                   Discount by category
                 </Typography>
-                <Box className="mt-3 flex h-24 items-end gap-2">
+                <Box className="mt-3 flex h-24 items-end justify-around gap-2">
                   {categoryTotals.map((item) => (
                     <Box
                       key={item.category}
                       className="flex min-w-0 flex-1 flex-col items-center gap-1"
                     >
-                      <Box
-                        className="w-full rounded-t-sm"
-                        sx={{
-                          height: `${Math.max(8, Math.min(item.discount * 2.5, 72))}px`,
-                          backgroundColor:
-                            item.category === strongestCategory
-                              ? "#000000"
-                              : "#141824",
-                          opacity:
-                            item.category === strongestCategory ? 1 : 0.65,
-                        }}
-                        title={`${item.category}: ${item.discount}%`}
-                      />
+                      <Tooltip title={`${item.category}: ${item.discount}%`} arrow>
+                        <Box
+                          sx={{
+                            width: 10,
+                            height: `${Math.max(8, Math.min(item.discount * 2.5, 72))}px`,
+                            borderRadius: "3px 3px 0 0",
+                            backgroundColor:
+                              item.category === strongestCategory
+                                ? "#000000"
+                                : "#141824",
+                            opacity:
+                              item.category === strongestCategory ? 1 : 0.65,
+                            cursor: "default",
+                          }}
+                        />
+                      </Tooltip>
                       <Typography
-                        sx={{ color: "#525b75", fontSize: 9, fontWeight: 500 }}
+                        sx={{
+                          color: "#525b75",
+                          fontSize: 9,
+                          fontWeight: 500,
+                          textAlign: "center",
+                          lineHeight: 1.2,
+                        }}
                       >
-                        {item.category.slice(0, 3)}
+                        {item.category}
                       </Typography>
                     </Box>
                   ))}
                 </Box>
               </Box>
               <Box className="rounded-lg border border-[#e3e6ed] bg-[#f5f7fa] p-3">
-                <Typography
-                  sx={{
-                    color: "#525b75",
-                    fontSize: 11,
-                    fontWeight: 500,
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Weekly offer activity
-                </Typography>
+                <Box className="flex items-center justify-between gap-2">
+                  <Typography
+                    sx={{
+                      color: "#525b75",
+                      fontSize: 11,
+                      fontWeight: 500,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Monthly offer activity
+                  </Typography>
+                  <InlineSelect
+                    value={activityYear}
+                    onChange={setActivityYear}
+                    options={[
+                      { label: "All years", value: "all" as const },
+                      ...availableYears.map((year) => ({
+                        label: String(year),
+                        value: year,
+                      })),
+                    ]}
+                  />
+                </Box>
                 <Box className="mt-3 flex h-24 items-end gap-1">
-                  {weeklyActivity.map((item) => (
+                  {monthlyActivity.map((item) => (
                     <Box
-                      key={item.week}
+                      key={item.month}
                       className="flex min-w-0 flex-1 flex-col items-center gap-1"
                     >
-                      <Box
-                        className="w-full rounded-t-sm"
-                        sx={{
-                          height: `${Math.max(8, Math.min((item.count / Math.max(summaryProducts.length, 1)) * 72, 72))}px`,
-                          backgroundColor: "#e5780b",
-                          opacity: item.count ? 1 : 0.3,
-                        }}
-                        title={`${item.week}: ${item.count} offers, ${item.discount}% average discount`}
-                      />
+                      <Tooltip
+                        title={`${item.month}: ${item.count} offers, ${item.discount}% average discount`}
+                        arrow
+                      >
+                        <Box
+                          className="w-full rounded-t-sm"
+                          sx={{
+                            height: `${Math.max(8, Math.min((item.count / Math.max(activityProducts.length, 1)) * 72, 72))}px`,
+                            backgroundColor: "#e5780b",
+                            opacity: item.count ? 1 : 0.3,
+                            cursor: "default",
+                          }}
+                        />
+                      </Tooltip>
                       <Typography
                         sx={{ color: "#525b75", fontSize: 9, fontWeight: 500 }}
                       >
-                        {item.week}
+                        {item.month}
                       </Typography>
                     </Box>
                   ))}
@@ -356,7 +599,7 @@ export default function BrandAnalytics() {
           className="rounded-2xl border border-[#e3e6ed] bg-white"
         >
           <CardContent className="!p-6">
-            <Box className="mb-4 flex items-center justify-between">
+            <Box className="mb-4 flex flex-wrap items-start justify-between gap-3">
               <Box>
                 <Typography
                   sx={{
@@ -369,7 +612,7 @@ export default function BrandAnalytics() {
                   Promotion Intensity Heatmap
                 </Typography>
                 <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
-                  Seasonality across the last eight weeks
+                  Yearly seasonality, compared by {heatmapDimensionLabel.toLowerCase()}
                 </Typography>
               </Box>
               <Box className="flex items-center gap-1">
@@ -379,69 +622,100 @@ export default function BrandAnalytics() {
                 <Box className="h-3 w-3 rounded-xs bg-[#000000]" />
               </Box>
             </Box>
-            <Box className="grid grid-cols-9 gap-2 text-center">
-              <Box />
-              {weeks.map((week) => (
-                <Typography
-                  key={week}
-                  sx={{ color: "#525b75", fontSize: 10, fontWeight: 500 }}
-                >
-                  {week}
-                </Typography>
-              ))}
-              {["Skincare", "Fragrance", "Makeup", "Haircare"].map(
-                (category, row) => (
-                  <React.Fragment key={category}>
+            <Box className="mb-4 flex flex-wrap items-center gap-2">
+              <InlineSelect
+                value={heatmapDimension}
+                onChange={setHeatmapDimension}
+                options={[
+                  { label: "Category wise", value: "category" as const },
+                  { label: "Brand wise", value: "brand" as const },
+                  { label: "Store wise", value: "store" as const },
+                ]}
+              />
+              <InlineSelect
+                value={heatmapYear}
+                onChange={setHeatmapYear}
+                options={[
+                  { label: "All years", value: "all" as const },
+                  ...availableYears.map((year) => ({
+                    label: String(year),
+                    value: year,
+                  })),
+                ]}
+              />
+            </Box>
+            {heatmapRows.length === 0 ? (
+              <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                No {heatmapDimensionLabel.toLowerCase()} data available for this
+                selection.
+              </Typography>
+            ) : (
+              <Box
+                className="grid gap-2 text-center"
+                sx={{ gridTemplateColumns: `minmax(72px, auto) repeat(${months.length}, 1fr)` }}
+              >
+                {heatmapRows.map((row) => (
+                  <React.Fragment key={row.rowValue}>
                     <Typography
                       sx={{
                         color: "#141824",
                         fontSize: 11,
                         fontWeight: 500,
                         textAlign: "left",
+                        display: "flex",
+                        alignItems: "center",
                       }}
                     >
-                      {category}
+                      {row.rowValue}
                     </Typography>
-                    {weeks.map((week, column) => {
-                      const categoryProducts = heatmapProducts.filter(
-                        (product) => product.category === category,
-                      );
-                      const weekProducts = categoryProducts.filter(
-                        (product) => weekBucketIndex(product.fromDate) === column,
-                      );
-                      const intensity = weekProducts.length
-                        ? Math.min(
-                            3,
-                            Math.floor(
-                              weekProducts.reduce(
-                                (sum, product) =>
-                                  sum + product.competitorDiscount,
-                                0,
-                              ) /
-                                weekProducts.length /
-                                10,
-                            ),
-                          )
-                        : 0;
+                    {row.cells.map((cell) => {
+                      const intensity = Math.min(3, Math.floor(cell.discount / 10));
+                      const backgroundColor = [
+                        "#eff2f6",
+                        "#cfe0ff",
+                        "#8fb4ff",
+                        "#000000",
+                      ][intensity];
+                      const hikeLabel =
+                        cell.hikeRatio === null
+                          ? "-"
+                          : `${cell.hikeRatio > 0 ? "+" : ""}${cell.hikeRatio}%`;
                       return (
-                        <Box
-                          key={`${category}-${week}`}
-                          className="h-8 rounded-sm transition-all"
-                          sx={{
-                            backgroundColor: [
-                              "#eff2f6",
-                              "#cfe0ff",
-                              "#8fb4ff",
-                              "#000000",
-                            ][intensity],
-                          }}
-                        />
+                        <Tooltip
+                          key={`${row.rowValue}-${cell.month}`}
+                          title={`${row.rowValue} • ${cell.month}: ${cell.discount}% avg discount, ${hikeLabel} hike vs previous month`}
+                          arrow
+                        >
+                          <Box
+                            className="h-8 rounded-sm transition-all flex items-center justify-center"
+                            sx={{ backgroundColor, cursor: "default" }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: 8,
+                                fontWeight: 600,
+                                color: intensity >= 2 ? "#ffffff" : "#525b75",
+                              }}
+                            >
+                              {hikeLabel}
+                            </Typography>
+                          </Box>
+                        </Tooltip>
                       );
                     })}
                   </React.Fragment>
-                ),
-              )}
-            </Box>
+                ))}
+                <Box />
+                {months.map((month) => (
+                  <Typography
+                    key={month}
+                    sx={{ color: "#525b75", fontSize: 10, fontWeight: 500 }}
+                  >
+                    {month}
+                  </Typography>
+                ))}
+              </Box>
+            )}
           </CardContent>
         </Card>
         <Card
@@ -457,62 +731,222 @@ export default function BrandAnalytics() {
                 letterSpacing: "-0.01em",
               }}
             >
-              Top-Promoted Categories
+              Store vs. Store Discount Comparison
             </Typography>
             <Typography
               sx={{ color: "#525b75", fontSize: 12.5, mb: 4, mt: 0.5 }}
             >
-              Ranked by discount level and SKU coverage
+              Benchmark competitive discount pressure across retailers.
             </Typography>
-            {categoryTotals.map((item, index) => (
-              <Box key={item.category} className="mb-4 flex items-center gap-3">
-                <Typography
-                  sx={{
-                    color: "#9fa6bc",
-                    fontSize: 12,
-                    fontWeight: 500,
-                    width: 20,
-                  }}
-                >
-                  0{index + 1}
-                </Typography>
-                <Box className="flex-1">
-                  <Box className="mb-1 flex justify-between">
-                    <Typography
-                      sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
-                    >
-                      {item.category}
+            {visibleStores.map(([name, revenue, score, color]) => (
+              <Box key={name} className="mb-5">
+                <Box className="mb-1.5 flex justify-between">
+                  <Typography
+                    sx={{ color: "#141824", fontSize: 13.5, fontWeight: 500 }}
+                  >
+                    {name}
+                  </Typography>
+                  <Box className="flex gap-3">
+                    <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                      {revenue}
                     </Typography>
-                    <Chip
-                      label={`${item.discount}% avg`}
-                      size="small"
-                      sx={{
-                        backgroundColor: "#f2f2f2",
-                        color: "#000000",
-                        fontWeight: 500,
-                        fontSize: 10,
-                        borderRadius: "6px",
-                      }}
-                    />
+                    <Typography
+                      sx={{ color: "#141824", fontSize: 12.5, fontWeight: 500 }}
+                    >
+                      Avg {score}%
+                    </Typography>
                   </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={item.discount * 3}
-                    sx={{
-                      height: 6,
-                      borderRadius: 4,
-                      backgroundColor: "#eff2f6",
-                      "& .MuiLinearProgress-bar": {
-                        backgroundColor: "#000000",
-                        borderRadius: 4,
-                      },
-                    }}
-                  />
                 </Box>
+                <LinearProgress
+                  variant="determinate"
+                  value={Number(score)}
+                  sx={{
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: "#eff2f6",
+                    "& .MuiLinearProgress-bar": {
+                      backgroundColor: color,
+                      borderRadius: 4,
+                    },
+                  }}
+                />
               </Box>
             ))}
+            {storePageCount > 1 && (
+              <AppPagination
+                count={storePageCount}
+                page={storePage}
+                onChange={setStorePage}
+                total={stores.length}
+                pageSize={storesPerPage}
+                itemLabel="stores"
+              />
+            )}
           </CardContent>
         </Card>
+      </Box>
+
+      <Box className="grid grid-cols-2 gap-4">
+        <Box className="grid grid-cols-1 gap-4">
+          <Card
+            elevation={0}
+            className="rounded-2xl border border-[#e3e6ed] bg-white"
+          >
+            <CardContent className="!p-6">
+              <Box className="mb-1 flex flex-wrap items-start justify-between gap-3">
+                <Box>
+                  <Typography
+                    sx={{
+                      color: "#141824",
+                      fontSize: 16,
+                      fontWeight: 500,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Top Discounts
+                  </Typography>
+                  <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
+                    Across every tracked store and product, which offers cut
+                    the deepest.
+                  </Typography>
+                </Box>
+                <InlineSelect
+                  value={topDiscountsYear}
+                  onChange={setTopDiscountsYear}
+                  options={[
+                    { label: "All years", value: "all" as const },
+                    ...availableYears.map((year) => ({
+                      label: String(year),
+                      value: year,
+                    })),
+                  ]}
+                />
+              </Box>
+              {topDiscountedOffers.length === 0 ? (
+                <Typography sx={{ color: "#525b75", fontSize: 12, mt: 2 }}>
+                  No data available for this selection.
+                </Typography>
+              ) : (
+                <BarChart
+                  height={320}
+                  xAxis={[
+                    {
+                      scaleType: "band",
+                      // A band scale needs a unique domain value per bar - the
+                      // store name alone repeats across bars (several top
+                      // offers share a retailer), which silently collapsed
+                      // bars together. Rank numbers are always unique and
+                      // short; the tooltip (series valueFormatter below) shows
+                      // the actual product + store detail on hover.
+                      data: topDiscountedOffers.map((_, index) => `#${index + 1}`),
+                      categoryGapRatio: 0.5,
+                      tickLabelStyle: { fontSize: 10, fill: "#525b75" },
+                    },
+                  ]}
+                  yAxis={[{ valueFormatter: (value: number) => `${value}%` }]}
+                  series={[
+                    {
+                      data: topDiscountedOffers.map((offer) => offer.discount),
+                      color: "#e5780b",
+                      valueFormatter: (value, context) =>
+                        `${value}% · ${topDiscountedOffers[context.dataIndex]?.label ?? ""}`,
+                    },
+                  ]}
+                  hideLegend
+                  margin={{ top: 10, right: 20, bottom: 30, left: 40 }}
+                  sx={{ "& .MuiBarElement-root": { maxWidth: 24 } }}
+                />
+              )}
+            </CardContent>
+          </Card>
+        </Box>
+
+        <Box className="grid grid-cols-1 gap-4">
+          <Card
+            elevation={0}
+            className="rounded-2xl border border-[#e3e6ed] bg-white"
+          >
+            <CardContent className="!p-6">
+              <Box className="mb-4 flex flex-wrap items-start justify-between gap-3">
+                <Box>
+                  <Typography
+                    sx={{
+                      color: "#141824",
+                      fontSize: 16,
+                      fontWeight: 500,
+                      letterSpacing: "-0.01em",
+                    }}
+                  >
+                    Promotion Type Mix
+                  </Typography>
+                  <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.5 }}>
+                    Share of Fixed / BOGO / Custom mechanics.
+                  </Typography>
+                </Box>
+                <InlineSelect
+                  value={promoMixDimension}
+                  onChange={setPromoMixDimension}
+                  options={[
+                    { label: "Brand wise", value: "brand" as const },
+                    { label: "Store wise", value: "store" as const },
+                  ]}
+                />
+              </Box>
+              <Box className="mb-4 flex flex-wrap items-center gap-3">
+                {promotionTypes.map((type) => (
+                  <Box key={type} className="flex items-center gap-1.5">
+                    <Box
+                      className="h-2.5 w-2.5 rounded-full"
+                      sx={{ backgroundColor: promotionTypeColors[type] }}
+                    />
+                    <Typography sx={{ color: "#525b75", fontSize: 11 }}>
+                      {type}
+                    </Typography>
+                  </Box>
+                ))}
+              </Box>
+              {promoMixRows.length === 0 ? (
+                <Typography sx={{ color: "#525b75", fontSize: 12 }}>
+                  No data available for this selection.
+                </Typography>
+              ) : (
+                promoMixRows.map((row) => (
+                  <Box key={row.value} className="mb-4">
+                    <Box className="mb-1.5 flex justify-between">
+                      <Typography
+                        sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
+                      >
+                        {row.value}
+                      </Typography>
+                      <Typography sx={{ color: "#525b75", fontSize: 11 }}>
+                        {row.total} offers
+                      </Typography>
+                    </Box>
+                    <Box className="flex h-3 w-full overflow-hidden rounded-full bg-[#eff2f6]">
+                      {row.segments
+                        .filter((segment) => segment.pct > 0)
+                        .map((segment) => (
+                          <Tooltip
+                            key={segment.type}
+                            title={`${segment.type}: ${segment.count} offers (${segment.pct}%)`}
+                            arrow
+                          >
+                            <Box
+                              sx={{
+                                width: `${segment.pct}%`,
+                                backgroundColor: promotionTypeColors[segment.type],
+                                cursor: "default",
+                              }}
+                            />
+                          </Tooltip>
+                        ))}
+                    </Box>
+                  </Box>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </Box>
       </Box>
     </Box>
   );

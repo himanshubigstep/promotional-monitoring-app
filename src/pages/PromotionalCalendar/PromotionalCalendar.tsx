@@ -5,6 +5,7 @@ import type { Product, ProductCategory } from "../../data/productTypes";
 import { isBenchmarkProduct } from "../../data/marketProducts";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
+import FormField from "../../components/FormField";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -37,10 +38,18 @@ const categoryTints: Record<ProductCategory, { bg: string; fg: string; bar: stri
 const defaultTint = { bg: "#eff2f6", fg: "#525b75", bar: "#9fa6bc" };
 
 const pageSize = 10;
+const ALL = "All";
+const getYear = (dateStr: string) => (dateStr ? Number(dateStr.slice(0, 4)) : NaN);
+const currentYear = new Date().getFullYear();
 
 export default function PromotionalCalendar() {
   const { filters, products } = useAppContext();
   const [page, setPage] = useState(1);
+  const [calendarYear, setCalendarYear] = useState(currentYear);
+  const [calendarCategory, setCalendarCategory] = useState(ALL);
+  const [calendarBrand, setCalendarBrand] = useState(ALL);
+  const [calendarStore, setCalendarStore] = useState(ALL);
+  const [calendarProduct, setCalendarProduct] = useState(ALL);
 
   const filteredCatalog = useMemo(
     () =>
@@ -48,12 +57,78 @@ export default function PromotionalCalendar() {
     [filters, products],
   );
 
+  // Every year any campaign touches (by fromDate or toDate), so the year
+  // select never offers an empty year - the Gantt grid can only show one
+  // calendar year at a time, so a year is always selected (not "All").
+  const availableYears = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          filteredCatalog.flatMap((product) => [
+            getYear(product.fromDate),
+            getYear(product.toDate),
+          ]),
+        ),
+      )
+        .filter((year) => Number.isFinite(year))
+        .sort((a, b) => b - a),
+    [filteredCatalog],
+  );
+
+  // If the selected year has no data (first load, or filters just changed
+  // it away), snap to the current year if it has data, else the most recent
+  // year that does.
+  useEffect(() => {
+    if (!availableYears.length) return;
+    if (availableYears.includes(calendarYear)) return;
+    setCalendarYear(
+      availableYears.includes(currentYear) ? currentYear : availableYears[0],
+    );
+  }, [availableYears, calendarYear]);
+
+  const availableCategories = useMemo(
+    () => Array.from(new Set(filteredCatalog.map((product) => product.category))).sort(),
+    [filteredCatalog],
+  );
+  const availableBrands = useMemo(
+    () => Array.from(new Set(filteredCatalog.map((product) => product.brand))).sort(),
+    [filteredCatalog],
+  );
+  const availableStores = useMemo(
+    () => Array.from(new Set(filteredCatalog.map((product) => product.retailer))).sort(),
+    [filteredCatalog],
+  );
+  const availableProducts = useMemo(
+    () => Array.from(new Set(filteredCatalog.map((product) => product.name))).sort(),
+    [filteredCatalog],
+  );
+
+  // This page's own view controls (year/category/brand/store/product),
+  // layered on top of whatever the shared "Filters" button already applied.
+  const yearScopedCatalog = useMemo(
+    () =>
+      filteredCatalog.filter((product) => {
+        const startYear = getYear(product.fromDate);
+        const endYear = getYear(product.toDate);
+        const touchesSelectedYear =
+          startYear <= calendarYear && endYear >= calendarYear;
+        return (
+          touchesSelectedYear &&
+          (calendarCategory === ALL || product.category === calendarCategory) &&
+          (calendarBrand === ALL || product.brand === calendarBrand) &&
+          (calendarStore === ALL || product.retailer === calendarStore) &&
+          (calendarProduct === ALL || product.name === calendarProduct)
+        );
+      }),
+    [filteredCatalog, calendarYear, calendarCategory, calendarBrand, calendarStore, calendarProduct],
+  );
+
   // Benchmark/dummy products (seeded once, then expanded to every retailer —
   // see marketProducts.ts) are guaranteed to have data across all stores, so
   // surface them first, same ordering rule as the Promotions page. Active
   // campaigns rank ahead of expired ones within each group.
   const sortedCampaigns = useMemo(() => {
-    return [...filteredCatalog].sort((a, b) => {
+    return [...yearScopedCatalog].sort((a, b) => {
       const aBench = isBenchmarkProduct(a);
       const bBench = isBenchmarkProduct(b);
       if (aBench !== bBench) return aBench ? -1 : 1;
@@ -62,13 +137,21 @@ export default function PromotionalCalendar() {
       if (aActive !== bActive) return aActive ? -1 : 1;
       return b.toDate.localeCompare(a.toDate);
     });
-  }, [filteredCatalog]);
+  }, [yearScopedCatalog]);
 
-  // One row per campaign now that brand-wise grouping is gone.
+  // One row per campaign now that brand-wise grouping is gone. Bars are
+  // clipped to the selected year, so a campaign that spans a year boundary
+  // (e.g. Nov 2025 - Feb 2026) only shows the portion inside this year
+  // instead of being mis-plotted onto whichever month index it happens to
+  // share with campaigns from a completely different year.
   const ganttRows = useMemo(() => {
+    const yearStart = new Date(calendarYear, 0, 1);
+    const yearEnd = new Date(calendarYear, 11, 31);
     return sortedCampaigns.map((product) => {
-      const start = new Date(product.fromDate);
-      const end = new Date(product.toDate);
+      const rawStart = new Date(product.fromDate);
+      const rawEnd = new Date(product.toDate);
+      const start = rawStart < yearStart ? yearStart : rawStart;
+      const end = rawEnd > yearEnd ? yearEnd : rawEnd;
       const startMonth = start.getMonth();
       const endMonth = end.getMonth();
 
@@ -85,16 +168,21 @@ export default function PromotionalCalendar() {
         durationMonths: endMonth - startMonth + 1,
         expired: product.toDate < today,
         benchmark: isBenchmarkProduct(product),
+        spansBeyondYear: rawStart < yearStart || rawEnd > yearEnd,
       };
     });
-  }, [sortedCampaigns]);
+  }, [sortedCampaigns, calendarYear]);
+
+  const activeCount = ganttRows.filter((row) => !row.expired).length;
+  const storeCount = new Set(ganttRows.map((row) => row.retailer)).size;
+  const brandCount = new Set(ganttRows.map((row) => row.brand)).size;
 
   const pageCount = Math.max(1, Math.ceil(ganttRows.length / pageSize));
   const visibleRows = ganttRows.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     setPage(1);
-  }, [filters]);
+  }, [filters, calendarYear, calendarCategory, calendarBrand, calendarStore, calendarProduct]);
 
   useEffect(() => {
     if (page > pageCount) setPage(pageCount);
@@ -159,8 +247,8 @@ export default function PromotionalCalendar() {
                 Promotional Campaign Calendar
               </Typography>
               <Typography sx={{ color: "#525b75", fontSize: 12.5, mt: 0.25 }}>
-                {ganttRows.length} campaign{ganttRows.length === 1 ? "" : "s"} across the
-                year, benchmark offers surfaced first.
+                {ganttRows.length} campaign{ganttRows.length === 1 ? "" : "s"} in{" "}
+                {calendarYear}, benchmark offers surfaced first.
               </Typography>
             </Box>
           </Box>
@@ -197,6 +285,81 @@ export default function PromotionalCalendar() {
               Export Timeline
             </Button>
           </Box>
+        </Box>
+
+        {/* View controls - slice the calendar by year, category, brand,
+            store, or a specific product, independent of the shared Filters
+            modal (which still applies underneath these). */}
+        <Box className="grid grid-cols-2 gap-3 border-b border-[#e3e6ed] bg-white p-4 sm:grid-cols-3 lg:grid-cols-5">
+          <FormField
+            type="select"
+            label="Year"
+            value={String(calendarYear)}
+            onValueChange={(value) => setCalendarYear(Number(value))}
+            options={availableYears.map((year) => ({
+              label: String(year),
+              value: String(year),
+            }))}
+          />
+          <FormField
+            type="select"
+            label="Category"
+            value={calendarCategory}
+            onValueChange={(value) => setCalendarCategory(String(value))}
+            options={[ALL, ...availableCategories].map((value) => ({
+              label: value,
+              value,
+            }))}
+          />
+          <FormField
+            type="select"
+            label="Brand"
+            value={calendarBrand}
+            onValueChange={(value) => setCalendarBrand(String(value))}
+            options={[ALL, ...availableBrands].map((value) => ({
+              label: value,
+              value,
+            }))}
+          />
+          <FormField
+            type="select"
+            label="Store"
+            value={calendarStore}
+            onValueChange={(value) => setCalendarStore(String(value))}
+            options={[ALL, ...availableStores].map((value) => ({
+              label: value,
+              value,
+            }))}
+          />
+          <FormField
+            type="select"
+            label="Product"
+            value={calendarProduct}
+            onValueChange={(value) => setCalendarProduct(String(value))}
+            options={[ALL, ...availableProducts].map((value) => ({
+              label: value,
+              value,
+            }))}
+          />
+        </Box>
+
+        {/* At-a-glance counts for the current year + filter selection. */}
+        <Box className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-[#e3e6ed] bg-[#fafbfc] px-4 py-3">
+          {[
+            { label: "Campaigns", value: ganttRows.length },
+            { label: "Active now", value: activeCount },
+            { label: "Stores", value: storeCount },
+            { label: "Brands", value: brandCount },
+          ].map((stat) => (
+            <Box key={stat.label} className="flex items-baseline gap-1.5">
+              <Typography sx={{ color: "#141824", fontSize: 15, fontWeight: 800 }}>
+                {stat.value}
+              </Typography>
+              <Typography sx={{ color: "#525b75", fontSize: 11.5 }}>
+                {stat.label}
+              </Typography>
+            </Box>
+          ))}
         </Box>
 
         <Box className="w-full overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
@@ -318,12 +481,13 @@ export default function PromotionalCalendar() {
                               </Typography>
                               <Typography sx={{ fontSize: 11 }}>
                                 Duration: {item.fromDate} to {item.toDate}
+                                {item.spansBeyondYear ? ` (continues beyond ${calendarYear})` : ""}
                               </Typography>
                             </Box>
                           }
                         >
                           <Box
-                            className="absolute flex flex-col justify-center rounded-lg px-3 transition-all hover:brightness-95 hover:shadow-sm cursor-pointer"
+                            className="absolute flex flex-col justify-center px-3 transition-all hover:brightness-95 hover:shadow-sm cursor-pointer"
                             sx={{
                               left: `${item.leftPercent}%`,
                               width: `${item.widthPercent}%`,
@@ -331,6 +495,15 @@ export default function PromotionalCalendar() {
                               height: laneHeight - 8,
                               backgroundColor: tint.bg,
                               borderLeft: `3px solid ${tint.bar}`,
+                              // Squared-off corners on whichever side the bar
+                              // is clipped hint that the campaign actually
+                              // continues outside the selected year.
+                              borderTopLeftRadius: item.leftPercent > 0 ? 8 : 2,
+                              borderBottomLeftRadius: item.leftPercent > 0 ? 8 : 2,
+                              borderTopRightRadius:
+                                item.leftPercent + item.widthPercent < 100 ? 8 : 2,
+                              borderBottomRightRadius:
+                                item.leftPercent + item.widthPercent < 100 ? 8 : 2,
                               opacity: item.expired ? 0.6 : 1,
                             }}
                           >
