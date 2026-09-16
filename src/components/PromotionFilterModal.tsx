@@ -6,6 +6,7 @@ import {
   useAppContext,
 } from "../context/AppContext";
 import FormField from "./FormField";
+import { formatRetailerLabel } from "../data/retailers";
 import { useEffect, useState } from "react";
 
 const getVisibleRetailerNames = (
@@ -91,7 +92,10 @@ export default function PromotionFilterModal({
             label="Retailer / store"
             value={draftFilters.retailer}
             onValueChange={(value) => update("retailer", value)}
-            options={options(getVisibleRetailerNames(retailers, draftFilters.market))}
+            options={getVisibleRetailerNames(retailers, draftFilters.market).map((name) => ({
+              label: name === "All" ? name : formatRetailerLabel(name),
+              value: name,
+            }))}
           />
           <FormField
             type="select"

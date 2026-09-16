@@ -34,6 +34,17 @@ const legacyRetailerMap: Record<string, string> = {
   "Notino CZ": "Notino",
 };
 
+// Display-only formatting - the canonical retailer id strings above (used
+// for filtering, matching, and as DB/RLS values, e.g. "sephora", "hebe")
+// stay lowercase on purpose; this only capitalizes the first character for
+// wherever a retailer name is actually shown to a user, so "superpharm" /
+// "hebe" / "drogerienatura" / "flaconi" / "sephora" read as proper names
+// ("Superpharm", "Hebe", ...) without touching the underlying values.
+export function formatRetailerLabel(retailer: string) {
+  if (!retailer) return retailer;
+  return retailer.charAt(0).toUpperCase() + retailer.slice(1);
+}
+
 export function normalizeRetailer(retailer: string) {
   if (retailer.startsWith("Sephora CZ Prague")) return "CZ Demo Store Prague";
   if (retailer.startsWith("Sephora CZ Brno")) return "CZ Demo Store Brno";

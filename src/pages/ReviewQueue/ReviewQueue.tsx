@@ -23,6 +23,7 @@ import {
 import ReviewEditModal from "./ReviewEditModal";
 import { useAppContext } from "../../context/AppContext";
 import { getNoImagePlaceholder } from "../../lib/media";
+import { formatRetailerLabel } from "../../data/retailers";
 
 // Color-codes Gemini's self-reported extraction confidence so the sketchiest
 // scraped rows are visually obvious before a reviewer reads a single field.
@@ -142,7 +143,10 @@ export default function ReviewQueue() {
             />
             <Box className="flex flex-col gap-2 p-4">
               <Stack direction="row" spacing={1} sx={{ alignItems: "center", flexWrap: "wrap" }}>
-                <Chip size="small" label={item.retailer?.name ?? "Unknown retailer"} />
+                <Chip
+                  size="small"
+                  label={item.retailer?.name ? formatRetailerLabel(item.retailer.name) : "Unknown retailer"}
+                />
                 {item.category?.name && <Chip size="small" label={item.category.name} variant="outlined" />}
                 {item.discount_text && (
                   <Chip size="small" color="error" label={item.discount_text} />

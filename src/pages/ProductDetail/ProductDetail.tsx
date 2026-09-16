@@ -9,6 +9,7 @@ import { Box, Button, Card, Chip, Divider, Typography } from "@mui/material";
 import { Link, useParams } from "react-router-dom";
 import { useAppContext } from "../../context/AppContext";
 import { getNoImagePlaceholder } from "../../lib/media";
+import { formatRetailerLabel } from "../../data/retailers";
 
 function CatalogProductDetail({
   product,
@@ -163,7 +164,7 @@ function CatalogProductDetail({
               <Typography
                 sx={{ color: "#141824", fontSize: 14, fontWeight: 800, mt: 0.5 }}
               >
-                {product.retailer}
+                {formatRetailerLabel(product.retailer)}
               </Typography>
             </Box>
           </Box>

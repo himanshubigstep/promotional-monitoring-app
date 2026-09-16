@@ -15,6 +15,7 @@ import {
   Typography,
 } from "@mui/material";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
+import { formatRetailerLabel } from "../../data/retailers";
 
 export default function StoreComparison() {
   const { filters, products } = useAppContext();
@@ -189,7 +190,7 @@ export default function StoreComparison() {
                     <TableCell
                       sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
                     >
-                      {retailer[0].toUpperCase()}
+                      {formatRetailerLabel(retailer[0])}
                     </TableCell>
                     <TableCell
                       sx={{ color: "#000000", fontSize: 13.5, fontWeight: 500 }}

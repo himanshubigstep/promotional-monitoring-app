@@ -3,6 +3,7 @@ import { Box, Button, Card, Chip, Tooltip, Typography } from "@mui/material";
 import { useEffect, useMemo, useState } from "react";
 import type { Product, ProductCategory } from "../../data/productTypes";
 import { isBenchmarkProduct } from "../../data/marketProducts";
+import { formatRetailerLabel } from "../../data/retailers";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
@@ -125,17 +126,19 @@ export default function PromotionalCalendar() {
 
   // Benchmark/dummy products (seeded once, then expanded to every retailer —
   // see marketProducts.ts) are guaranteed to have data across all stores, so
-  // surface them first, same ordering rule as the Promotions page. Active
-  // campaigns rank ahead of expired ones within each group.
+  // surface them first, same ordering rule as the Promotions page. Within
+  // each group (benchmark / non-benchmark), sort chronologically by
+  // fromDate so the calendar reads top-to-bottom in the same left-to-right
+  // order as the Gantt bars themselves. This is purely a display-order
+  // change scoped to this page's own sort — it doesn't touch
+  // BrandComparisonTable, which sorts its rows alphabetically by
+  // brand/name and is unaffected by this.
   const sortedCampaigns = useMemo(() => {
     return [...yearScopedCatalog].sort((a, b) => {
       const aBench = isBenchmarkProduct(a);
       const bBench = isBenchmarkProduct(b);
       if (aBench !== bBench) return aBench ? -1 : 1;
-      const aActive = a.toDate >= today;
-      const bActive = b.toDate >= today;
-      if (aActive !== bActive) return aActive ? -1 : 1;
-      return b.toDate.localeCompare(a.toDate);
+      return a.fromDate.localeCompare(b.fromDate);
     });
   }, [yearScopedCatalog]);
 
@@ -327,7 +330,7 @@ export default function PromotionalCalendar() {
             value={calendarStore}
             onValueChange={(value) => setCalendarStore(String(value))}
             options={[ALL, ...availableStores].map((value) => ({
-              label: value,
+              label: value === ALL ? value : formatRetailerLabel(value),
               value,
             }))}
           />
@@ -438,7 +441,7 @@ export default function PromotionalCalendar() {
                               maxWidth: 130,
                             }}
                           >
-                            {item.brand} · {item.retailer}
+                            {item.brand} · {formatRetailerLabel(item.retailer)}
                           </Typography>
                         </Box>
                         <Chip
@@ -529,7 +532,7 @@ export default function PromotionalCalendar() {
                                 textOverflow: "ellipsis",
                               }}
                             >
-                              -{item.competitorDiscount}% • {item.durationMonths}m • {item.retailer}
+                              -{item.competitorDiscount}% • {item.durationMonths}m • {formatRetailerLabel(item.retailer)}
                             </Typography>
                           </Box>
                         </Tooltip>

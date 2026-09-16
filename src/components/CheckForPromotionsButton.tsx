@@ -48,7 +48,7 @@ export default function CheckForPromotionsButton() {
         "success",
       );
     } catch (err) {
-      showToast(err instanceof Error ? err.message : "Failed to trigger the scrape.", "error");
+      showToast("No Promotions Available for now", "error");
     } finally {
       setTriggering(false);
     }

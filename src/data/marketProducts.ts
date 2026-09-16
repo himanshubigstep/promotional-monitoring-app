@@ -51,17 +51,24 @@ export const upsertProductInMarket = (
 // are usually sparse. These 20 are seeded once here (pre-expansion, like
 // every other plProducts entry): all 6 ProductCategory values are covered
 // (Skincare/Makeup x4, Body Care/Haircare/Fragrance/Tools x3) with a diverse
-// spread of real brands. Each one's fromDate/toDate is a 4-month window,
-// staggered so consecutive products overlap, spanning Jan 2024 - Dec 2026
-// with no gaps and no overshoot past Dec 2026 — every month in that range
-// has at least one active benchmark promotion.
+// spread of real brands. Each one's fromDate is staggered by ~16 days,
+// spanning Jan 2026 - Nov 2026 (so Brand Analytics' monthly bucketing,
+// which groups by fromDate's month, has offers landing in every month of
+// 2026 for the client's month-over-month brand comparison). toDate is a
+// 6-month window from fromDate — long enough that ~12 of the 20 are
+// simultaneously active on any given day (not just the ones starting this
+// month), so Store Comparison / Brand x Retailer Comparison (which only
+// show currently-active rows) still surface a healthy double-digit set
+// instead of just whichever handful started in the current month.
 // expandPolishRetailerOffers() below always gives each one Sephora's own
 // offer (so there's a client-side comparison row) plus a randomly-picked 2
 // or 3 of the other 6 PL retailers (see benchmarkRetailerSubsets below)
 // rather than every retailer — each product ends up at 3 or 4 of the 7 PL
-// retailers, not all of them. retailerOfferOffsets further down uses a
-// fixed, pairwise-distinct offset per retailer, so within any one product's
-// row no two retailers (Sephora included) ever land on the same discount %.
+// retailers, not all of them. buildDiscountOffsets() further down gives
+// each product its own seeded random, pairwise-distinct offset per
+// retailer, so within any one product's row no two retailers (Sephora
+// included) ever land on the same discount %, and which retailer discounts
+// deepest isn't the same fixed ranking on every product.
 // Listed first so insertion order keeps them at the top of the
 // catalog/promotions lists and the BrandComparisonTable rows.
 const benchmarkProducts: Product[] = [
@@ -78,8 +85,8 @@ const benchmarkProducts: Product[] = [
     stock: 30,
     competitorDiscount: 15,
     image: getImage(100),
-    fromDate: "2024-01-01",
-    toDate: "2024-04-30",
+    fromDate: "2026-01-01",
+    toDate: "2026-07-01",
     promotionName: "Moisturising Cream",
     description: "Ceramide-rich daily moisturiser for normal to dry skin.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -99,8 +106,8 @@ const benchmarkProducts: Product[] = [
     stock: 26,
     competitorDiscount: 20,
     image: getImage(101),
-    fromDate: "2024-03-01",
-    toDate: "2024-06-30",
+    fromDate: "2026-01-17",
+    toDate: "2026-07-17",
     promotionName: "Effaclar Duo+",
     description: "Corrective unclogging care for blemish-prone skin.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -120,8 +127,8 @@ const benchmarkProducts: Product[] = [
     stock: 34,
     competitorDiscount: 18,
     image: getImage(102),
-    fromDate: "2024-05-01",
-    toDate: "2024-08-31",
+    fromDate: "2026-02-02",
+    toDate: "2026-08-02",
     promotionName: "Fit Me Foundation",
     description: "Matte + poreless liquid foundation, buildable coverage.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -141,8 +148,8 @@ const benchmarkProducts: Product[] = [
     stock: 40,
     competitorDiscount: 15,
     image: getImage(104),
-    fromDate: "2024-06-01",
-    toDate: "2024-09-30",
+    fromDate: "2026-02-18",
+    toDate: "2026-08-18",
     promotionName: "Q10 Power Cream",
     description: "Anti-wrinkle body firming cream with Q10 and creatine.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -162,8 +169,8 @@ const benchmarkProducts: Product[] = [
     stock: 45,
     competitorDiscount: 10,
     image: getImage(105),
-    fromDate: "2024-08-01",
-    toDate: "2024-11-30",
+    fromDate: "2026-03-06",
+    toDate: "2026-09-06",
     promotionName: "Nourishing Body Wash",
     description: "1/4 moisturising cream body wash for soft, smooth skin.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -183,8 +190,8 @@ const benchmarkProducts: Product[] = [
     stock: 29,
     competitorDiscount: 18,
     image: getImage(110),
-    fromDate: "2024-10-01",
-    toDate: "2025-01-31",
+    fromDate: "2026-03-22",
+    toDate: "2026-09-22",
     promotionName: "Gliss Hair Repair Mask",
     description: "Deep repair hair mask for damaged, brittle hair.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -204,8 +211,8 @@ const benchmarkProducts: Product[] = [
     stock: 48,
     competitorDiscount: 10,
     image: getImage(111),
-    fromDate: "2024-11-01",
-    toDate: "2025-02-28",
+    fromDate: "2026-04-07",
+    toDate: "2026-10-07",
     promotionName: "Pro-V Shampoo",
     description: "Daily strengthening shampoo for visibly healthier hair.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -225,8 +232,8 @@ const benchmarkProducts: Product[] = [
     stock: 14,
     competitorDiscount: 20,
     image: getImage(113),
-    fromDate: "2025-01-01",
-    toDate: "2025-04-30",
+    fromDate: "2026-04-23",
+    toDate: "2026-10-23",
     promotionName: "Black Opium EDP",
     description: "Signature gourmand-floral eau de parfum.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -246,8 +253,8 @@ const benchmarkProducts: Product[] = [
     stock: 16,
     competitorDiscount: 18,
     image: getImage(114),
-    fromDate: "2025-03-01",
-    toDate: "2025-06-30",
+    fromDate: "2026-05-09",
+    toDate: "2026-11-09",
     promotionName: "Bottled Eau de Toilette",
     description: "Classic woody-aromatic fragrance for everyday wear.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -267,8 +274,8 @@ const benchmarkProducts: Product[] = [
     stock: 20,
     competitorDiscount: 22,
     image: getImage(115),
-    fromDate: "2025-04-01",
-    toDate: "2025-07-31",
+    fromDate: "2026-05-25",
+    toDate: "2026-11-25",
     promotionName: "CK One",
     description: "Iconic unisex citrus-fresh eau de toilette.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -288,8 +295,8 @@ const benchmarkProducts: Product[] = [
     stock: 42,
     competitorDiscount: 10,
     image: getImage(116),
-    fromDate: "2025-06-01",
-    toDate: "2025-09-30",
+    fromDate: "2026-06-10",
+    toDate: "2026-12-10",
     promotionName: "Miracle Complexion Sponge",
     description: "Latex-free blending sponge for a flawless, airbrushed finish.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -309,8 +316,8 @@ const benchmarkProducts: Product[] = [
     stock: 36,
     competitorDiscount: 20,
     image: getImage(118),
-    fromDate: "2025-08-01",
-    toDate: "2025-11-30",
+    fromDate: "2026-06-26",
+    toDate: "2026-12-26",
     promotionName: "Niacinamide 10% Serum",
     description: "High-strength blemish and pore-refining serum.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -330,8 +337,8 @@ const benchmarkProducts: Product[] = [
     stock: 28,
     competitorDiscount: 15,
     image: getImage(119),
-    fromDate: "2025-09-01",
-    toDate: "2025-12-31",
+    fromDate: "2026-07-12",
+    toDate: "2027-01-12",
     promotionName: "Sensibio H2O",
     description: "Gentle micellar cleansing water for sensitive skin.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -351,8 +358,8 @@ const benchmarkProducts: Product[] = [
     stock: 45,
     competitorDiscount: 20,
     image: getImage(124),
-    fromDate: "2025-11-01",
-    toDate: "2026-02-28",
+    fromDate: "2026-07-28",
+    toDate: "2027-01-28",
     promotionName: "Lip Lingerie Matte Liquid Lipstick",
     description: "Long-wearing matte liquid lipstick with a lightweight feel.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -372,8 +379,8 @@ const benchmarkProducts: Product[] = [
     stock: 60,
     competitorDiscount: 10,
     image: getImage(125),
-    fromDate: "2026-01-01",
-    toDate: "2026-04-30",
+    fromDate: "2026-08-13",
+    toDate: "2027-02-13",
     promotionName: "Lash Princess Mascara",
     description: "Volumising and lengthening mascara with an hourglass brush.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -393,8 +400,8 @@ const benchmarkProducts: Product[] = [
     stock: 38,
     competitorDiscount: 15,
     image: getImage(126),
-    fromDate: "2026-02-01",
-    toDate: "2026-05-31",
+    fromDate: "2026-08-29",
+    toDate: "2027-03-01",
     promotionName: "HD Liquid Coverage Foundation",
     description: "High-definition, buildable-coverage liquid foundation.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -414,8 +421,8 @@ const benchmarkProducts: Product[] = [
     stock: 24,
     competitorDiscount: 18,
     image: getImage(127),
-    fromDate: "2026-04-01",
-    toDate: "2026-07-31",
+    fromDate: "2026-09-14",
+    toDate: "2027-03-14",
     promotionName: "Reve de Miel Ultra-Nourishing Body Lotion",
     description: "Honey-enriched nourishing lotion for dry, sensitive skin.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -435,8 +442,8 @@ const benchmarkProducts: Product[] = [
     stock: 50,
     competitorDiscount: 12,
     image: getImage(129),
-    fromDate: "2026-06-01",
-    toDate: "2026-09-30",
+    fromDate: "2026-09-30",
+    toDate: "2027-03-30",
     promotionName: "Classic Clean Anti-Dandruff Shampoo",
     description: "Anti-dandruff shampoo for clean, flake-free hair.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -456,8 +463,8 @@ const benchmarkProducts: Product[] = [
     stock: 46,
     competitorDiscount: 10,
     image: getImage(133),
-    fromDate: "2026-07-01",
-    toDate: "2026-10-31",
+    fromDate: "2026-10-16",
+    toDate: "2027-04-16",
     promotionName: "Bamboo Foundation Brush",
     description: "Sustainably-sourced bamboo brush for flawless foundation application.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -477,8 +484,8 @@ const benchmarkProducts: Product[] = [
     stock: 39,
     competitorDiscount: 12,
     image: getImage(134),
-    fromDate: "2026-09-01",
-    toDate: "2026-12-31",
+    fromDate: "2026-11-01",
+    toDate: "2027-05-01",
     promotionName: "The Original Detangling Hairbrush",
     description: "Detangling brush that glides through wet or dry hair painlessly.",
     promotionDescription: "Benchmark offer tracked across multiple retailers.",
@@ -2639,19 +2646,40 @@ export let czProducts: Product[] = [
   },
 ];
 
-// Each retailer gets its own fixed, pairwise-distinct offset (no two
-// retailers can ever land on the same value) so that within a single
-// product's row, no two retailers ever tie on discount % — every cell is
-// unambiguously ahead of or behind Sephora, never equal to it.
-const retailerOfferOffsets: Record<(typeof plRetailers)[number], number> = {
-  Douglas: 3,
-  drogerienatura: 2,
-  superpharm: 1,
-  sephora: 0,
-  flaconi: -1,
-  hebe: -2,
-  Notino: -3,
-};
+// Each product gets its own seeded random per-retailer discount offset
+// (deterministic, not Math.random() - see mulberry32 above) instead of the
+// old fixed table that reused the exact same offset for every retailer on
+// every product. That made Douglas always look like the deepest discounter,
+// Notino always the shallowest, and Sephora land exactly on the base value,
+// identically on every single row - mechanical instead of realistic.
+// Now Sephora's own offer is deliberately weighted a bit below the base
+// value (we generally don't discount as deep as the competitor market -
+// that's the story this benchmark data is meant to tell), while which
+// competitor discounts deepest varies randomly product to product instead
+// of being a fixed ranking. Offsets are nudged apart to stay
+// pairwise-distinct within a single product's row, so no two retailers
+// ever tie on discount %.
+function buildDiscountOffsets(
+  retailersForProduct: (typeof plRetailers)[number][],
+  seed: number,
+) {
+  const random = mulberry32(seed);
+  const used = new Set<number>();
+  const claim = (raw: number) => {
+    let value = raw;
+    while (used.has(value)) value += 1;
+    used.add(value);
+    return value;
+  };
+  const offsets: Partial<Record<(typeof plRetailers)[number], number>> = {};
+  retailersForProduct.forEach((retailer) => {
+    offsets[retailer] =
+      retailer === "sephora"
+        ? claim(-(2 + Math.floor(random() * 4))) // -2..-5, always below base
+        : claim(-1 + Math.floor(random() * 9)); // -1..+7, random per product
+  });
+  return offsets;
+}
 
 function addDays(date: string, days: number) {
   const result = new Date(`${date}T00:00:00Z`);
@@ -2660,10 +2688,11 @@ function addDays(date: string, days: number) {
 }
 
 function expandPolishRetailerOffers(products: Product[]) {
-  return products.flatMap((product) => {
+  return products.flatMap((product, productIndex) => {
     const retailersForProduct = benchmarkRetailerSubsets[product.id] ?? plRetailers;
+    const offsets = buildDiscountOffsets(retailersForProduct, productIndex + 5000);
     return retailersForProduct.map((retailer, retailerIndex) => {
-      const discount = Math.max(5, product.competitorDiscount + retailerOfferOffsets[retailer]);
+      const discount = Math.max(5, product.competitorDiscount + (offsets[retailer] ?? 0));
       const priceAfterDiscount = Math.round(product.price * (1 - discount / 100));
       const isSephora = retailer === "sephora";
 

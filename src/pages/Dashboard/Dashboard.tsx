@@ -34,6 +34,7 @@ import BrandComparisonTable from "../../components/BrandComparisonTable";
 import { isBenchmarkProduct } from "../../data/marketProducts";
 import { BarChart } from "@mui/x-charts";
 import { getNoImagePlaceholder } from "../../lib/media";
+import { formatRetailerLabel } from "../../data/retailers";
 
 const today = new Date().toISOString().slice(0, 10);
 const months = [
@@ -850,7 +851,7 @@ const Dashboard = () => {
                     setComparisonRetailers(next.slice(0, MAX_COMPARISON_RETAILERS));
                   }}
                   options={competitorRetailerOptions.map((r) => ({
-                    label: r,
+                    label: formatRetailerLabel(r),
                     value: r,
                   }))}
                   placeholder={`Compare up to ${MAX_COMPARISON_RETAILERS} retailers`}
@@ -875,7 +876,9 @@ const Dashboard = () => {
                       {
                         scaleType: "band",
                         data: visibleRetailerComparison.map((r) =>
-                          r.isClient ? `${r.retailer} (you)` : r.retailer,
+                          r.isClient
+                            ? `${formatRetailerLabel(r.retailer)} (you)`
+                            : formatRetailerLabel(r.retailer),
                         ),
                         tickLabelStyle: { fontSize: 10, fill: "#525b75" },
                       },
@@ -890,7 +893,9 @@ const Dashboard = () => {
                       data: visibleRetailerComparison.map((r2, i) =>
                         i === seriesIndex ? r2.avgDiscount : null,
                       ),
-                      label: r.isClient ? `${r.retailer} (you)` : r.retailer,
+                      label: r.isClient
+                        ? `${formatRetailerLabel(r.retailer)} (you)`
+                        : formatRetailerLabel(r.retailer),
                       color: RETAILER_LINE_COLORS[seriesIndex % RETAILER_LINE_COLORS.length],
                     }))}
                     margin={{ top: 10, right: 10, bottom: 24, left: 32 }}

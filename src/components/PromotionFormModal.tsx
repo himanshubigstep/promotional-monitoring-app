@@ -28,6 +28,7 @@ import {
 } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 import { getNoImagePlaceholder } from "../lib/media";
+import { formatRetailerLabel } from "../data/retailers";
 
 const categories = [
   "Pielęgnacja",
@@ -1073,7 +1074,7 @@ export default function PromotionFormModal({
                     }));
                   }}
                   options={marketProductOptions.map((item) => ({
-                    label: `${item.name} · ${item.brand} · ${item.retailer}`,
+                    label: `${item.name} · ${item.brand} · ${formatRetailerLabel(item.retailer)}`,
                     value: item.name,
                   }))}
                   required
@@ -1088,7 +1089,7 @@ export default function PromotionFormModal({
                   disabled={isReadOnlyField("retailer")}
                   onValueChange={(value) => update("retailer", value)}
                   options={marketRetailers.map((item) => ({
-                    label: item,
+                    label: formatRetailerLabel(item),
                     value: item,
                   }))}
                   placeholder={currentLanguage.retailer}

@@ -15,6 +15,7 @@ import React, { useState } from "react";
 import type { Product, PromotionType } from "../../data/productTypes";
 import { matchesPromotionFilters, useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
+import { formatRetailerLabel } from "../../data/retailers";
 
 const months = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -284,7 +285,13 @@ export default function BrandAnalytics() {
       previousDiscount = discount;
       return { month, discount, hikeRatio };
     });
-    return { rowValue, cells };
+    return {
+      rowValue,
+      // Only store names need first-letter capitalizing for display -
+      // brand/category values are already properly cased in the data.
+      displayValue: heatmapDimension === "store" ? formatRetailerLabel(rowValue) : rowValue,
+      cells,
+    };
   });
   const heatmapDimensionLabel =
     heatmapDimension === "brand"
@@ -303,7 +310,7 @@ export default function BrandAnalytics() {
     .sort((left, right) => right.competitorDiscount - left.competitorDiscount)
     .slice(0, 12)
     .map((product) => ({
-      label: `${product.name} · ${product.retailer}`,
+      label: `${product.name} · ${formatRetailerLabel(product.retailer)}`,
       discount: product.competitorDiscount,
     }));
 
@@ -330,7 +337,14 @@ export default function BrandAnalytics() {
         ).length;
         return { type, count, pct: Math.round((count / total) * 100) };
       });
-      return { value, segments, total: rowProducts.length };
+      return {
+        value,
+        // Only store names need first-letter capitalizing for display -
+        // brand values are already properly cased in the data.
+        displayValue: promoMixDimension === "store" ? formatRetailerLabel(value) : value,
+        segments,
+        total: rowProducts.length,
+      };
     });
 
   const strongestCategory = categoryTotals[0]?.category || "No category data";
@@ -666,7 +680,7 @@ export default function BrandAnalytics() {
                         alignItems: "center",
                       }}
                     >
-                      {row.rowValue}
+                      {row.displayValue}
                     </Typography>
                     {row.cells.map((cell) => {
                       const intensity = Math.min(3, Math.floor(cell.discount / 10));
@@ -683,7 +697,7 @@ export default function BrandAnalytics() {
                       return (
                         <Tooltip
                           key={`${row.rowValue}-${cell.month}`}
-                          title={`${row.rowValue} • ${cell.month}: ${cell.discount}% avg discount, ${hikeLabel} hike vs previous month`}
+                          title={`${row.displayValue} • ${cell.month}: ${cell.discount}% avg discount, ${hikeLabel} hike vs previous month`}
                           arrow
                         >
                           <Box
@@ -744,7 +758,7 @@ export default function BrandAnalytics() {
                   <Typography
                     sx={{ color: "#141824", fontSize: 13.5, fontWeight: 500 }}
                   >
-                    {name}
+                    {formatRetailerLabel(name)}
                   </Typography>
                   <Box className="flex gap-3">
                     <Typography sx={{ color: "#525b75", fontSize: 12 }}>
@@ -916,7 +930,7 @@ export default function BrandAnalytics() {
                       <Typography
                         sx={{ color: "#141824", fontSize: 13, fontWeight: 500 }}
                       >
-                        {row.value}
+                        {row.displayValue}
                       </Typography>
                       <Typography sx={{ color: "#525b75", fontSize: 11 }}>
                         {row.total} offers

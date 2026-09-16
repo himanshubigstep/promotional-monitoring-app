@@ -145,14 +145,25 @@ const BrandComparisonTable = () => {
         if (page > pageCount) setPage(pageCount);
     }, [page, pageCount]);
 
-    // Colors the discount % relative to Sephora's own offer in that row, so
-    // it's immediately obvious which retailers are beating or trailing
-    // Sephora — a flat "active = green" scheme made every active cell look
-    // identical and gave no basis for comparison.
+    // Colors the discount % by its rank among every active offer in that
+    // row (including Sephora's own) — the deepest discount in the row is
+    // green, the shallowest is red, everything between is interpolated on
+    // the same red-to-green gradient. Replaces the old "vs Sephora only"
+    // scheme, which couldn't show how competitors ranked against each
+    // other, only against Sephora.
+    const rankColor = (t: number) => {
+        const hue = Math.round(Math.max(0, Math.min(1, t)) * 120); // 0=red, 120=green
+        return {
+            bg: `hsl(${hue}, 75%, 92%)`,
+            color: `hsl(${hue}, 65%, 28%)`,
+        };
+    };
+
     const renderCell = (
         cell: RetailerCell | undefined,
         isYourStore: boolean,
-        sephoraDiscount: number | undefined,
+        rowMin: number | undefined,
+        rowMax: number | undefined,
     ) => {
         if (!cell) {
             return (
@@ -170,24 +181,17 @@ const BrandComparisonTable = () => {
             bg = "#f2f2f2";
             color = "#9fa6bc";
             icon = <ScheduleRounded sx={{ fontSize: 12 }} />;
-        } else if (isYourStore) {
-            bg = "#e7ecff";
-            color = "#2545c9";
-            icon = <StorefrontRounded sx={{ fontSize: 12 }} />;
-        } else if (sephoraDiscount !== undefined) {
-            if (cell.discount > sephoraDiscount) {
-                bg = "#d9fbd0";
-                color = "#1c6c09";
-                icon = <TrendingUpRounded sx={{ fontSize: 12 }} />;
-            } else if (cell.discount < sephoraDiscount) {
-                bg = "#ffe2dc";
-                color = "#c92e13";
-                icon = <TrendingDownRounded sx={{ fontSize: 12 }} />;
-            } else {
-                bg = "#fff3cd";
-                color = "#8a6d00";
-                icon = <TrendingFlatRounded sx={{ fontSize: 12 }} />;
-            }
+        } else if (rowMin !== undefined && rowMax !== undefined) {
+            const t = rowMax === rowMin ? 0.5 : (cell.discount - rowMin) / (rowMax - rowMin);
+            ({ bg, color } = rankColor(t));
+            icon =
+                cell.discount === rowMax ? (
+                    <TrendingUpRounded sx={{ fontSize: 12 }} />
+                ) : cell.discount === rowMin ? (
+                    <TrendingDownRounded sx={{ fontSize: 12 }} />
+                ) : (
+                    <TrendingFlatRounded sx={{ fontSize: 12 }} />
+                );
         }
 
         return (
@@ -196,6 +200,7 @@ const BrandComparisonTable = () => {
                     className="inline-flex items-center gap-0.5 rounded-full"
                     sx={{ px: 1, py: 0.3, backgroundColor: bg, color }}
                 >
+                    {isYourStore && <StorefrontRounded sx={{ fontSize: 12 }} />}
                     {icon}
                     <Typography
                         sx={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.2 }}
@@ -227,7 +232,7 @@ const BrandComparisonTable = () => {
                             </Typography>
                         </Box>
                         <Typography sx={{ fontSize: 13, color: "#525b75" }}>
-                            Discount % is colored against Sephora's own offer: green beats Sephora, red trails it, amber matches it. Grey cells are expired offers.
+                            Discount % is colored by rank within each row: the deepest active offer is green, the shallowest is red, with everything else shaded in between. Grey cells are expired offers.
                         </Typography>
                     </Box>
                 </Box>
@@ -377,7 +382,19 @@ const BrandComparisonTable = () => {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {visibleRows.map((row) => (
+                            {visibleRows.map((row) => {
+                                const activeDiscounts = retailers
+                                    .map((r) => row.retailers[r])
+                                    .filter((c): c is RetailerCell => !!c && c.active)
+                                    .map((c) => c.discount);
+                                const rowMin = activeDiscounts.length
+                                    ? Math.min(...activeDiscounts)
+                                    : undefined;
+                                const rowMax = activeDiscounts.length
+                                    ? Math.max(...activeDiscounts)
+                                    : undefined;
+
+                                return (
                                 <TableRow
                                     key={row.key}
                                     sx={{
@@ -404,7 +421,6 @@ const BrandComparisonTable = () => {
                                     {retailers.map((r) => {
                                         const cell = row.retailers[r];
                                         const isYour = r === yourStore;
-                                        const sephoraDiscount = row.retailers[yourStore]?.discount;
 
                                         return (
                                             <TableCell
@@ -416,12 +432,13 @@ const BrandComparisonTable = () => {
                                                     py: 1,
                                                 }}
                                             >
-                                                {renderCell(cell, isYour, sephoraDiscount)}
+                                                {renderCell(cell, isYour, rowMin, rowMax)}
                                             </TableCell>
                                         );
                                     })}
                                 </TableRow>
-                            ))}
+                                );
+                            })}
                             {rows.length === 0 && (
                                 <TableRow>
                                     <TableCell

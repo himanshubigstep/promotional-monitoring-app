@@ -21,6 +21,7 @@ import AppPagination from "../../components/AppPagination";
 import PromotionFormModal from "../../components/PromotionFormModal";
 import { isBenchmarkProduct } from "../../data/marketProducts";
 import { getNoImagePlaceholder } from "../../lib/media";
+import { formatRetailerLabel } from "../../data/retailers";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -317,7 +318,7 @@ export default function Promotions() {
                       {product.name}
                     </Typography>
                     <Typography sx={{ color: "#525b75", fontSize: 11, mt: 0.5 }}>
-                      {product.category} · {product.retailer}
+                      {product.category} · {formatRetailerLabel(product.retailer)}
                     </Typography>
                     <Typography
                       sx={{

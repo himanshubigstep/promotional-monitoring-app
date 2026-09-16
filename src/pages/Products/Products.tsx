@@ -16,6 +16,7 @@ import { useAppContext } from "../../context/AppContext";
 import AppPagination from "../../components/AppPagination";
 import FormField from "../../components/FormField";
 import { getNoImagePlaceholder } from "../../lib/media";
+import { formatRetailerLabel } from "../../data/retailers";
 
 const pageSize = 15;
 
@@ -229,7 +230,7 @@ export default function Products() {
             {marketRetailers.map((retailer) => (
               <Chip
                 key={retailer.id}
-                label={retailer.name}
+                label={formatRetailerLabel(retailer.name)}
                 size="small"
                 onClick={() => {
                   setRetailerFilter(retailer.name);
@@ -272,7 +273,7 @@ export default function Products() {
                     }}
                   />
                   <Chip
-                    label={product.retailer}
+                    label={formatRetailerLabel(product.retailer)}
                     size="small"
                     sx={{
                       position: "absolute",
@@ -464,7 +465,7 @@ export default function Products() {
                 setForm((f) => ({ ...f, retailer: String(value) }))
               }
               options={retailerOptions.map((r) => ({
-                label: `${r.name} (${r.market})`,
+                label: `${formatRetailerLabel(r.name)} (${r.market})`,
                 value: r.name,
               }))}
               required
