@@ -7,7 +7,7 @@ import { useAppContext } from "../context/AppContext";
 // Must match scraper/src/retailers.ts's retailerTargets (the promo-scrape
 // list, not the smaller catalog-crawl one) and the "options" list in
 // .github/workflows/scrape.yml's workflow_dispatch input.
-const RETAILERS = ["Notino", "superpharm", "drogerienatura", "flaconi"];
+const RETAILERS = ["Notino", "Superpharm", "Drogerienatura", "Flaconi"];
 
 export default function CheckForPromotionsButton() {
   const { canEdit, showToast } = useAppContext();
