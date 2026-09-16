@@ -205,7 +205,7 @@ export default function Promotions() {
                         event.currentTarget.src = fallbackImage;
                       }}
                     />
-                    <Box className="absolute left-2 top-2">
+                    <Box className="absolute left-2 top-2 flex flex-col items-start gap-1">
                       <Chip
                         label={expired ? "Expired" : "Active"}
                         size="small"

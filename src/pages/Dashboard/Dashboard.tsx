@@ -41,6 +41,10 @@ const months = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+// Client always first (so it keeps the same color slot even as the
+// competitor selection changes), then up to 3 competitors.
+const RETAILER_LINE_COLORS = ["#141824", "#e5780b", "#2545c9", "#1c6c09"];
+
 const Dashboard = () => {
   const {
     filters,
@@ -65,6 +69,8 @@ const Dashboard = () => {
   const [bulkMarket, setBulkMarket] = useState<"PL" | "CZ">(
     filters.market === "All" ? "PL" : (filters.market as "PL" | "CZ"),
   );
+  const MAX_COMPARISON_RETAILERS = 3;
+  const [comparisonRetailers, setComparisonRetailers] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const catalogPageSize = 10;
   const expiredPageSize = 5;
@@ -371,7 +377,7 @@ const Dashboard = () => {
   const retailerComparison = useMemo(() => {
     const map = new Map<
       string,
-      { totalDiscount: number; count: number; activeCount: number }
+      { totalDiscount: number; count: number; activeCount: number; isClient: boolean }
     >();
 
     chartProducts.forEach((product) => {
@@ -380,12 +386,14 @@ const Dashboard = () => {
         totalDiscount: 0,
         count: 0,
         activeCount: 0,
+        isClient: false,
       };
       entry.totalDiscount += product.competitorDiscount;
       entry.count += 1;
       if (product.fromDate <= today && product.toDate >= today) {
         entry.activeCount += 1;
       }
+      if (product.isClient) entry.isClient = true;
       map.set(key, entry);
     });
 
@@ -395,40 +403,48 @@ const Dashboard = () => {
         avgDiscount: Math.round(stats.totalDiscount / stats.count),
         offers: stats.count,
         active: stats.activeCount,
+        isClient: stats.isClient,
       }))
       .sort((a, b) => b.avgDiscount - a.avgDiscount);
   }, [chartProducts]);
 
-  const retailerLine = useMemo(() => {
-    const topPad = 15;
-    const innerHeight = 85;
-    const values = retailerComparison.map((r) => r.avgDiscount);
-    const maxVal = Math.max(...values, 1);
-    const count = retailerComparison.length;
+  // The client's own retailer (Sephora on PL, the CZ demo store on CZ) is
+  // always shown; the dropdown only picks which competitors join it, so the
+  // chart stays a real "us vs them" comparison instead of an undifferentiated
+  // list of every retailer in the data.
+  const clientRetailer = useMemo(
+    () => retailerComparison.find((r) => r.isClient) ?? null,
+    [retailerComparison],
+  );
+  const competitorRetailerOptions = useMemo(
+    () => retailerComparison.filter((r) => !r.isClient).map((r) => r.retailer),
+    [retailerComparison],
+  );
 
-    const points = retailerComparison.map((item, index) => {
-      const xPct = count > 1 ? (index / (count - 1)) * 100 : 50;
-      const heightFraction = item.avgDiscount / maxVal;
-      const yPct = topPad + (1 - heightFraction) * innerHeight;
-      return {
-        ...item,
-        xPct,
-        yPct,
-        isPeak: item.avgDiscount === maxVal && item.avgDiscount > 0,
-      };
-    });
+  useEffect(() => {
+    setComparisonRetailers((current) =>
+      current.filter((r) => competitorRetailerOptions.includes(r)),
+    );
+  }, [competitorRetailerOptions]);
 
-    const linePath = points
-      .map(
-        (p, i) =>
-          `${i === 0 ? "M" : "L"} ${p.xPct.toFixed(2)} ${p.yPct.toFixed(2)}`,
-      )
-      .join(" ");
-    const areaPath =
-      points.length > 0 ? `${linePath} L 100 100 L 0 100 Z` : "";
+  // First time the data loads, pre-pick 3 random competitors so the chart
+  // isn't just a lone Sephora bar — the user can still change the selection
+  // afterward via the dropdown, and this never re-randomizes once it's run.
+  const hasAutoPickedCompetitorsRef = useRef(false);
+  useEffect(() => {
+    if (hasAutoPickedCompetitorsRef.current) return;
+    if (competitorRetailerOptions.length === 0) return;
+    hasAutoPickedCompetitorsRef.current = true;
+    const shuffled = [...competitorRetailerOptions].sort(() => Math.random() - 0.5);
+    setComparisonRetailers(shuffled.slice(0, MAX_COMPARISON_RETAILERS));
+  }, [competitorRetailerOptions]);
 
-    return { points, linePath, areaPath };
-  }, [retailerComparison]);
+  const visibleRetailerComparison = useMemo(() => {
+    const selected = retailerComparison.filter(
+      (r) => !r.isClient && comparisonRetailers.includes(r.retailer),
+    );
+    return clientRetailer ? [clientRetailer, ...selected] : selected;
+  }, [retailerComparison, clientRetailer, comparisonRetailers]);
 
   const catalogProducts = filteredProducts.slice(
     (catalogPage - 1) * catalogPageSize,
@@ -808,11 +824,11 @@ const Dashboard = () => {
                     Retailer Discount Comparison
                   </Typography>
                   <Typography sx={{ color: "#525b75", fontSize: 11 }}>
-                    Average competitor discount by retailer
+                    Sephora vs up to {MAX_COMPARISON_RETAILERS} competitors you pick
                   </Typography>
                 </Box>
                 <Chip
-                  label={`${retailerComparison.length} retailers`}
+                  label={`${visibleRetailerComparison.length} retailers`}
                   size="small"
                   sx={{
                     backgroundColor: "#ffe2dc",
@@ -824,96 +840,64 @@ const Dashboard = () => {
                 />
               </Box>
 
-              {retailerComparison.length === 0 ? (
+              <Box className="mb-3" sx={{ maxWidth: 320 }}>
+                <FormField
+                  type="multiselect"
+                  label=""
+                  value={comparisonRetailers}
+                  onValueChange={(value) => {
+                    const next = Array.isArray(value) ? value : [];
+                    setComparisonRetailers(next.slice(0, MAX_COMPARISON_RETAILERS));
+                  }}
+                  options={competitorRetailerOptions.map((r) => ({
+                    label: r,
+                    value: r,
+                  }))}
+                  placeholder={`Compare up to ${MAX_COMPARISON_RETAILERS} retailers`}
+                  disabled={competitorRetailerOptions.length === 0}
+                />
+              </Box>
+
+              {visibleRetailerComparison.length === 0 ? (
                 <Box className="flex h-[200px] items-center justify-center">
                   <Typography sx={{ color: "#525b75", fontSize: 12 }}>
-                    No retailer data available.
+                    {clientRetailer
+                      ? "Select up to 3 retailers above to compare against Sephora."
+                      : "No retailer data available."}
                   </Typography>
                 </Box>
               ) : (
-                <Box className="relative" sx={{ height: "12.5rem" }}>
-                  {/* Value labels */}
-                  {retailerLine.points.map((p: any) => (
-                    <Box
-                      key={`label-${p.retailer}`}
-                      className="absolute -translate-x-1/2"
-                      sx={{ left: `${p.xPct}%`, top: 0 }}
-                    >
-                      <Typography
-                        sx={{
-                          color: p.isPeak ? "#e5780b" : p.value ? "#525b75" : "#cbd0dd",
-                          fontSize: 10,
-                          fontWeight: 800,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {p.avgDiscount ? `${p.avgDiscount}%` : "-"}
-                      </Typography>
-                    </Box>
-                  ))}
-
-                  {/* Plot area */}
-                  <Box className="absolute inset-x-0" sx={{ top: 20, bottom: 20 }}>
-                    <Box className="absolute inset-0 flex justify-between">
-                      {retailerLine.points.map((p) => (
-                        <Box
-                          key={`grid-${p.retailer}`}
-                          className="h-full border-l border-[#eff2f6] first:border-l-0"
-                        />
-                      ))}
-                    </Box>
-                    <svg
-                      viewBox="0 0 100 100"
-                      preserveAspectRatio="none"
-                      className="absolute inset-0 h-full w-full"
-                    >
-                      <path d={retailerLine.areaPath} fill="#ffe2dc" stroke="none" />
-                      <path
-                        d={retailerLine.linePath}
-                        fill="none"
-                        stroke="#e5780b"
-                        strokeWidth={2.5}
-                        vectorEffect="non-scaling-stroke"
-                        strokeLinejoin="round"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    {retailerLine.points.map((p) => (
-                      <Box
-                        key={`dot-${p.retailer}`}
-                        className="absolute -translate-x-1/2 -translate-y-1/2 rounded-full"
-                        sx={{
-                          left: `${p.xPct}%`,
-                          top: `${p.yPct}%`,
-                          width: p.isPeak ? 9 : 6,
-                          height: p.isPeak ? 9 : 6,
-                          backgroundColor: p.isPeak ? "#e5780b" : "#ffffff",
-                          border: "2px solid #e5780b",
-                        }}
-                      />
-                    ))}
-                  </Box>
-
-                  {/* Retailer labels */}
-                  <Box className="absolute inset-x-0 bottom-0 flex justify-between">
-                    {retailerLine.points.map((p) => (
-                      <Typography
-                        key={`xlabel-${p.retailer}`}
-                        sx={{
-                          color: "#525b75",
-                          fontSize: 10,
-                          fontWeight: 500,
-                          maxWidth: 60,
-                          textAlign: "center",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {p.retailer}
-                      </Typography>
-                    ))}
-                  </Box>
+                <Box sx={{ width: "100%", height: 200 }}>
+                  <BarChart
+                    height={200}
+                    hideLegend
+                    xAxis={[
+                      {
+                        scaleType: "band",
+                        data: visibleRetailerComparison.map((r) =>
+                          r.isClient ? `${r.retailer} (you)` : r.retailer,
+                        ),
+                        tickLabelStyle: { fontSize: 10, fill: "#525b75" },
+                      },
+                    ]}
+                    yAxis={[
+                      {
+                        tickLabelStyle: { fontSize: 10, fill: "#525b75" },
+                        valueFormatter: (value: number) => `${value}%`,
+                      },
+                    ]}
+                    series={visibleRetailerComparison.map((r, seriesIndex) => ({
+                      data: visibleRetailerComparison.map((r2, i) =>
+                        i === seriesIndex ? r2.avgDiscount : null,
+                      ),
+                      label: r.isClient ? `${r.retailer} (you)` : r.retailer,
+                      color: RETAILER_LINE_COLORS[seriesIndex % RETAILER_LINE_COLORS.length],
+                    }))}
+                    margin={{ top: 10, right: 10, bottom: 24, left: 32 }}
+                    sx={{
+                      "& .MuiBarElement-root": { rx: 4 },
+                    }}
+                  />
                 </Box>
               )}
             </CardContent>
@@ -991,23 +975,22 @@ const Dashboard = () => {
                       event.currentTarget.src = fallbackImage;
                     }}
                   />
-                  <Chip
-                    label={product.toDate >= today ? "Active" : "Expired"}
-                    size="small"
-                    sx={{
-                      position: "absolute",
-                      left: 8,
-                      top: 8,
-                      backgroundColor:
-                        product.toDate >= today ? "#141824" : "#eff2f6",
-                      color: product.toDate >= today ? "#ffffff" : "#525b75",
-                      fontSize: 10,
-                      fontWeight: 500,
-                      letterSpacing: "0.04em",
-                      textTransform: "uppercase",
-                      borderRadius: "6px",
-                    }}
-                  />
+                  <Box className="absolute left-2 top-2 flex flex-col items-start gap-1">
+                    <Chip
+                      label={product.toDate >= today ? "Active" : "Expired"}
+                      size="small"
+                      sx={{
+                        backgroundColor:
+                          product.toDate >= today ? "#141824" : "#eff2f6",
+                        color: product.toDate >= today ? "#ffffff" : "#525b75",
+                        fontSize: 10,
+                        fontWeight: 500,
+                        letterSpacing: "0.04em",
+                        textTransform: "uppercase",
+                        borderRadius: "6px",
+                      }}
+                    />
+                  </Box>
                   {canEdit && product.toDate >= today && (
                     <IconButton
                       size="small"

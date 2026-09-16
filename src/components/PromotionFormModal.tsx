@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import {
   AddPhotoAlternateRounded,
@@ -16,12 +16,15 @@ import {
 } from "@mui/material";
 import { createWorker } from "tesseract.js";
 import { useAppContext, type Promotion } from "../context/AppContext";
+import type { PromotionType } from "../data/productTypes";
 import FormField from "./FormField";
 import { sephoraBrands } from "../data/brands";
 import { plRetailers } from "../data/retailers";
 import {
   readPromotionFieldsWithGemini,
   translateToEnglishWithGemini,
+  translateTextWithGemini,
+  convertCurrencyInText,
 } from "../utils/geminiOcr";
 import { preprocessImageForOCR } from "../utils/imagePreprocessing";
 import { noImagePlaceholder as fallbackImage } from "../lib/media";
@@ -34,6 +37,21 @@ const categories = [
   "Pielęgnacja ciała",
   "Akcesoria",
 ];
+// Canonical PL category values are what's stored/saved everywhere (form.category,
+// the DB, etc.) — this only maps them to an English label for display when
+// displayLang === "EN", and to accept the English catalog category names
+// (productCatalog's `category` field, e.g. "Skincare") when prefilling from a product.
+const categoryEnLabels: Record<string, string> = {
+  "Pielęgnacja": "Skincare",
+  "Perfumy": "Fragrance",
+  "Makijaż": "Makeup",
+  "Włosy": "Haircare",
+  "Pielęgnacja ciała": "Body Care",
+  "Akcesoria": "Tools",
+};
+const categoryEnToPl: Record<string, string> = Object.fromEntries(
+  Object.entries(categoryEnLabels).map(([pl, en]) => [en, pl]),
+);
 const brandCatalog = [...sephoraBrands];
 const retailers = [...plRetailers];
 const scopes = ["Wielokanałowa", "Tylko e-commerce", "Tylko aplikacja mobilna"];
@@ -116,6 +134,12 @@ const promotionTypeOptions = {
   ],
 } as const;
 
+const VALID_PROMOTION_TYPES: readonly PromotionType[] = promotionTypeOptions.PL.map(
+  (o) => o.value,
+);
+const toPromotionType = (value: string, fallback: PromotionType): PromotionType =>
+  (VALID_PROMOTION_TYPES as readonly string[]).includes(value) ? (value as PromotionType) : fallback;
+
 const emptyForm: FormState = {
   market: "PL",
   name: "",
@@ -174,6 +198,11 @@ const extractPromotionFields = (rawText: string) => {
   const matchedRetailer = findKnownMatches(text, retailers) as string;
   const matchedCategory = findKnownMatches(text, categories) as string;
 
+  const isBogo = /buy\s*\d+\s*get\s*\d+|kup\s*\d+[^.\n]*(?:gratis|otrzymaj|za\s*darmo)|\b\d\s*\+\s*\d\b/i.test(
+    text,
+  );
+  const promotionType = isBogo ? "Buy one get one free" : "";
+
   const nameCandidate = rawText
     .split("\n")
     .map((l) => l.trim())
@@ -187,6 +216,7 @@ const extractPromotionFields = (rawText: string) => {
     brands: matchedBrand,
     retailer: matchedRetailer,
     category: matchedCategory,
+    promotionType,
     name: nameCandidate || "",
   };
 };
@@ -479,6 +509,7 @@ export default function PromotionFormModal({
     category?: string;
     name?: string;
     notes?: string;
+    promotionType?: string;
   };
 
   function mergeExtractedIntoForm(
@@ -496,8 +527,15 @@ export default function PromotionFormModal({
       category: extracted.category || current.category || "",
       name: extracted.name || current.name || "",
       notes: extracted.notes || current.notes || "",
+      promotionType: extracted.promotionType
+        ? toPromotionType(extracted.promotionType, current.promotionType)
+        : current.promotionType,
     };
   }
+
+  // EN has no market of its own — defaults to PLN, mirroring the "EN view
+  // saves as market PL" rule used at submit time further down.
+  const targetCurrency = displayLang === "CZ" ? "CZK" : "PLN";
 
   // --- Tesseract path (local OCR) ----------------------------------------
 
@@ -514,23 +552,43 @@ export default function PromotionFormModal({
     } = await worker.recognize(processedFile);
     await worker.terminate();
 
-    return extractPromotionFields(text);
+    const extracted = extractPromotionFields(text);
+    return {
+      ...extracted,
+      discount: convertCurrencyInText(extracted.discount, targetCurrency),
+      threshold: convertCurrencyInText(extracted.threshold, targetCurrency),
+    };
   }
 
   // --- Gemini path ---------------------------------------------------------
 
   async function extractWithGemini(file: File): Promise<ExtractedFields> {
-    const raw = await readPromotionFieldsWithGemini(file);
+    const raw = await readPromotionFieldsWithGemini(file, {
+      categories,
+      retailers: retailerOptions.map((r) => r.name),
+      targetLanguage: displayLang,
+    });
 
     return {
       discount: raw.discount || "",
       threshold: raw.threshold || "",
       averageMarketDiscount: raw.averageMarketDiscount || "",
       name: raw.name || "",
-      brands: findKnownMatches(raw.brands || "", [...brandsByMarket.PL, ...brandsByMarket.CZ]) as string,
+      // Fall back to the raw extracted brand text (e.g. "MAC") when it isn't
+      // in the known catalog, instead of silently discarding it — the brand
+      // picker already supports adding a brand inline, so this just means
+      // the field starts pre-filled with a real value instead of blank.
+      brands:
+        (findKnownMatches(raw.brands || "", [...brandsByMarket.PL, ...brandsByMarket.CZ]) as string) ||
+        raw.brands ||
+        "",
       retailer: findKnownMatches(raw.retailer || "", retailerOptions.map((r) => r.name)) as string,
       category: findKnownMatches(raw.category || "", categories) as string,
       notes: raw.notes || "",
+      promotionType: findKnownMatches(
+        raw.promotionType || "",
+        promotionTypeOptions.PL.map((o) => o.value),
+      ) as string,
     };
   }
 
@@ -591,6 +649,45 @@ export default function PromotionFormModal({
 
   const isGeminiConfigured = () =>
     Boolean(process.env.REACT_APP_GEMINI_API_KEY || process.env.GEMINI_API_KEY);
+
+  // Switching PL/CZ/EN only changed static UI labels before — any name/notes
+  // already filled in (from OCR or manual typing) stayed in whatever language
+  // they were in. Re-translate them into the newly selected language so the
+  // whole modal actually matches the toggle.
+  const previousDisplayLangRef = useRef(displayLang);
+  useEffect(() => {
+    if (previousDisplayLangRef.current === displayLang) return;
+    previousDisplayLangRef.current = displayLang;
+
+    if (!isGeminiConfigured()) return;
+    if (!form.name.trim() && !form.notes.trim()) return;
+
+    const targetLanguageName =
+      displayLang === "EN" ? "English" : displayLang === "CZ" ? "Czech" : "Polish";
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const [translatedName, translatedNotes] = await Promise.all([
+          form.name.trim() ? translateTextWithGemini(form.name, targetLanguageName) : Promise.resolve(""),
+          form.notes.trim() ? translateTextWithGemini(form.notes, targetLanguageName) : Promise.resolve(""),
+        ]);
+        if (cancelled) return;
+        setForm((current) => ({
+          ...current,
+          name: translatedName || current.name,
+          notes: translatedNotes || current.notes,
+        }));
+      } catch (err) {
+        console.warn("Failed to translate fields on language change:", err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [displayLang]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -690,7 +787,7 @@ export default function PromotionFormModal({
       creativeData: nextCreativeData,
       averageMarketDiscount: editingPromotion.averageMarketDiscount,
     });
-  }, [editingPromotion]);
+  }, [editingPromotion, open]);
 
   const marketRetailers = retailerOptions
     .filter((r) => r.market === form.market)
@@ -889,7 +986,7 @@ export default function PromotionFormModal({
                   disabled={isReadOnlyField("category")}
                   onValueChange={(value) => update("category", value)}
                   options={categories.map((item) => ({
-                    label: item,
+                    label: displayLang === "EN" ? categoryEnLabels[item] || item : item,
                     value: item,
                   }))}
                   required
@@ -970,18 +1067,7 @@ export default function PromotionFormModal({
                       product: nextProduct,
                       brands: selected?.brand || current.brands,
                       category: selected?.category
-                        ? categories.find(
-                          (item) =>
-                            item ===
-                            ({
-                              Skincare: "Pielęgnacja",
-                              Fragrance: "Perfumy",
-                              Makeup: "Makijaż",
-                              Haircare: "Włosy",
-                              "Body Care": "Pielęgnacja ciała",
-                              Tools: "Akcesoria",
-                            } as Record<string, string>)[selected.category],
-                        ) || current.category
+                        ? categoryEnToPl[selected.category] || current.category
                         : current.category,
                       retailer: selected?.retailer || current.retailer,
                     }));

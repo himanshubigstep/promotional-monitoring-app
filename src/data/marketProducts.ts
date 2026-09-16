@@ -49,11 +49,21 @@ export const upsertProductInMarket = (
 // Sephora's manually-entered promos almost never land on the same SKU, so
 // cross-retailer comparisons (Store Comparison, Brand x Retailer Comparison)
 // are usually sparse. These 20 are seeded once here (pre-expansion, like
-// every other plProducts entry) and expandPolishRetailerOffers() below gives
-// each one an offer at every PL retailer, so there's always at least one
-// full apples-to-apples comparison row. Listed first so insertion order
-// keeps them at the top of the catalog/promotions lists and the
-// BrandComparisonTable rows.
+// every other plProducts entry): all 6 ProductCategory values are covered
+// (Skincare/Makeup x4, Body Care/Haircare/Fragrance/Tools x3) with a diverse
+// spread of real brands. Each one's fromDate/toDate is a 4-month window,
+// staggered so consecutive products overlap, spanning Jan 2024 - Dec 2026
+// with no gaps and no overshoot past Dec 2026 — every month in that range
+// has at least one active benchmark promotion.
+// expandPolishRetailerOffers() below always gives each one Sephora's own
+// offer (so there's a client-side comparison row) plus a randomly-picked 2
+// or 3 of the other 6 PL retailers (see benchmarkRetailerSubsets below)
+// rather than every retailer — each product ends up at 3 or 4 of the 7 PL
+// retailers, not all of them. retailerOfferOffsets further down uses a
+// fixed, pairwise-distinct offset per retailer, so within any one product's
+// row no two retailers (Sephora included) ever land on the same discount %.
+// Listed first so insertion order keeps them at the top of the
+// catalog/promotions lists and the BrandComparisonTable rows.
 const benchmarkProducts: Product[] = [
   {
     id: "PL-BENCH-01",
@@ -68,11 +78,11 @@ const benchmarkProducts: Product[] = [
     stock: 30,
     competitorDiscount: 15,
     image: getImage(100),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-01-01",
+    toDate: "2024-04-30",
     promotionName: "Moisturising Cream",
     description: "Ceramide-rich daily moisturiser for normal to dry skin.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 76,
   },
@@ -89,11 +99,11 @@ const benchmarkProducts: Product[] = [
     stock: 26,
     competitorDiscount: 20,
     image: getImage(101),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-03-01",
+    toDate: "2024-06-30",
     promotionName: "Effaclar Duo+",
     description: "Corrective unclogging care for blemish-prone skin.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 63,
   },
@@ -110,37 +120,16 @@ const benchmarkProducts: Product[] = [
     stock: 34,
     competitorDiscount: 18,
     image: getImage(102),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-05-01",
+    toDate: "2024-08-31",
     promotionName: "Fit Me Foundation",
     description: "Matte + poreless liquid foundation, buildable coverage.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 48,
   },
   {
     id: "PL-BENCH-04",
-    name: "Revitalift Serum",
-    brand: "L'Oréal Paris",
-    category: "Skincare",
-    price: 99,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.6,
-    stock: 22,
-    competitorDiscount: 22,
-    image: getImage(103),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Revitalift Serum",
-    description: "Hyaluronic acid anti-ageing serum for visible plumping.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 77,
-  },
-  {
-    id: "PL-BENCH-05",
     name: "Q10 Power Cream",
     brand: "Nivea",
     category: "Body Care",
@@ -152,16 +141,16 @@ const benchmarkProducts: Product[] = [
     stock: 40,
     competitorDiscount: 15,
     image: getImage(104),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-06-01",
+    toDate: "2024-09-30",
     promotionName: "Q10 Power Cream",
     description: "Anti-wrinkle body firming cream with Q10 and creatine.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 38,
   },
   {
-    id: "PL-BENCH-06",
+    id: "PL-BENCH-05",
     name: "Nourishing Body Wash",
     brand: "Dove",
     category: "Body Care",
@@ -173,100 +162,16 @@ const benchmarkProducts: Product[] = [
     stock: 45,
     competitorDiscount: 10,
     image: getImage(105),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-08-01",
+    toDate: "2024-11-30",
     promotionName: "Nourishing Body Wash",
     description: "1/4 moisturising cream body wash for soft, smooth skin.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 23,
   },
   {
-    id: "PL-BENCH-07",
-    name: "Micellar Water",
-    brand: "Garnier",
-    category: "Skincare",
-    price: 29,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.6,
-    stock: 50,
-    competitorDiscount: 12,
-    image: getImage(106),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Micellar Water",
-    description: "All-in-1 cleanser and makeup remover for sensitive skin.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 26,
-  },
-  {
-    id: "PL-BENCH-08",
-    name: "Mineral 89 Booster",
-    brand: "Vichy",
-    category: "Skincare",
-    price: 119,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.7,
-    stock: 18,
-    competitorDiscount: 20,
-    image: getImage(107),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Mineral 89 Booster",
-    description: "Hyaluronic-acid + mineralising water daily skin booster.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 95,
-  },
-  {
-    id: "PL-BENCH-09",
-    name: "Volumizing Mascara",
-    brand: "Eveline",
-    category: "Makeup",
-    price: 32,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.3,
-    stock: 38,
-    competitorDiscount: 25,
-    image: getImage(108),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Volumizing Mascara",
-    description: "Buildable volume mascara with a flexible hourglass brush.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 24,
-  },
-  {
-    id: "PL-BENCH-10",
-    name: "Lasting Finish Lipstick",
-    brand: "Rimmel",
-    category: "Makeup",
-    price: 39,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.4,
-    stock: 33,
-    competitorDiscount: 15,
-    image: getImage(109),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Lasting Finish Lipstick",
-    description: "Long-wear creamy lipstick in classic and bold shades.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 33,
-  },
-  {
-    id: "PL-BENCH-11",
+    id: "PL-BENCH-06",
     name: "Gliss Hair Repair Mask",
     brand: "Schwarzkopf",
     category: "Haircare",
@@ -278,16 +183,16 @@ const benchmarkProducts: Product[] = [
     stock: 29,
     competitorDiscount: 18,
     image: getImage(110),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-10-01",
+    toDate: "2025-01-31",
     promotionName: "Gliss Hair Repair Mask",
     description: "Deep repair hair mask for damaged, brittle hair.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 22,
   },
   {
-    id: "PL-BENCH-12",
+    id: "PL-BENCH-07",
     name: "Pro-V Shampoo",
     brand: "Pantene",
     category: "Haircare",
@@ -299,37 +204,16 @@ const benchmarkProducts: Product[] = [
     stock: 48,
     competitorDiscount: 10,
     image: getImage(111),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2024-11-01",
+    toDate: "2025-02-28",
     promotionName: "Pro-V Shampoo",
     description: "Daily strengthening shampoo for visibly healthier hair.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 20,
   },
   {
-    id: "PL-BENCH-13",
-    name: "Elements Conditioner",
-    brand: "Wella",
-    category: "Haircare",
-    price: 49,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.6,
-    stock: 24,
-    competitorDiscount: 15,
-    image: getImage(112),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Elements Conditioner",
-    description: "Renewing conditioner for lightweight moisture and shine.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 42,
-  },
-  {
-    id: "PL-BENCH-14",
+    id: "PL-BENCH-08",
     name: "Black Opium EDP",
     brand: "Yves Saint Laurent",
     category: "Fragrance",
@@ -341,16 +225,16 @@ const benchmarkProducts: Product[] = [
     stock: 14,
     competitorDiscount: 20,
     image: getImage(113),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-01-01",
+    toDate: "2025-04-30",
     promotionName: "Black Opium EDP",
     description: "Signature gourmand-floral eau de parfum.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 287,
   },
   {
-    id: "PL-BENCH-15",
+    id: "PL-BENCH-09",
     name: "Bottled Eau de Toilette",
     brand: "Hugo Boss",
     category: "Fragrance",
@@ -362,16 +246,16 @@ const benchmarkProducts: Product[] = [
     stock: 16,
     competitorDiscount: 18,
     image: getImage(114),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-03-01",
+    toDate: "2025-06-30",
     promotionName: "Bottled Eau de Toilette",
     description: "Classic woody-aromatic fragrance for everyday wear.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 237,
   },
   {
-    id: "PL-BENCH-16",
+    id: "PL-BENCH-10",
     name: "CK One",
     brand: "Calvin Klein",
     category: "Fragrance",
@@ -383,16 +267,16 @@ const benchmarkProducts: Product[] = [
     stock: 20,
     competitorDiscount: 22,
     image: getImage(115),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-04-01",
+    toDate: "2025-07-31",
     promotionName: "CK One",
     description: "Iconic unisex citrus-fresh eau de toilette.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 155,
   },
   {
-    id: "PL-BENCH-17",
+    id: "PL-BENCH-11",
     name: "Miracle Complexion Sponge",
     brand: "Real Techniques",
     category: "Tools",
@@ -404,37 +288,16 @@ const benchmarkProducts: Product[] = [
     stock: 42,
     competitorDiscount: 10,
     image: getImage(116),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-06-01",
+    toDate: "2025-09-30",
     promotionName: "Miracle Complexion Sponge",
     description: "Latex-free blending sponge for a flawless, airbrushed finish.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 32,
   },
   {
-    id: "PL-BENCH-18",
-    name: "Conceal & Fix Concealer",
-    brand: "Revolution Beauty",
-    category: "Makeup",
-    price: 45,
-    currency: "PLN",
-    market: "PL",
-    retailer: "sephora.pl (Your brand)",
-    rating: 4.4,
-    stock: 31,
-    competitorDiscount: 15,
-    image: getImage(117),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
-    promotionName: "Conceal & Fix Concealer",
-    description: "Full-coverage, crease-resistant liquid concealer.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
-    terms: "While stock lasts.",
-    priceAfterDiscount: 38,
-  },
-  {
-    id: "PL-BENCH-19",
+    id: "PL-BENCH-12",
     name: "Niacinamide 10% Serum",
     brand: "The Ordinary",
     category: "Skincare",
@@ -446,16 +309,16 @@ const benchmarkProducts: Product[] = [
     stock: 36,
     competitorDiscount: 20,
     image: getImage(118),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-08-01",
+    toDate: "2025-11-30",
     promotionName: "Niacinamide 10% Serum",
     description: "High-strength blemish and pore-refining serum.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 31,
   },
   {
-    id: "PL-BENCH-20",
+    id: "PL-BENCH-13",
     name: "Sensibio H2O",
     brand: "Bioderma",
     category: "Skincare",
@@ -467,13 +330,160 @@ const benchmarkProducts: Product[] = [
     stock: 28,
     competitorDiscount: 15,
     image: getImage(119),
-    fromDate: "2026-08-01",
-    toDate: "2026-12-31",
+    fromDate: "2025-09-01",
+    toDate: "2025-12-31",
     promotionName: "Sensibio H2O",
     description: "Gentle micellar cleansing water for sensitive skin.",
-    promotionDescription: "Benchmark offer tracked across every retailer.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
     terms: "While stock lasts.",
     priceAfterDiscount: 55,
+  },
+  {
+    id: "PL-BENCH-14",
+    name: "Lip Lingerie Matte Liquid Lipstick",
+    brand: "NYX Professional Makeup",
+    category: "Makeup",
+    price: 34,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.5,
+    stock: 45,
+    competitorDiscount: 20,
+    image: getImage(124),
+    fromDate: "2025-11-01",
+    toDate: "2026-02-28",
+    promotionName: "Lip Lingerie Matte Liquid Lipstick",
+    description: "Long-wearing matte liquid lipstick with a lightweight feel.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 27,
+  },
+  {
+    id: "PL-BENCH-15",
+    name: "Lash Princess Mascara",
+    brand: "essence",
+    category: "Makeup",
+    price: 18,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.6,
+    stock: 60,
+    competitorDiscount: 10,
+    image: getImage(125),
+    fromDate: "2026-01-01",
+    toDate: "2026-04-30",
+    promotionName: "Lash Princess Mascara",
+    description: "Volumising and lengthening mascara with an hourglass brush.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 16,
+  },
+  {
+    id: "PL-BENCH-16",
+    name: "HD Liquid Coverage Foundation",
+    brand: "Catrice",
+    category: "Makeup",
+    price: 29,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.4,
+    stock: 38,
+    competitorDiscount: 15,
+    image: getImage(126),
+    fromDate: "2026-02-01",
+    toDate: "2026-05-31",
+    promotionName: "HD Liquid Coverage Foundation",
+    description: "High-definition, buildable-coverage liquid foundation.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 25,
+  },
+  {
+    id: "PL-BENCH-17",
+    name: "Reve de Miel Ultra-Nourishing Body Lotion",
+    brand: "Nuxe",
+    category: "Body Care",
+    price: 79,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.7,
+    stock: 24,
+    competitorDiscount: 18,
+    image: getImage(127),
+    fromDate: "2026-04-01",
+    toDate: "2026-07-31",
+    promotionName: "Reve de Miel Ultra-Nourishing Body Lotion",
+    description: "Honey-enriched nourishing lotion for dry, sensitive skin.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 65,
+  },
+  {
+    id: "PL-BENCH-18",
+    name: "Classic Clean Anti-Dandruff Shampoo",
+    brand: "Head & Shoulders",
+    category: "Haircare",
+    price: 24,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.5,
+    stock: 50,
+    competitorDiscount: 12,
+    image: getImage(129),
+    fromDate: "2026-06-01",
+    toDate: "2026-09-30",
+    promotionName: "Classic Clean Anti-Dandruff Shampoo",
+    description: "Anti-dandruff shampoo for clean, flake-free hair.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 21,
+  },
+  {
+    id: "PL-BENCH-19",
+    name: "Bamboo Foundation Brush",
+    brand: "EcoTools",
+    category: "Tools",
+    price: 29,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.6,
+    stock: 46,
+    competitorDiscount: 10,
+    image: getImage(133),
+    fromDate: "2026-07-01",
+    toDate: "2026-10-31",
+    promotionName: "Bamboo Foundation Brush",
+    description: "Sustainably-sourced bamboo brush for flawless foundation application.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 26,
+  },
+  {
+    id: "PL-BENCH-20",
+    name: "The Original Detangling Hairbrush",
+    brand: "Tangle Teezer",
+    category: "Tools",
+    price: 45,
+    currency: "PLN",
+    market: "PL",
+    retailer: "sephora.pl (Your brand)",
+    rating: 4.8,
+    stock: 39,
+    competitorDiscount: 12,
+    image: getImage(134),
+    fromDate: "2026-09-01",
+    toDate: "2026-12-31",
+    promotionName: "The Original Detangling Hairbrush",
+    description: "Detangling brush that glides through wet or dry hair painlessly.",
+    promotionDescription: "Benchmark offer tracked across multiple retailers.",
+    terms: "While stock lasts.",
+    priceAfterDiscount: 40,
   },
 ];
 
@@ -488,6 +498,39 @@ const benchmarkKeys = new Set(
 
 export const isBenchmarkProduct = (product: { brand: string; name: string }) =>
   benchmarkKeys.has(`${product.brand}::${product.name}`);
+
+// Each benchmark product always gets Sephora's own offer (so there's a
+// client-side row to compare against) plus a randomly-picked 2 or 3 of the
+// other 6 PL retailers, for 3-4 retailers total — not every product at
+// every retailer, and not a fixed repeating pattern either, so coverage
+// looks natural across the catalog. Deterministic (seeded per product id)
+// rather than Math.random() so the data doesn't reshuffle on every reload.
+function mulberry32(seed: number) {
+  let state = seed;
+  return () => {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+const competitorRetailers = plRetailers.filter((r) => r !== "sephora");
+
+const benchmarkRetailerSubsets: Record<string, (typeof plRetailers)[number][]> =
+  Object.fromEntries(
+    benchmarkProducts.map((product, index) => {
+      const random = mulberry32(index + 1);
+      const shuffled = [...competitorRetailers];
+      for (let i = shuffled.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      const competitorCount = random() < 0.5 ? 2 : 3;
+      return [product.id, ["sephora", ...shuffled.slice(0, competitorCount)]];
+    }),
+  );
 
 export let plProducts: Product[] = [
   ...benchmarkProducts,
@@ -2596,14 +2639,18 @@ export let czProducts: Product[] = [
   },
 ];
 
+// Each retailer gets its own fixed, pairwise-distinct offset (no two
+// retailers can ever land on the same value) so that within a single
+// product's row, no two retailers ever tie on discount % — every cell is
+// unambiguously ahead of or behind Sephora, never equal to it.
 const retailerOfferOffsets: Record<(typeof plRetailers)[number], number> = {
-  Douglas: 2,
-  Notino: -2,
+  Douglas: 3,
+  drogerienatura: 2,
   superpharm: 1,
-  hebe: -1,
-  drogerienatura: 3,
-  flaconi: 0,
   sephora: 0,
+  flaconi: -1,
+  hebe: -2,
+  Notino: -3,
 };
 
 function addDays(date: string, days: number) {
@@ -2613,12 +2660,10 @@ function addDays(date: string, days: number) {
 }
 
 function expandPolishRetailerOffers(products: Product[]) {
-  return products.flatMap((product) =>
-    plRetailers.map((retailer, retailerIndex) => {
-      const discount = Math.max(
-        5,
-        product.competitorDiscount + retailerOfferOffsets[retailer] + (retailerIndex % 2),
-      );
+  return products.flatMap((product) => {
+    const retailersForProduct = benchmarkRetailerSubsets[product.id] ?? plRetailers;
+    return retailersForProduct.map((retailer, retailerIndex) => {
+      const discount = Math.max(5, product.competitorDiscount + retailerOfferOffsets[retailer]);
       const priceAfterDiscount = Math.round(product.price * (1 - discount / 100));
       const isSephora = retailer === "sephora";
 
@@ -2636,8 +2681,8 @@ function expandPolishRetailerOffers(products: Product[]) {
         stock: Math.max(1, product.stock + retailerIndex - 3),
         isClient: isSephora,
       };
-    }),
-  );
+    });
+  });
 }
 
 plProducts = expandPolishRetailerOffers(plProducts);

@@ -8,8 +8,10 @@ import {
     SearchRounded,
     StorefrontRounded,
     UnfoldMoreRounded,
-    CheckRounded,
     ScheduleRounded,
+    TrendingUpRounded,
+    TrendingDownRounded,
+    TrendingFlatRounded,
 } from "@mui/icons-material";
 import { matchesPromotionFilters, useAppContext } from "../context/AppContext";
 import { getMarketRetailers } from "../data/retailers";
@@ -143,7 +145,15 @@ const BrandComparisonTable = () => {
         if (page > pageCount) setPage(pageCount);
     }, [page, pageCount]);
 
-    const renderCell = (cell: RetailerCell | undefined) => {
+    // Colors the discount % relative to Sephora's own offer in that row, so
+    // it's immediately obvious which retailers are beating or trailing
+    // Sephora — a flat "active = green" scheme made every active cell look
+    // identical and gave no basis for comparison.
+    const renderCell = (
+        cell: RetailerCell | undefined,
+        isYourStore: boolean,
+        sephoraDiscount: number | undefined,
+    ) => {
         if (!cell) {
             return (
                 <Typography sx={{ fontSize: 13, color: "#cbd0dd", fontWeight: 600 }}>
@@ -152,22 +162,41 @@ const BrandComparisonTable = () => {
             );
         }
 
+        let bg = "#eef1f6";
+        let color = "#525b75";
+        let icon = <TrendingFlatRounded sx={{ fontSize: 12 }} />;
+
+        if (!cell.active) {
+            bg = "#f2f2f2";
+            color = "#9fa6bc";
+            icon = <ScheduleRounded sx={{ fontSize: 12 }} />;
+        } else if (isYourStore) {
+            bg = "#e7ecff";
+            color = "#2545c9";
+            icon = <StorefrontRounded sx={{ fontSize: 12 }} />;
+        } else if (sephoraDiscount !== undefined) {
+            if (cell.discount > sephoraDiscount) {
+                bg = "#d9fbd0";
+                color = "#1c6c09";
+                icon = <TrendingUpRounded sx={{ fontSize: 12 }} />;
+            } else if (cell.discount < sephoraDiscount) {
+                bg = "#ffe2dc";
+                color = "#c92e13";
+                icon = <TrendingDownRounded sx={{ fontSize: 12 }} />;
+            } else {
+                bg = "#fff3cd";
+                color = "#8a6d00";
+                icon = <TrendingFlatRounded sx={{ fontSize: 12 }} />;
+            }
+        }
+
         return (
             <Box className="flex flex-col items-center justify-center gap-0.5 py-1">
                 <Box
                     className="inline-flex items-center gap-0.5 rounded-full"
-                    sx={{
-                        px: 1,
-                        py: 0.3,
-                        backgroundColor: cell.active ? "#d9fbd0" : "#ffe2dc",
-                        color: cell.active ? "#1c6c09" : "#c92e13",
-                    }}
+                    sx={{ px: 1, py: 0.3, backgroundColor: bg, color }}
                 >
-                    {cell.active ? (
-                        <CheckRounded sx={{ fontSize: 12 }} />
-                    ) : (
-                        <ScheduleRounded sx={{ fontSize: 12 }} />
-                    )}
+                    {icon}
                     <Typography
                         sx={{ fontSize: "11px", fontWeight: 800, lineHeight: 1.2 }}
                     >
@@ -198,7 +227,7 @@ const BrandComparisonTable = () => {
                             </Typography>
                         </Box>
                         <Typography sx={{ fontSize: 13, color: "#525b75" }}>
-                            Overview of promotions across retailers. Active deals have a green background and expired deals have a red background.
+                            Discount % is colored against Sephora's own offer: green beats Sephora, red trails it, amber matches it. Grey cells are expired offers.
                         </Typography>
                     </Box>
                 </Box>
@@ -375,6 +404,7 @@ const BrandComparisonTable = () => {
                                     {retailers.map((r) => {
                                         const cell = row.retailers[r];
                                         const isYour = r === yourStore;
+                                        const sephoraDiscount = row.retailers[yourStore]?.discount;
 
                                         return (
                                             <TableCell
@@ -386,7 +416,7 @@ const BrandComparisonTable = () => {
                                                     py: 1,
                                                 }}
                                             >
-                                                {renderCell(cell)}
+                                                {renderCell(cell, isYour, sephoraDiscount)}
                                             </TableCell>
                                         );
                                     })}

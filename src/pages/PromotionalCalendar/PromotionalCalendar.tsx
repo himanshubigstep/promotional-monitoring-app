@@ -263,21 +263,6 @@ export default function PromotionalCalendar() {
                           >
                             {item.name}
                           </Typography>
-                          {item.benchmark && (
-                            <Chip
-                              label="Benchmark"
-                              size="small"
-                              sx={{
-                                height: 15,
-                                fontSize: 8.5,
-                                fontWeight: 800,
-                                bgcolor: "#141824",
-                                color: "#ffffff",
-                                borderRadius: "4px",
-                                "& .MuiChip-label": { px: 0.6 },
-                              }}
-                            />
-                          )}
                         </Box>
                         <Box className="flex items-center gap-1">
                           <Typography

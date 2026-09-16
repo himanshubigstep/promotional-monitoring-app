@@ -4,8 +4,7 @@ export type PromotionType =
   | "Custom";
 
 // Widened from the original 4 to match what's actually in the database's
-// categories table (products.json always had Body Care/Tools rows too —
-// this was a known, tracked mismatch, see Decisions.md).
+// categories table (this was a known, tracked mismatch, see Decisions.md).
 export type ProductCategory =
   | "Skincare"
   | "Fragrance"
