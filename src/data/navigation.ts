@@ -52,7 +52,7 @@ export const appNavigation: AppNavigation[] = [
     name: "Product catalog",
     route: "/product-catalog",
     description:
-      "Every product our scraper has found across all monitored stores, browsable and searchable — pick from these when creating a promotion, even before a campaign exists for it.",
+      "Every product our scraper has found across all monitored stores, browsable and searchable - pick from these when creating a promotion, even before a campaign exists for it.",
     capabilities: [
       "Browse every scraped product across all monitored stores",
       "Search/filter products by store",
@@ -95,7 +95,7 @@ export const appNavigation: AppNavigation[] = [
     name: "Review queue",
     route: "/review-queue",
     description:
-      "Queue of scraped promotions awaiting approval — edit, approve, or reject before they appear anywhere else in the app.",
+      "Queue of scraped promotions awaiting approval - edit, approve, or reject before they appear anywhere else in the app.",
     capabilities: [
       "Review promotions the scraper found (status: pending review)",
       "Approve, edit, or reject a pending promotion",
